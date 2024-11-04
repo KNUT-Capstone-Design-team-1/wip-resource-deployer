@@ -1,0 +1,29 @@
+{
+  "name": "wip-resource-deployer",
+  "version": "1.0.0",
+  "description": "wip resource deploy module",
+  "main": "app.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KNUT-Capstone-Design-team-1/wip-resource-deployer.git"
+  },
+  "author": "2mukee",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/KNUT-Capstone-Design-team-1/wip-resource-deployer/issues"
+  },
+  "homepage": "https://github.com/KNUT-Capstone-Design-team-1/wip-resource-deployer#readme",
+  "dependencies": {
+    "@types/node": "^22.8.7",
+    "csvtojson": "^2.0.10",
+    "dotenv": "^16.4.5",
+    "fs": "^0.0.1-security",
+    "iconv-lite": "^0.6.3",
+    "realm": "^12.13.2",
+    "simple-excel-to-json": "^2.3.0",
+    "typescript": "^5.6.3"
+  }
+}
