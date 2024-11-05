@@ -4,7 +4,7 @@
   "description": "wip resource deploy module",
   "main": "app.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "ts-node ./src/app.ts"
   },
   "repository": {
     "type": "git",
@@ -17,7 +17,8 @@
   },
   "homepage": "https://github.com/KNUT-Capstone-Design-team-1/wip-resource-deployer#readme",
   "dependencies": {
-    "@types/node": "^22.8.7",
+    "@aws-sdk/client-s3": "^3.685.0",
+    "@types/node": "^22.9.0",
     "csvtojson": "^2.0.10",
     "dotenv": "^16.4.5",
     "fs": "^0.0.1-security",
@@ -25,5 +26,8 @@
     "realm": "^12.13.2",
     "simple-excel-to-json": "^2.3.0",
     "typescript": "^5.6.3"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2"
   }
 }
