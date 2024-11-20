@@ -1,4 +1,4 @@
-import Realm from "realm";
+import { ObjectSchema } from "realm";
 
 /**
  * 완제 의약품 허가 상세
@@ -32,4 +32,36 @@ export interface IFinishedMedicinePermissionDetails {
   INGR_NAME: string; // 첨가제명
 }
 
-export class FinishedMedicinePermissionDetailSchema extends Realm.Object<IFinishedMedicinePermissionDetails> {}
+const FinishedMedicinePermissionDetailSchema: ObjectSchema = {
+  name: "FinishedMedicinePermissionDetail",
+  properties: {
+    ITEM_SEQ: "string",
+    ITEM_NAME: "string",
+    ENTP_NAME: "string",
+    ITEM_PERMIT_DATE: "string",
+    CNSGN_MANUF: "string",
+    ETC_OTC_CODE: "string",
+    CHART: "string",
+    BAR_CODE: "string",
+    MATERIAL_NAME: "string",
+    EE_DOC_ID: "string",
+    UD_DOC_ID: "string",
+    NB_DOC_ID: "string",
+    INSERT_FILE: "string",
+    VALID_TERM: "string",
+    STORAGE_METHOD: "string",
+    REEXAM_TARGET: "string",
+    REEXAM_DATE: "string",
+    PACK_UNIT: "string",
+    EDI_CODE: "string",
+    PERMIT_KIND: "string",
+    ENTP_NO: "string",
+    NARCOTIC_KIND: "string",
+    NEWDRUG_CLASS_NAME: "string",
+    INDUTY_TYPE: "string",
+    MAIN_ITEM_INGR: "string",
+    INGR_NAME: "string",
+  },
+};
+
+export default FinishedMedicinePermissionDetailSchema;

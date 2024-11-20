@@ -1,4 +1,4 @@
-import Realm from "realm";
+import { ObjectSchema } from "realm";
 
 /**
  * 의약품 낱알식별정보
@@ -33,4 +33,37 @@ export interface IDrugRecognition {
   EDI_CODE: string; // 보험 코드
 }
 
-export class DrugRecognitionSchema extends Realm.Object<IDrugRecognition> {}
+const DrugRecognitionSchema: ObjectSchema = {
+  name: "DrugRecognition",
+  properties: {
+    ITEM_SEQ: "string",
+    ITEM_NAME: "string",
+    ENTP_SEQ: "string",
+    ENTP_NAME: "string",
+    CHARTIN: "string",
+    ITEM_IMAGE: "string",
+    PRINT_FRONT: "string",
+    PRINT_BACK: "string",
+    DRUG_SHAPE: "string",
+    COLOR_CLASS1: "string",
+    COLOR_CLASS2: "string",
+    LINE_FRONT: "string",
+    LINE_BACK: "string",
+    LENG_LONG: "string",
+    LENG_SHORT: "string",
+    THICK: "string",
+    IMG_REGIST_TS: "string",
+    CLASS_NO: "string",
+    ETC_OTC_CODE: "string",
+    ITEM_PERMIT_DATE: "string",
+    SHAPE_CODE: "string",
+    MARK_CODE_FRONT_ANAL: "string",
+    MARK_CODE_BACK_ANAL: "string",
+    MARK_CODE_FRONT_IMG: "string",
+    MARK_CODE_BACK_IMG: "string",
+    ITEM_ENG_NAME: "string",
+    EDI_CODE: "string",
+  },
+};
+
+export default DrugRecognitionSchema;
