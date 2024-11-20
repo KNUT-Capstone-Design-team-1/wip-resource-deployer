@@ -22,7 +22,7 @@ export class ResourceLoader {
   public async loadResource(): Promise<Record<string, object[]>> {
     const resource: Record<string, Array<object>> = {};
 
-    logger.info('Start load resource');
+    logger.info("Start load resource");
 
     for await (const resourcePath of this.getPathList()) {
       const fileList = fs.existsSync(resourcePath)
@@ -37,19 +37,18 @@ export class ResourceLoader {
 
       const key = resourcePath.split(/\\|\//).pop() as string; // 디렉터리 이름만 추출 (this.~~~dirName)
 
-      resource[key].push(...resourceData);
+      resource[key] = resourceData;
     }
 
-    logger.info('Resource load complete');
+    logger.info("Resource load complete");
 
     return resource;
   }
 
   private getPathList(): Array<string> {
     return [
-      path.join(__dirname, `${this.dirPath}/${this.drugRecognitionDirName}`),
+      path.join(`${this.dirPath}/${this.drugRecognitionDirName}`),
       path.join(
-        __dirname,
         `${this.dirPath}/${this.finishedMedicinePermissionDetailsDirName}`
       ),
     ];
@@ -62,7 +61,7 @@ export class ResourceLoader {
     const resourceData: Array<Object> = [];
 
     for await (const fileName of fileList) {
-      logger.info('Convert to object target: %s', fileName);
+      logger.info("Convert to object target: %s", fileName);
 
       const jsonArrOfFile = await this.convertToObject(
         `${resourcePath}/${fileName}`
