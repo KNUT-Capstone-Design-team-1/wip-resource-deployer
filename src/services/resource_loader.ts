@@ -3,6 +3,7 @@ import fs from "fs";
 import xlsParser from "simple-excel-to-json";
 import iconvLite from "iconv-lite";
 import { Converter } from "csvtojson/v2/Converter";
+import { logger } from "../utils";
 
 export class ResourceLoader {
   private readonly dirPath: string;
@@ -21,6 +22,8 @@ export class ResourceLoader {
   public async loadResource(): Promise<Record<string, object[]>> {
     const resource: Record<string, Array<object>> = {};
 
+    logger.info('Start load resource');
+
     for await (const resourcePath of this.getPathList()) {
       const fileList = fs.existsSync(resourcePath)
         ? fs.readdirSync(resourcePath)
@@ -36,6 +39,8 @@ export class ResourceLoader {
 
       resource[key].push(...resourceData);
     }
+
+    logger.info('Resource load complete');
 
     return resource;
   }
@@ -57,6 +62,8 @@ export class ResourceLoader {
     const resourceData: Array<Object> = [];
 
     for await (const fileName of fileList) {
+      logger.info('Convert to object target: %s', fileName);
+
       const jsonArrOfFile = await this.convertToObject(
         `${resourcePath}/${fileName}`
       );

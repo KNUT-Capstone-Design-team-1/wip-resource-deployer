@@ -1,3 +1,5 @@
+import logger from './logger'
+
 export function convertStringToInt8Array(
   int8ArrayFormatString: string
 ): Int8Array {
@@ -5,3 +7,5 @@ export function convertStringToInt8Array(
 
   return new Int8Array(res ?? []);
 }
+
+export { logger };
