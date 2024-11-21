@@ -4,11 +4,20 @@ import xlsParser from "simple-excel-to-json";
 import iconvLite from "iconv-lite";
 import { Converter } from "csvtojson/v2/Converter";
 import { logger } from "../utils";
+import {
+  TDrugRecognitionKey,
+  TFinishedMedicinePermissionDetailsKey,
+  TLoadedResource,
+  TResourceData,
+  TResourceKey,
+} from "../@types/resource_loader";
+import { IDrugRecognition } from "../@types/drug_recognition";
+import { IFinishedMedicinePermissionDetails } from "../@types/finished_medicine_permission_details";
 
 export class ResourceLoader {
   private readonly dirPath: string;
-  private readonly drugRecognitionDirName: string; // 의약품 낱알식별정보 데이터
-  private readonly finishedMedicinePermissionDetailsDirName: string; // 완제 의약품 허가 상세 데이터
+  private readonly drugRecognitionDirName: TDrugRecognitionKey; // 의약품 낱알식별정보 데이터
+  private readonly finishedMedicinePermissionDetailsDirName: TFinishedMedicinePermissionDetailsKey; // 완제 의약품 허가 상세 데이터
 
   constructor() {
     this.dirPath = path.join(__dirname, `../../res`);
@@ -16,11 +25,14 @@ export class ResourceLoader {
     this.drugRecognitionDirName = "drug_recognition";
 
     this.finishedMedicinePermissionDetailsDirName =
-      "finished_medecine_permission_details";
+      "finished_medicine_permission_details";
   }
 
-  public async loadResource(): Promise<Record<string, object[]>> {
-    const resource: Record<string, Array<object>> = {};
+  public async loadResource(): Promise<TLoadedResource> {
+    const resource: TLoadedResource = {
+      drug_recognition: [],
+      finished_medicine_permission_details: [],
+    };
 
     logger.info("Start load resource");
 
@@ -35,9 +47,17 @@ export class ResourceLoader {
 
       const resourceData = await this.getResourceData(resourcePath, fileList);
 
-      const key = resourcePath.split(/\\|\//).pop() as string; // 디렉터리 이름만 추출 (this.~~~dirName)
+      const key = resourcePath.split(/\\|\//).pop() as TResourceKey; // 디렉터리 이름만 추출 (this.~~~dirName)
 
-      resource[key] = resourceData;
+      if (key === "drug_recognition") {
+        resource.drug_recognition =
+          resourceData as unknown as Array<IDrugRecognition>;
+      }
+
+      if (key === "finished_medicine_permission_details") {
+        resource.finished_medicine_permission_details =
+          resourceData as unknown as Array<IFinishedMedicinePermissionDetails>;
+      }
     }
 
     logger.info("Resource load complete");
@@ -57,8 +77,8 @@ export class ResourceLoader {
   private async getResourceData(
     resourcePath: string,
     fileList: string[]
-  ): Promise<Array<Object>> {
-    const resourceData: Array<Object> = [];
+  ): Promise<Array<TResourceData>> {
+    const resourceData: Array<TResourceData> = [];
 
     for await (const fileName of fileList) {
       logger.info("Convert to object target: %s", fileName);
@@ -77,25 +97,27 @@ export class ResourceLoader {
     return resourceData;
   }
 
-  private async convertToObject(fileName: string): Promise<Array<Object>> {
+  private async convertToObject(
+    fileName: string
+  ): Promise<Array<TResourceData>> {
     const fileExtension = fileName.split(".").slice(-1)[0];
 
     switch (fileExtension) {
       case "xlsx":
       case "xls": {
         const doc: { flat: () => Object[] } = xlsParser.parseXls2Json(fileName);
-        return doc.flat();
+        return doc.flat() as unknown as Array<TResourceData>;
       }
 
       case "csv": {
         const csvString = iconvLite.decode(fs.readFileSync(fileName), "euc-kr");
         const rows: Array<Object> = await new Converter().fromString(csvString);
-        return rows;
+        return rows as unknown as Array<TResourceData>;
       }
 
       case "json": {
         const jsonStr = fs.readFileSync(fileName, "utf-8");
-        return JSON.parse(jsonStr);
+        return JSON.parse(jsonStr) as unknown as Array<TResourceData>;
       }
 
       default:

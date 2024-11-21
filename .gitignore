@@ -2,3 +2,7 @@
 node_modules
 res
 log
+*.realm
+*.realm.lock
+database_resource
+current_database_resource

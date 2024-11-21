@@ -1,17 +1,22 @@
 import Realm from "realm";
-import DrugRecognitionSchema from "src/schemas/drug_recognition";
-import FinishedMedicinePermissionDetailSchema from "src/schemas/finished_medicine_permission_details";
+import DrugRecognitionSchema from "../schemas/drug_recognition";
+import FinishedMedicinePermissionDetailSchema from "../schemas/finished_medicine_permission_details";
 
 export default class RealmDatabase {
-  private static instance: Realm;
+  private static _instance: Realm;
 
-  public static async getInstance(): Promise<Realm> {
-    if (!this.instance) {
-      this.instance = await Realm.open({
+  public static get() {
+    return this._instance;
+  }
+
+  public static async initInstance(path: string): Promise<Realm> {
+    if (!this._instance) {
+      this._instance = await Realm.open({
         schema: [DrugRecognitionSchema, FinishedMedicinePermissionDetailSchema],
+        path,
       });
     }
 
-    return this.instance;
+    return this._instance;
   }
 }
