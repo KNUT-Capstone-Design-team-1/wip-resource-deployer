@@ -18,7 +18,7 @@ export class DrugRecognitionModel {
 
   public upsertMany(datas: Array<IDrugRecognition>) {
     for (let i = 0; i < datas.length; i += 1) {
-      logger.info(datas[i]);
+      logger.info("Upsert of %s", datas[i]);
       this.upsert(datas[i]);
     }
   }

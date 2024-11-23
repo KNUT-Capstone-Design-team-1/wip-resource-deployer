@@ -1,12 +1,12 @@
 import path from "path";
 import logger from "./logger";
 
-export const DATABASE_DIRECTORY_NAME = "./database_resource";
-export const INITIAL_REALM_FILE_NAME = path.join(
-  `${DATABASE_DIRECTORY_NAME}/initial.realm`
+export const NEW_DATABASE_DIRECTORY_NAME = "./database_resource";
+export const NEW_INITIAL_REALM_FILE_NAME = path.join(
+  `${NEW_DATABASE_DIRECTORY_NAME}/initial.realm`
 );
 export const UPDATE_REALM_FILE_NAME = path.join(
-  `${DATABASE_DIRECTORY_NAME}/update.realm`
+  `${NEW_DATABASE_DIRECTORY_NAME}/update.realm`
 );
 
 export const CURRENT_DATABASE_DIRECTORY_NAME = "./current_database_resource";

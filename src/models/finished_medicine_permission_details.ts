@@ -18,7 +18,7 @@ export class FinishedMedicinePermissionDetailModel {
 
   public upsertMany(datas: Array<IFinishedMedicinePermissionDetails>) {
     for (let i = 0; i < datas.length; i += 1) {
-      logger.info(datas[i]);
+      logger.info("Upsert of %s", datas[i]);
       this.upsert(datas[i]);
     }
   }
