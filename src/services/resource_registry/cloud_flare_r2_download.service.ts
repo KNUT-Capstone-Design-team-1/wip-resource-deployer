@@ -57,19 +57,23 @@ export class CloudFlareDownloadService {
       fs.mkdirSync(this.resourcePath);
     }
 
-    const fileStream = fs.createWriteStream(
-      path.join(this.resourcePath, `/current_${fileName}`)
-    );
+    return new Promise((resolve, reject) => {
+      const fileStream = fs.createWriteStream(
+        path.join(this.resourcePath, `/current_${fileName}`)
+      );
 
-    const passThroughStream = new PassThrough();
-    streamData.pipe(passThroughStream).pipe(fileStream);
+      const passThroughStream = new PassThrough();
+      streamData.pipe(passThroughStream).pipe(fileStream);
 
-    fileStream.on("finish", () => {
-      logger.info("File downloaded successfully!");
-    });
+      fileStream.on("finish", () => {
+        logger.info("File downloaded successfully!");
+        resolve("success");
+      });
 
-    fileStream.on("error", (err) => {
-      logger.error("Error downloading file:", err);
+      fileStream.on("error", (err) => {
+        logger.error("Error downloading file:", err);
+        reject(err);
+      });
     });
   }
 }

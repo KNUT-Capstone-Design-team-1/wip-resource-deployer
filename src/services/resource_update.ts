@@ -24,7 +24,7 @@ function createUpdateResourceData(
     drugRecognition: [],
     finishedMedicinePermissionDetail: [],
   };
-
+  
   updateResourceData.drugRecognition.push(
     ...(getObjectArrayDiff(
       newRes.drugRecognition,
@@ -45,10 +45,10 @@ function createUpdateResourceData(
 }
 
 function getResourceData(realmFilePath: string): TLoadedResource {
-  const drugRecognition = new DrugRecognitionModel(realmFilePath).readAll();
+  const drugRecognition = [...new DrugRecognitionModel(realmFilePath).readAll()];
 
   const finishedMedicinePermissionDetail =
-    new FinishedMedicinePermissionDetailModel(realmFilePath).readAll();
+    [...new FinishedMedicinePermissionDetailModel(realmFilePath).readAll()];
 
   return { drugRecognition, finishedMedicinePermissionDetail };
 }

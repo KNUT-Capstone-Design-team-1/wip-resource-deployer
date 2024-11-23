@@ -7,7 +7,11 @@ import {
   createUpdateResourceFile,
   CloudflareUploadService,
 } from "./services";
-import { logger, INITIAL_REALM_FILE_NAME, UPDATE_REALM_FILE_NAME } from "./utils";
+import {
+  logger,
+  INITIAL_REALM_FILE_NAME,
+  UPDATE_REALM_FILE_NAME,
+} from "./utils";
 
 async function main() {
   logger.info("------Create initial resource file------");
