@@ -1,11 +1,11 @@
 import { ObjectSchema } from "realm";
-import { FINISHED_MEDICINE_PERMISSION_DETAILS } from "../utils";
+import { FINISHED_MEDICINE_PERMISSION_DETAIL } from "../utils";
 
 /**
  * 완제 의약품 허가 상세
  */
 export const FinishedMedicinePermissionDetailSchema: ObjectSchema = {
-  name: FINISHED_MEDICINE_PERMISSION_DETAILS,
+  name: FINISHED_MEDICINE_PERMISSION_DETAIL,
   primaryKey: "ITEM_SEQ",
   properties: {
     ITEM_SEQ: "string",

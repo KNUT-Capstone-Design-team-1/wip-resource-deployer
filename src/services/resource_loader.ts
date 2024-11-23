@@ -3,38 +3,33 @@ import fs from "fs";
 import xlsParser from "simple-excel-to-json";
 import iconvLite from "iconv-lite";
 import { Converter } from "csvtojson/v2/Converter";
-import { logger } from "../utils";
 import {
   TDrugRecognitionKey,
-  TFinishedMedicinePermissionDetailsKey,
   TLoadedResource,
   TResourceData,
   TResourceKey,
   IDrugRecognition,
-  IFinishedMedicinePermissionDetails,
+  IFinishedMedicinePermissionDetail,
+  TFinishedMedicinePermissionDetailKey,
 } from "../@types";
 
 export class ResourceLoader {
   private readonly dirPath: string;
   private readonly drugRecognitionDirName: TDrugRecognitionKey; // 의약품 낱알식별정보 데이터
-  private readonly finishedMedicinePermissionDetailsDirName: TFinishedMedicinePermissionDetailsKey; // 완제 의약품 허가 상세 데이터
+  private readonly finishedMedicinePermissionDetailDirName: TFinishedMedicinePermissionDetailKey; // 완제 의약품 허가 상세 데이터
 
   constructor() {
     this.dirPath = path.join(__dirname, `../../res`);
-
     this.drugRecognitionDirName = "drug_recognition";
-
-    this.finishedMedicinePermissionDetailsDirName =
-      "finished_medicine_permission_details";
+    this.finishedMedicinePermissionDetailDirName =
+      "finished_medicine_permission_detail";
   }
 
   public async loadResource(): Promise<TLoadedResource> {
     const resource: TLoadedResource = {
       drug_recognition: [],
-      finished_medicine_permission_details: [],
+      finished_medicine_permission_detail: [],
     };
-
-    logger.info("Start load resource");
 
     for await (const resourcePath of this.getPathList()) {
       const fileList = fs.existsSync(resourcePath)
@@ -46,7 +41,6 @@ export class ResourceLoader {
       }
 
       const resourceData = await this.getResourceData(resourcePath, fileList);
-
       const key = resourcePath.split(/\\|\//).pop() as TResourceKey; // 디렉터리 이름만 추출 (this.~~~dirName)
 
       if (key === "drug_recognition") {
@@ -54,13 +48,11 @@ export class ResourceLoader {
           resourceData as unknown as Array<IDrugRecognition>;
       }
 
-      if (key === "finished_medicine_permission_details") {
-        resource.finished_medicine_permission_details =
-          resourceData as unknown as Array<IFinishedMedicinePermissionDetails>;
+      if (key === "finished_medicine_permission_detail") {
+        resource.finished_medicine_permission_detail =
+          resourceData as unknown as Array<IFinishedMedicinePermissionDetail>;
       }
     }
-
-    logger.info("Resource load complete");
 
     return resource;
   }
@@ -69,7 +61,7 @@ export class ResourceLoader {
     return [
       path.join(`${this.dirPath}/${this.drugRecognitionDirName}`),
       path.join(
-        `${this.dirPath}/${this.finishedMedicinePermissionDetailsDirName}`
+        `${this.dirPath}/${this.finishedMedicinePermissionDetailDirName}`
       ),
     ];
   }
@@ -81,16 +73,12 @@ export class ResourceLoader {
     const resourceData: Array<TResourceData> = [];
 
     for await (const fileName of fileList) {
-      logger.info("Convert to object target: %s", fileName);
-
       const jsonArrOfFile = await this.convertToObject(
         `${resourcePath}/${fileName}`
       );
-
       if (jsonArrOfFile.length === 0) {
         continue;
       }
-
       resourceData.push(...jsonArrOfFile);
     }
 

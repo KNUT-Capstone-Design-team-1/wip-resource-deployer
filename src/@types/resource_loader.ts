@@ -1,28 +1,28 @@
 import { IDrugRecognition } from "./drug_recognition";
-import { IFinishedMedicinePermissionDetails } from "./finished_medicine_permission_details";
+import { IFinishedMedicinePermissionDetail } from "./finished_medicine_permission_detail";
 
 export type TDrugRecognitionKey = "drug_recognition";
 
-export type TFinishedMedicinePermissionDetailsKey =
-  "finished_medicine_permission_details";
+export type TFinishedMedicinePermissionDetailKey =
+  "finished_medicine_permission_detail";
 
 export type TDrugRecognitionResourceObj = Record<
   TDrugRecognitionKey,
   Array<IDrugRecognition>
 >;
 
-export type TFinishedMedicinePermissionDetails = Record<
-  TFinishedMedicinePermissionDetailsKey,
-  Array<IFinishedMedicinePermissionDetails>
+export type TFinishedMedicinePermissionDetail = Record<
+TFinishedMedicinePermissionDetailKey,
+  Array<IFinishedMedicinePermissionDetail>
 >;
 
 export type TLoadedResource = TDrugRecognitionResourceObj &
-  TFinishedMedicinePermissionDetails;
+  TFinishedMedicinePermissionDetail;
 
 export type TResourceKey =
   | TDrugRecognitionKey
-  | TFinishedMedicinePermissionDetailsKey;
+  | TFinishedMedicinePermissionDetailKey;
 
 export type TResourceData =
   | Array<IDrugRecognition>
-  | Array<IFinishedMedicinePermissionDetails>;
+  | Array<IFinishedMedicinePermissionDetail>;

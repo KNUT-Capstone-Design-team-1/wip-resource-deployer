@@ -14,7 +14,7 @@ export const CURRENT_INITIAL_REALM_FILE_NAME = path.join(
   `${CURRENT_DATABASE_DIRECTORY_NAME}/initial.realm`
 );
 
-export const FINISHED_MEDICINE_PERMISSION_DETAILS =
+export const FINISHED_MEDICINE_PERMISSION_DETAIL =
   "FinishedMedicinePermissionDetail";
 export const DRUG_RECOGNITION = "DrugRecognition";
 
