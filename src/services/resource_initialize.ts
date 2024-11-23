@@ -16,14 +16,14 @@ export async function createInitialResourceFile() {
 
   logger.info("Upsert drug recognition");
   const drugRecognitionModel = new DrugRecognitionModel();
-  drugRecognitionModel.upsertMany(resource.drug_recognition);
+  drugRecognitionModel.upsertMany(resource.drugRecognition);
   logger.info("Upsert complete");
 
   logger.info("Upsert finished medicine permission detail");
   const finishedMedicinePermissionDetailModel =
     new FinishedMedicinePermissionDetailModel();
   finishedMedicinePermissionDetailModel.upsertMany(
-    resource.finished_medicine_permission_detail
+    resource.finishedMedicinePermissionDetail
   );
   logger.info("Upsert complete");
 }

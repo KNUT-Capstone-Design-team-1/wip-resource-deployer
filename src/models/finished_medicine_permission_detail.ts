@@ -13,7 +13,9 @@ export class FinishedMedicinePermissionDetailModel {
   }
 
   public readAll() {
-    return this.database.objects(this.collection);
+    return this.database.objects(
+      this.collection
+    ) as unknown as Array<IFinishedMedicinePermissionDetail>;
   }
 
   public upsertMany(datas: Array<IFinishedMedicinePermissionDetail>) {

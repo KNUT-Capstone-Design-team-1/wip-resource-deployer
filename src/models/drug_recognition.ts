@@ -13,7 +13,7 @@ export class DrugRecognitionModel {
   }
 
   public readAll() {
-    return this.database.objects(this.collection);
+    return this.database.objects(this.collection) as unknown as Array<IDrugRecognition>;
   }
 
   public upsertMany(datas: Array<IDrugRecognition>) {

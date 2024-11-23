@@ -4,19 +4,19 @@ import xlsParser from "simple-excel-to-json";
 import iconvLite from "iconv-lite";
 import { Converter } from "csvtojson/v2/Converter";
 import {
-  TDrugRecognitionKey,
   TLoadedResource,
   TResourceData,
-  TResourceKey,
   IDrugRecognition,
   IFinishedMedicinePermissionDetail,
-  TFinishedMedicinePermissionDetailKey,
+  TResourceDirectoryName,
+  TDrugRecognitionDirectoryName,
+  TFinishedMedicinePermissionDetailDirectoryName,
 } from "../@types";
 
 export class ResourceLoader {
   private readonly dirPath: string;
-  private readonly drugRecognitionDirName: TDrugRecognitionKey; // 의약품 낱알식별정보 데이터
-  private readonly finishedMedicinePermissionDetailDirName: TFinishedMedicinePermissionDetailKey; // 완제 의약품 허가 상세 데이터
+  private readonly drugRecognitionDirName: TDrugRecognitionDirectoryName; // 의약품 낱알식별정보 데이터
+  private readonly finishedMedicinePermissionDetailDirName: TFinishedMedicinePermissionDetailDirectoryName; // 완제 의약품 허가 상세 데이터
 
   constructor() {
     this.dirPath = path.join(__dirname, `../../res`);
@@ -27,8 +27,8 @@ export class ResourceLoader {
 
   public async loadResource(): Promise<TLoadedResource> {
     const resource: TLoadedResource = {
-      drug_recognition: [],
-      finished_medicine_permission_detail: [],
+      drugRecognition: [],
+      finishedMedicinePermissionDetail: [],
     };
 
     for await (const resourcePath of this.getPathList()) {
@@ -41,15 +41,15 @@ export class ResourceLoader {
       }
 
       const resourceData = await this.getResourceData(resourcePath, fileList);
-      const key = resourcePath.split(/\\|\//).pop() as TResourceKey; // 디렉터리 이름만 추출 (this.~~~dirName)
+      const key = resourcePath.split(/\\|\//).pop() as TResourceDirectoryName; // 디렉터리 이름만 추출 (this.~~~dirName)
 
       if (key === "drug_recognition") {
-        resource.drug_recognition =
+        resource.drugRecognition =
           resourceData as unknown as Array<IDrugRecognition>;
       }
 
       if (key === "finished_medicine_permission_detail") {
-        resource.finished_medicine_permission_detail =
+        resource.finishedMedicinePermissionDetail =
           resourceData as unknown as Array<IFinishedMedicinePermissionDetail>;
       }
     }
