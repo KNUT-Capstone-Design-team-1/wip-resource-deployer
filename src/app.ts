@@ -1,5 +1,7 @@
-import { createInitialResourceFile } from "./services";
-import { CloudFlareDownloadService } from "./services/resource_registry";
+import {
+  createInitialResourceFile,
+  CloudFlareDownloadService,
+} from "./services";
 import { logger } from "./utils";
 
 async function main() {
