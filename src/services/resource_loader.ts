@@ -10,9 +10,9 @@ import {
   TLoadedResource,
   TResourceData,
   TResourceKey,
-} from "../@types/resource_loader";
-import { IDrugRecognition } from "../@types/drug_recognition";
-import { IFinishedMedicinePermissionDetails } from "../@types/finished_medicine_permission_details";
+  IDrugRecognition,
+  IFinishedMedicinePermissionDetails,
+} from "../@types";
 
 export class ResourceLoader {
   private readonly dirPath: string;

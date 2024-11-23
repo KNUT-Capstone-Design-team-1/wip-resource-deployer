@@ -1,4 +1,4 @@
-import RealmDatabase from "../models/realm_database";
+import { RealmDatabase } from "../models";
 import { logger, UPDATE_REALM_FILE_NAME } from "../utils";
 
 export async function createUpdateResourceFile() {

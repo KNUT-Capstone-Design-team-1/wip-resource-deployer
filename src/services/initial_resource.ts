@@ -1,6 +1,8 @@
-import RealmDatabase from "../models/realm_database";
-import { DrugRecognitionModel } from "../models/drug_recognition";
-import { FinishedMedicinePermissionDetailModel } from "../models/finished_medicine_permission_details";
+import {
+  RealmDatabase,
+  DrugRecognitionModel,
+  FinishedMedicinePermissionDetailModel,
+} from "../models/";
 import { logger, INITIAL_REALM_FILE_NAME } from "../utils";
 import { ResourceLoader } from "./resource_loader";
 

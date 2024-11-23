@@ -4,7 +4,7 @@ import { DRUG_RECOGNITION } from "../utils";
 /**
  * 의약품 낱알식별정보
  */
-const DrugRecognitionSchema: ObjectSchema = {
+export const DrugRecognitionSchema: ObjectSchema = {
   name: DRUG_RECOGNITION,
   primaryKey: "ITEM_SEQ",
   properties: {
@@ -37,5 +37,3 @@ const DrugRecognitionSchema: ObjectSchema = {
     EDI_CODE: { type: "string", optional: true },
   },
 };
-
-export default DrugRecognitionSchema;

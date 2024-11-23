@@ -1,5 +1,5 @@
-import logger from "./logger";
 import path from "path";
+import logger from "./logger";
 
 export const DATABASE_DIRECTORY_NAME = "./database_resource";
 export const INITIAL_REALM_FILE_NAME = path.join(

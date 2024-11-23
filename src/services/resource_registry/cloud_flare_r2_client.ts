@@ -7,7 +7,7 @@ export class CloudFlareR2Client {
     return this.s3Client;
   }
 
-  public static createS3Client() {
+  public static initS3Client() {
     const {
       CLOUD_FLARE_RESOURCE_DOWNLOAD_URL,
       CLOUD_FLARE_ACCESS_KEY_ID,

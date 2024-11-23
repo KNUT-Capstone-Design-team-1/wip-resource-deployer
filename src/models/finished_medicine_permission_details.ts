@@ -1,6 +1,6 @@
 import Realm from "realm";
-import RealmDatabase from "./realm_database";
-import { IFinishedMedicinePermissionDetails } from "../@types/finished_medicine_permission_details";
+import { RealmDatabase } from "./realm_database";
+import { IFinishedMedicinePermissionDetails } from "../@types";
 import { FINISHED_MEDICINE_PERMISSION_DETAILS, logger } from "../utils";
 
 export class FinishedMedicinePermissionDetailModel {

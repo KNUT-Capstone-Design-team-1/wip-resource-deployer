@@ -1,8 +1,10 @@
 import Realm from "realm";
-import DrugRecognitionSchema from "../schemas/drug_recognition";
-import FinishedMedicinePermissionDetailSchema from "../schemas/finished_medicine_permission_details";
+import {
+  DrugRecognitionSchema,
+  FinishedMedicinePermissionDetailSchema,
+} from "../schemas";
 
-export default class RealmDatabase {
+export class RealmDatabase {
   private static _instance: Realm;
 
   public static get() {

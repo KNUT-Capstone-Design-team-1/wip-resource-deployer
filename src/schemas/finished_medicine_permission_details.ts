@@ -4,7 +4,7 @@ import { FINISHED_MEDICINE_PERMISSION_DETAILS } from "../utils";
 /**
  * 완제 의약품 허가 상세
  */
-const FinishedMedicinePermissionDetailSchema: ObjectSchema = {
+export const FinishedMedicinePermissionDetailSchema: ObjectSchema = {
   name: FINISHED_MEDICINE_PERMISSION_DETAILS,
   primaryKey: "ITEM_SEQ",
   properties: {
@@ -36,5 +36,3 @@ const FinishedMedicinePermissionDetailSchema: ObjectSchema = {
     INGR_NAME: { type: "string", optional: true },
   },
 };
-
-export default FinishedMedicinePermissionDetailSchema;

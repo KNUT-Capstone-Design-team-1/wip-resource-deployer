@@ -1,10 +1,16 @@
+import { createInitialResourceFile } from "./services";
+import { CloudFlareDownloadService } from "./services/resource_registry";
 import { logger } from "./utils";
 
 async function main() {
   logger.info("Start wip-resource-deployer");
 
   // 0. 리소스 파일을 읽어 initial.realm (이하 new)을 만든다
+  await createInitialResourceFile();
+
   // 1. 클라우드 플레어로부터 initial.realm (이하 current)을 받는다
+  const resourceDownloadService = new CloudFlareDownloadService();
+
   // 2. current load한다
   //   - Realm.copyBundledRealmFiles(); 으로 *.realm 파일들을 애플리케이션 문서 디렉터리에 추가한다
   //   - const realmContext = createRealmContext({schema: [], path: 'current~~~.realm'}); 으로 realm context를 가져온다
