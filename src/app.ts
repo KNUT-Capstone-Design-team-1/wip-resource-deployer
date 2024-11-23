@@ -7,27 +7,27 @@ import {
   createUpdateResourceFile,
   CloudflareUploadService,
 } from "./services";
-import { CURRENT_INITIAL_REALM_FILE_NAME, logger, NEW_INITIAL_REALM_FILE_NAME } from "./utils";
+import { logger, INITIAL_REALM_FILE_NAME, UPDATE_REALM_FILE_NAME } from "./utils";
 
 async function main() {
   logger.info("------Create initial resource file------");
   await createInitialResourceFile();
 
   logger.info("------Upload resource file------");
+  CloudFlareR2Client.initS3Client();
   const resourceUploadService = new CloudflareUploadService();
-  await resourceUploadService.upload(NEW_INITIAL_REALM_FILE_NAME);
+  await resourceUploadService.upload(INITIAL_REALM_FILE_NAME);
 
   logger.info("------Download current resource file------");
-  CloudFlareR2Client.initS3Client();
   const resourceDownloadService = new CloudFlareDownloadService();
   await resourceDownloadService.downloadAllResources();
 
   logger.info("------Create update resource file------");
   await createUpdateResourceFile();
 
-  if (fs.existsSync(CURRENT_INITIAL_REALM_FILE_NAME)) {
+  if (fs.existsSync(UPDATE_REALM_FILE_NAME)) {
     logger.info("------Upload update resource file------");
-    await resourceUploadService.upload(CURRENT_INITIAL_REALM_FILE_NAME);
+    await resourceUploadService.upload(UPDATE_REALM_FILE_NAME);
   }
 
   logger.info("------End wip-resource-deployer------");

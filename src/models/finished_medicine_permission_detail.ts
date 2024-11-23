@@ -7,15 +7,17 @@ export class FinishedMedicinePermissionDetailModel {
   private readonly database: Realm;
   private readonly collection: string;
 
-  constructor() {
-    this.database = RealmDatabase.get();
+  constructor(realmFilepath: string) {
+    this.database = RealmDatabase.initInstance(realmFilepath);
     this.collection = FINISHED_MEDICINE_PERMISSION_DETAIL;
   }
 
   public readAll() {
-    return this.database.objects(
-      this.collection
-    ) as unknown as Array<IFinishedMedicinePermissionDetail>;
+    return Array.from(
+      this.database.objects(
+        this.collection
+      ) as unknown as Array<IFinishedMedicinePermissionDetail>
+    );
   }
 
   public upsertMany(datas: Array<IFinishedMedicinePermissionDetail>) {

@@ -2,19 +2,17 @@ import path from "path";
 import _ from "lodash";
 import logger from "./logger";
 
-export const NEW_DATABASE_DIRECTORY_NAME = "./database_resource";
+export const DATABASE_DIRECTORY_NAME = "./database_resource";
 
-export const NEW_INITIAL_REALM_FILE_NAME = path.join(
-  `${NEW_DATABASE_DIRECTORY_NAME}/initial.realm`
+export const INITIAL_REALM_FILE_NAME = path.join(
+  `${DATABASE_DIRECTORY_NAME}/initial.realm`
 );
 export const UPDATE_REALM_FILE_NAME = path.join(
-  `${NEW_DATABASE_DIRECTORY_NAME}/update.realm`
+  `${DATABASE_DIRECTORY_NAME}/update.realm`
 );
 
-export const CURRENT_DATABASE_DIRECTORY_NAME = "./current_database_resource";
-
 export const CURRENT_INITIAL_REALM_FILE_NAME = path.join(
-  `${CURRENT_DATABASE_DIRECTORY_NAME}/initial.realm`
+  `${DATABASE_DIRECTORY_NAME}/current_initial.realm`
 );
 
 export const FINISHED_MEDICINE_PERMISSION_DETAIL =

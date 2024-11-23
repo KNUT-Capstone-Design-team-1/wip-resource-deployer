@@ -2,13 +2,12 @@ import _ from "lodash";
 import {
   DrugRecognitionModel,
   FinishedMedicinePermissionDetailModel,
-  RealmDatabase,
 } from "../models";
 import {
   CURRENT_INITIAL_REALM_FILE_NAME,
   getObjectArrayDiff,
   logger,
-  NEW_INITIAL_REALM_FILE_NAME,
+  INITIAL_REALM_FILE_NAME,
   UPDATE_REALM_FILE_NAME,
 } from "../utils";
 import {
@@ -45,39 +44,26 @@ function createUpdateResourceData(
   return updateResourceData;
 }
 
+function getResourceData(realmFilePath: string): TLoadedResource {
+  const drugRecognition = new DrugRecognitionModel(realmFilePath).readAll();
+
+  const finishedMedicinePermissionDetail =
+    new FinishedMedicinePermissionDetailModel(realmFilePath).readAll();
+
+  return { drugRecognition, finishedMedicinePermissionDetail };
+}
+
 export async function createUpdateResourceFile() {
-  logger.info("Read all data of current resource");
-
-  await RealmDatabase.initInstance(CURRENT_INITIAL_REALM_FILE_NAME);
-
-  const currentResourceData: TLoadedResource = {
-    drugRecognition: new DrugRecognitionModel().readAll(),
-    finishedMedicinePermissionDetail:
-      new FinishedMedicinePermissionDetailModel().readAll(),
-  };
-
-  logger.info("Read all data of new initial resource");
-
-  await RealmDatabase.initInstance(NEW_INITIAL_REALM_FILE_NAME);
-
-  const initialResourceData: TLoadedResource = {
-    drugRecognition: new DrugRecognitionModel().readAll(),
-    finishedMedicinePermissionDetail:
-      new FinishedMedicinePermissionDetailModel().readAll(),
-  };
-
   logger.info("Create update resource data");
+  const { drugRecognition, finishedMedicinePermissionDetail } =
+    createUpdateResourceData(
+      getResourceData(INITIAL_REALM_FILE_NAME),
+      getResourceData(CURRENT_INITIAL_REALM_FILE_NAME)
+    );
 
-  const updateResourceData = createUpdateResourceData(
-    initialResourceData,
-    currentResourceData
-  );
-
-  const drugRecognitionUpdated = Boolean(
-    updateResourceData.drugRecognition.length
-  );
+  const drugRecognitionUpdated = Boolean(drugRecognition.length);
   const finishedMedicinePermissionDetailUpdated = Boolean(
-    updateResourceData.finishedMedicinePermissionDetail.length
+    finishedMedicinePermissionDetail.length
   );
 
   if (!drugRecognitionUpdated && !finishedMedicinePermissionDetailUpdated) {
@@ -87,16 +73,16 @@ export async function createUpdateResourceFile() {
 
   logger.info("Update resource data is exist. create update resource file");
 
-  await RealmDatabase.initInstance(UPDATE_REALM_FILE_NAME);
-
   if (drugRecognitionUpdated) {
-    new DrugRecognitionModel().upsertMany(updateResourceData.drugRecognition);
+    new DrugRecognitionModel(UPDATE_REALM_FILE_NAME).upsertMany(
+      drugRecognition
+    );
   }
 
   if (finishedMedicinePermissionDetailUpdated) {
-    new FinishedMedicinePermissionDetailModel().upsertMany(
-      updateResourceData.finishedMedicinePermissionDetail
-    );
+    new FinishedMedicinePermissionDetailModel(
+      UPDATE_REALM_FILE_NAME
+    ).upsertMany(finishedMedicinePermissionDetail);
   }
 
   logger.info("Create update resource file complete");

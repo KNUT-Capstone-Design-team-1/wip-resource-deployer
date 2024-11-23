@@ -6,7 +6,7 @@ import {
 import { PassThrough, Stream } from "stream";
 import fs from "fs";
 import path from "path";
-import { CURRENT_DATABASE_DIRECTORY_NAME, logger } from "../../utils";
+import { DATABASE_DIRECTORY_NAME, logger } from "../../utils";
 import { CloudFlareR2Client } from "./cloud_flare_r2_client";
 
 export class CloudFlareDownloadService {
@@ -19,7 +19,7 @@ export class CloudFlareDownloadService {
 
     this.client = CloudFlareR2Client.get();
     this.bucket = CLOUD_FLARE_RESOURCE_BUCKET as string;
-    this.resourcePath = CURRENT_DATABASE_DIRECTORY_NAME;
+    this.resourcePath = DATABASE_DIRECTORY_NAME;
   }
 
   public async downloadAllResources() {
@@ -58,7 +58,7 @@ export class CloudFlareDownloadService {
     }
 
     const fileStream = fs.createWriteStream(
-      path.join(this.resourcePath, `/${fileName}`)
+      path.join(this.resourcePath, `/current_${fileName}`)
     );
 
     const passThroughStream = new PassThrough();

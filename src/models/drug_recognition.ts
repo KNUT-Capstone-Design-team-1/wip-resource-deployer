@@ -7,13 +7,17 @@ export class DrugRecognitionModel {
   private readonly database: Realm;
   private readonly collection: string;
 
-  constructor() {
-    this.database = RealmDatabase.get();
+  constructor(realmFilepath: string) {
+    this.database = RealmDatabase.initInstance(realmFilepath);
     this.collection = DRUG_RECOGNITION;
   }
 
   public readAll() {
-    return this.database.objects(this.collection) as unknown as Array<IDrugRecognition>;
+    return Array.from(
+      this.database.objects(
+        this.collection
+      ) as unknown as Array<IDrugRecognition>
+    );
   }
 
   public upsertMany(datas: Array<IDrugRecognition>) {
