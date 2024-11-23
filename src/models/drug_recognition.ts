@@ -1,7 +1,7 @@
 import Realm from "realm";
 import { RealmDatabase } from "./realm_database";
 import { IDrugRecognition } from "../@types";
-import { DRUG_RECOGNITION, logger } from "../utils";
+import { DRUG_RECOGNITION } from "../utils";
 
 export class DrugRecognitionModel {
   private readonly database: Realm;
@@ -18,7 +18,6 @@ export class DrugRecognitionModel {
 
   public upsertMany(datas: Array<IDrugRecognition>) {
     for (let i = 0; i < datas.length; i += 1) {
-      logger.info("Upsert of %s", datas[i]);
       this.upsert(datas[i]);
     }
   }

@@ -48,9 +48,7 @@ export class CloudFlareDownloadService {
       Bucket: this.bucket,
       Key: fileName,
     });
-
     const response = await this.client.send(command);
-
     this.createFile(fileName, response.Body as Stream);
   }
 

@@ -1,7 +1,7 @@
 import Realm from "realm";
 import { RealmDatabase } from "./realm_database";
 import { IFinishedMedicinePermissionDetails } from "../@types";
-import { FINISHED_MEDICINE_PERMISSION_DETAILS, logger } from "../utils";
+import { FINISHED_MEDICINE_PERMISSION_DETAILS } from "../utils";
 
 export class FinishedMedicinePermissionDetailModel {
   private readonly database: Realm;
@@ -18,7 +18,6 @@ export class FinishedMedicinePermissionDetailModel {
 
   public upsertMany(datas: Array<IFinishedMedicinePermissionDetails>) {
     for (let i = 0; i < datas.length; i += 1) {
-      logger.info("Upsert of %s", datas[i]);
       this.upsert(datas[i]);
     }
   }

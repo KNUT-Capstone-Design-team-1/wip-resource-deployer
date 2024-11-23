@@ -1,14 +1,11 @@
+import "dotenv/config";
 import { RealmDatabase } from "./models";
 import {
   createInitialResourceFile,
   CloudFlareDownloadService,
   CloudFlareR2Client,
 } from "./services";
-import {
-  CURRENT_INITIAL_REALM_FILE_NAME,
-  NEW_INITIAL_REALM_FILE_NAME,
-  logger,
-} from "./utils";
+import { NEW_INITIAL_REALM_FILE_NAME, logger } from "./utils";
 
 async function main() {
   logger.info("Start wip-resource-deployer");
@@ -22,9 +19,6 @@ async function main() {
   const resourceDownloadService = new CloudFlareDownloadService();
   await resourceDownloadService.downloadAllResources();
 
-  logger.info("Load current resource data");
-  await RealmDatabase.initInstance(CURRENT_INITIAL_REALM_FILE_NAME);
-  
   // 2. current load한다
   //   - Realm.copyBundledRealmFiles(); 으로 *.realm 파일들을 애플리케이션 문서 디렉터리에 추가한다
   //   - const realmContext = createRealmContext({schema: [], path: 'current~~~.realm'}); 으로 realm context를 가져온다
@@ -35,7 +29,6 @@ async function main() {
   // 5. initial.realm과 update.realm을 CF에 업로드 하여 덮어쓰기 한다
 
   logger.info("End wip-resource-deployer");
-  process.exit(0);
 }
 
 main();
