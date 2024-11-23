@@ -3,7 +3,7 @@ import {
   DrugRecognitionModel,
   FinishedMedicinePermissionDetailModel,
   RealmDatabase,
-} from "../models/";
+} from "../models";
 import { ResourceLoader } from "./resource_loader";
 
 export async function createInitialResourceFile() {

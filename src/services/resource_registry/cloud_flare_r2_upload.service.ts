@@ -7,4 +7,6 @@ export class CloudflareUploadService {
   constructor() {
     this.client = CloudFlareR2Client.get();
   }
+
+  public async upload(fileName: string) {}
 }
