@@ -10,7 +10,7 @@ export const FinishedMedicinePermissionDetailSchema: ObjectSchema = {
   properties: {
     ITEM_SEQ: "string",
     ITEM_NAME: "string",
-    ENTP_NAME: { type: "string", optional: true },
+    ENTP_NAME: "string",
     ITEM_PERMIT_DATE: { type: "string", optional: true },
     CNSGN_MANUF: { type: "string", optional: true },
     ETC_OTC_CODE: { type: "string", optional: true },

@@ -10,8 +10,8 @@ export const DrugRecognitionSchema: ObjectSchema = {
   properties: {
     ITEM_SEQ: "string",
     ITEM_NAME: "string",
-    ENTP_SEQ: { type: "string", optional: true },
-    ENTP_NAME: { type: "string", optional: true },
+    ENTP_SEQ: "string",
+    ENTP_NAME: "string",
     CHARTIN: { type: "string", optional: true },
     ITEM_IMAGE: { type: "string", optional: true },
     PRINT_FRONT: { type: "string", optional: true },

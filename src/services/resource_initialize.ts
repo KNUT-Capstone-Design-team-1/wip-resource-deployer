@@ -1,12 +1,15 @@
-import { logger } from "../utils";
+import { logger, NEW_INITIAL_REALM_FILE_NAME } from "../utils";
 import {
   DrugRecognitionModel,
   FinishedMedicinePermissionDetailModel,
+  RealmDatabase,
 } from "../models/";
 import { ResourceLoader } from "./resource_loader";
 
 export async function createInitialResourceFile() {
   logger.info("Start load resource");
+  await RealmDatabase.initInstance(NEW_INITIAL_REALM_FILE_NAME);
+
   const resourceLoader = new ResourceLoader();
   const resource = await resourceLoader.loadResource();
   logger.info("Resource load complete");

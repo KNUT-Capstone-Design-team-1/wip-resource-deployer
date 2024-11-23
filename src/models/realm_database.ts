@@ -3,6 +3,7 @@ import {
   DrugRecognitionSchema,
   FinishedMedicinePermissionDetailSchema,
 } from "../schemas";
+import { convertStringToInt8Array } from "../utils";
 
 export class RealmDatabase {
   private static _instance: Realm;
@@ -11,14 +12,17 @@ export class RealmDatabase {
     return this._instance;
   }
 
-  public static async initInstance(path: string): Promise<Realm> {
-    if (!this._instance) {
-      this._instance = await Realm.open({
-        schema: [DrugRecognitionSchema, FinishedMedicinePermissionDetailSchema],
-        path,
-      });
+  public static async initInstance(path: string) {
+    if (this._instance) {
+      this._instance.close();
     }
+  
+    const config = {
+      path,
+      schema: [DrugRecognitionSchema, FinishedMedicinePermissionDetailSchema],
+      encryptionKey: convertStringToInt8Array(process.env.REALM_ENCRYPTION_KEY as string),
+    };
 
-    return this._instance;
+    this._instance = await Realm.open(config);
   }
 }
