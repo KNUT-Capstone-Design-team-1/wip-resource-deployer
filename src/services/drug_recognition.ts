@@ -4,16 +4,16 @@ import { IDrugRecognition } from "../@types/drug_recognition";
 import { DRUG_RECOGNITION, logger } from "../utils";
 
 export class DrugRecognitionModel {
-  private readonly realm: Realm;
+  private readonly database: Realm;
   private readonly collection: string;
 
   constructor() {
-    this.realm = RealmDatabase.get();
+    this.database = RealmDatabase.get();
     this.collection = DRUG_RECOGNITION;
   }
 
   public readAll() {
-    return this.realm.objects(this.collection);
+    return this.database.objects(this.collection);
   }
 
   public upsertMany(datas: Array<IDrugRecognition>) {
@@ -24,8 +24,8 @@ export class DrugRecognitionModel {
   }
 
   public upsert(data: IDrugRecognition) {
-    this.realm.write(() => {
-      this.realm.create(DRUG_RECOGNITION, data, Realm.UpdateMode.Modified);
+    this.database.write(() => {
+      this.database.create(DRUG_RECOGNITION, data, Realm.UpdateMode.Modified);
     });
   }
 }

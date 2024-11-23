@@ -4,16 +4,16 @@ import { IFinishedMedicinePermissionDetails } from "../@types/finished_medicine_
 import { FINISHED_MEDICINE_PERMISSION_DETAILS, logger } from "../utils";
 
 export class FinishedMedicinePermissionDetailModel {
-  private readonly realm: Realm;
+  private readonly database: Realm;
   private readonly collection: string;
 
   constructor() {
-    this.realm = RealmDatabase.get();
+    this.database = RealmDatabase.get();
     this.collection = FINISHED_MEDICINE_PERMISSION_DETAILS;
   }
 
   public readAll() {
-    return this.realm.objects(this.collection);
+    return this.database.objects(this.collection);
   }
 
   public upsertMany(datas: Array<IFinishedMedicinePermissionDetails>) {
@@ -24,8 +24,8 @@ export class FinishedMedicinePermissionDetailModel {
   }
 
   public upsert(data: IFinishedMedicinePermissionDetails) {
-    this.realm.write(() => {
-      this.realm.create(
+    this.database.write(() => {
+      this.database.create(
         FINISHED_MEDICINE_PERMISSION_DETAILS,
         data,
         Realm.UpdateMode.Modified
