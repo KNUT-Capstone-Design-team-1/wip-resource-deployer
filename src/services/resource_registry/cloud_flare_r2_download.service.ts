@@ -49,10 +49,10 @@ export class CloudFlareDownloadService {
       Key: fileName,
     });
     const response = await this.client.send(command);
-    this.createFile(fileName, response.Body as Stream);
+    await this.createFile(fileName, response.Body as Stream);
   }
 
-  private createFile(fileName: string, streamData: Stream) {
+  private async createFile(fileName: string, streamData: Stream) {
     if (!fs.existsSync(this.resourcePath)) {
       fs.mkdirSync(this.resourcePath);
     }
