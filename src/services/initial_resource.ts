@@ -1,7 +1,7 @@
+import RealmDatabase from "../models/realm_database";
 import { DrugRecognitionModel } from "../models/drug_recognition";
 import { FinishedMedicinePermissionDetailModel } from "../models/finished_medicine_permission_details";
 import { logger, INITIAL_REALM_FILE_NAME } from "../utils";
-import RealmDatabase from "./realm_database";
 import { ResourceLoader } from "./resource_loader";
 
 export async function createInitialResourceFile() {
