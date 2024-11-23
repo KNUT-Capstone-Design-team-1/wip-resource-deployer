@@ -6,3 +6,4 @@ log
 *.realm.lock
 database_resource
 current_database_resource
+tmp
