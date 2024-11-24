@@ -19,26 +19,22 @@ function createUpdateResourceData(
   newRes: TLoadedResource,
   currentRes: TLoadedResource
 ): TLoadedResource {
+  const drugRecognition = getObjectArrayDiff(
+    newRes.drugRecognition,
+    "ITEM_SEQ",
+    currentRes.drugRecognition
+  ) as Array<IDrugRecognition>;
+
+  const finishedMedicinePermissionDetail = getObjectArrayDiff(
+    newRes.finishedMedicinePermissionDetail,
+    "ITEM_SEQ",
+    currentRes.finishedMedicinePermissionDetail
+  ) as Array<IFinishedMedicinePermissionDetail>;
+
   const updateResourceData: TLoadedResource = {
-    drugRecognition: [],
-    finishedMedicinePermissionDetail: [],
+    drugRecognition: [...drugRecognition],
+    finishedMedicinePermissionDetail: [...finishedMedicinePermissionDetail],
   };
-
-  updateResourceData.drugRecognition.push(
-    ...(getObjectArrayDiff(
-      newRes.drugRecognition,
-      "ITEM_SEQ",
-      currentRes.drugRecognition
-    ) as Array<IDrugRecognition>)
-  );
-
-  updateResourceData.finishedMedicinePermissionDetail.push(
-    ...(getObjectArrayDiff(
-      newRes.finishedMedicinePermissionDetail,
-      "ITEM_SEQ",
-      currentRes.finishedMedicinePermissionDetail
-    ) as Array<IFinishedMedicinePermissionDetail>)
-  );
 
   return updateResourceData;
 }
