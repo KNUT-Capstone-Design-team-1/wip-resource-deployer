@@ -1,5 +1,4 @@
 import path from "path";
-import _ from "lodash";
 import logger from "./logger";
 
 export const DATABASE_DIRECTORY_NAME = "./database_resource";
@@ -40,7 +39,7 @@ export function getObjectArrayDiff(
   
     const sameItem = compare.find((c) => c[criteriaKey] === criteriaItem[criteriaKey]);
 
-    if (!sameItem || !_.isEqual(criteriaItem, sameItem)) {
+    if (!sameItem || JSON.stringify(criteriaItem) !== JSON.stringify(sameItem)) {
       diff.push(criteriaItem);
     }
   }

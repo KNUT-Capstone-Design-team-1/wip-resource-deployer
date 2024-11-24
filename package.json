@@ -23,14 +23,12 @@
     "dotenv": "^16.4.5",
     "fs": "^0.0.1-security",
     "iconv-lite": "^0.6.3",
-    "lodash": "^4.17.21",
     "realm": "^12.13.2",
     "simple-excel-to-json": "^2.3.0",
     "typescript": "^5.6.3",
     "winston": "^3.17.0"
   },
   "devDependencies": {
-    "@types/lodash": "^4.17.13",
     "ts-node": "^10.9.2"
   }
 }

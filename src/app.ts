@@ -15,7 +15,7 @@ import {
 
 async function main() {
   logger.info("------Create initial resource file------");
-  await createInitialResourceFile();
+  // await createInitialResourceFile();
 
   logger.info("------Upload resource file------");
   CloudFlareR2Client.initS3Client();
@@ -24,7 +24,7 @@ async function main() {
 
   logger.info("------Download current resource file------");
   const resourceDownloadService = new CloudFlareDownloadService();
-  await resourceDownloadService.downloadAllResources();
+  // await resourceDownloadService.downloadAllResources();
 
   logger.info("------Create update resource file------");
   await createUpdateResourceFile();
