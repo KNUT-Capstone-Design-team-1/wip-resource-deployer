@@ -49,7 +49,7 @@ function getResourceData(realmFilePath: string): TLoadedResource {
 }
 
 export async function createUpdateResourceFile() {
-  logger.info("Create update resource data");
+  logger.info("Compare initial resource current and new");
   const { drugRecognition, finishedMedicinePermissionDetail } =
     createUpdateResourceData(
       getResourceData(INITIAL_REALM_FILE_NAME),
@@ -66,7 +66,7 @@ export async function createUpdateResourceFile() {
     return;
   }
 
-  logger.info("Update resource data is exist. create update resource file");
+  logger.info("Update data is exist. create update resource file");
 
   if (drugRecognitionUpdated) {
     new DrugRecognitionModel(UPDATE_REALM_FILE_NAME).upsertMany(
@@ -80,5 +80,5 @@ export async function createUpdateResourceFile() {
     ).upsertMany(finishedMedicinePermissionDetail);
   }
 
-  logger.info("Create update resource file complete");
+  logger.info("Complete resource file for update");
 }
