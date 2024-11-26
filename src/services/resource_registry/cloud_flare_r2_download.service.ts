@@ -15,15 +15,13 @@ export class CloudFlareDownloadService {
   private readonly resourcePath: string;
 
   constructor() {
-    const { CLOUD_FLARE_RESOURCE_BUCKET } = process.env;
-
     this.client = CloudFlareR2Client.get();
-    this.bucket = CLOUD_FLARE_RESOURCE_BUCKET as string;
+    this.bucket = process.env.CLOUD_FLARE_RESOURCE_BUCKET as string;
     this.resourcePath = DATABASE_DIRECTORY_NAME;
   }
 
   public async downloadAllResources() {
-    const resourceList = await this.getBucketList();
+    const resourceList = await this.getObjectResource();
 
     if (!resourceList?.length) {
       logger.info("Resoure list is not exist in bucket");
@@ -37,7 +35,7 @@ export class CloudFlareDownloadService {
     }
   }
 
-  private async getBucketList() {
+  private async getObjectResource() {
     const command = new ListObjectsV2Command({ Bucket: this.bucket });
     const response = await this.client.send(command);
     return response.Contents;
