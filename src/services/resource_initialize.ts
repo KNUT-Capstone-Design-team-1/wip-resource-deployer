@@ -16,11 +16,11 @@ export async function createInitialResourceFile() {
   new DrugRecognitionModel(INITIAL_REALM_FILE_NAME).upsertMany(
     drugRecognition
   );
-  logger.info("Upsert complete");
+  logger.info("Complete upsert drug recognition");
 
   logger.info("Upsert finished medicine permission detail");
   new FinishedMedicinePermissionDetailModel(
     INITIAL_REALM_FILE_NAME
   ).upsertMany(finishedMedicinePermissionDetail);
-  logger.info("Upsert complete");
+  logger.info("Complete upsert finished medicine permission detail");
 }

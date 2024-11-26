@@ -64,12 +64,12 @@ export class CloudFlareDownloadService {
       streamData.pipe(passThroughStream).pipe(fileStream);
 
       fileStream.on("finish", () => {
-        logger.info("File downloaded successfully!");
+        logger.info("Success downloaded %s", fileName);
         resolve("success");
       });
 
       fileStream.on("error", (err) => {
-        logger.error("Error downloading file:", err);
+        logger.error("Failed to download %s. %s", fileName, err);
         reject(err);
       });
     });
