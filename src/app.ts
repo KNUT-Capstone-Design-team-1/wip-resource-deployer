@@ -2,7 +2,6 @@ import "dotenv/config";
 import {
   createInitialResourceFile,
   CloudFlareDownloadService,
-  CloudFlareR2Client,
   createUpdateResourceFile,
   CloudflareUploadService,
 } from "./services";
@@ -13,7 +12,6 @@ async function main() {
   await createInitialResourceFile();
 
   logger.info("------Download current resource file------");
-  CloudFlareR2Client.initS3Client();
   const resourceDownloadService = new CloudFlareDownloadService();
   await resourceDownloadService.downloadAllResources();
 
