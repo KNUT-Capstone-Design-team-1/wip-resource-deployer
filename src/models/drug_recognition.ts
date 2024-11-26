@@ -8,7 +8,7 @@ export class DrugRecognitionModel {
   private readonly collection: string;
 
   constructor(realmFilepath: string) {
-    this.database = RealmDatabase.initInstance(realmFilepath);
+    this.database = RealmDatabase.getInstance(realmFilepath);
     this.collection = DRUG_RECOGNITION;
   }
 

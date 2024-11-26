@@ -8,7 +8,7 @@ export class FinishedMedicinePermissionDetailModel {
   private readonly collection: string;
 
   constructor(realmFilepath: string) {
-    this.database = RealmDatabase.initInstance(realmFilepath);
+    this.database = RealmDatabase.getInstance(realmFilepath);
     this.collection = FINISHED_MEDICINE_PERMISSION_DETAIL;
   }
 

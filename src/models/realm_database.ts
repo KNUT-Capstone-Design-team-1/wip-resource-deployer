@@ -6,7 +6,7 @@ import {
 import { convertStringToInt8Array } from "../utils";
 
 export class RealmDatabase {
-  public static initInstance(realmFilepath: string) {
+  public static getInstance(realmFilepath: string): Realm {
     const config = {
       path: realmFilepath,
       schema: [DrugRecognitionSchema, FinishedMedicinePermissionDetailSchema],
