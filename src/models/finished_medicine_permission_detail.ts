@@ -20,19 +20,15 @@ export class FinishedMedicinePermissionDetailModel {
     );
   }
 
-  public upsertMany(datas: Array<IFinishedMedicinePermissionDetail>) {
-    for (let i = 0; i < datas.length; i += 1) {
-      this.upsert(datas[i]);
-    }
-  }
-
-  public upsert(data: IFinishedMedicinePermissionDetail) {
+  public upsertMany(data: Array<IFinishedMedicinePermissionDetail>) {
     this.database.write(() => {
-      this.database.create(
-        FINISHED_MEDICINE_PERMISSION_DETAIL,
-        data,
-        Realm.UpdateMode.Modified
-      );
-    });
+      for (let i = 0; i < data.length; i += 1) {
+        this.database.create(
+          FINISHED_MEDICINE_PERMISSION_DETAIL,
+          data[i],
+          Realm.UpdateMode.Modified
+        );
+      }
+    })
   }
 }

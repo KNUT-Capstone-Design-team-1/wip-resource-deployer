@@ -20,15 +20,11 @@ export class DrugRecognitionModel {
     );
   }
 
-  public upsertMany(datas: Array<IDrugRecognition>) {
-    for (let i = 0; i < datas.length; i += 1) {
-      this.upsert(datas[i]);
-    }
-  }
-
-  public upsert(data: IDrugRecognition) {
+  public upsertMany(data: Array<IDrugRecognition>) {
     this.database.write(() => {
-      this.database.create(DRUG_RECOGNITION, data, Realm.UpdateMode.Modified);
-    });
+      for (let i = 0; i < data.length; i += 1) {
+        this.database.create(DRUG_RECOGNITION, data[i], Realm.UpdateMode.Modified);
+      }
+    })
   }
 }
