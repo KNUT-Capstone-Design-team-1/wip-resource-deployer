@@ -29,4 +29,5 @@ export interface IDrugRecognition {
   MARK_CODE_BACK_IMG: string; // 마크 이미지 (뒤)
   ITEM_ENG_NAME: string; // 제품 영문명
   EDI_CODE: string; // 보험 코드
+  VECTOR: number[];
 }

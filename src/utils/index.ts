@@ -36,7 +36,7 @@ export function getObjectArrayDiff(
 
   for (let i = 0; i < criteria.length; i += 1) {
     const criteriaItem = criteria[i];
-  
+
     const sameItem = compare.find((c) => c[criteriaKey] === criteriaItem[criteriaKey]);
 
     if (!sameItem || JSON.stringify(criteriaItem) !== JSON.stringify(sameItem)) {
@@ -45,6 +45,19 @@ export function getObjectArrayDiff(
   }
 
   return diff;
+}
+
+// PRINT_FRONT + PRINT_BACK => vector (유니코드 벡터)
+const maxTextLength = 29
+
+export const textToVector = (text: string) => {
+  const vector = new Array<number>(maxTextLength).fill(0)
+
+  for (let i = 0; i < text.length; i++) {
+    vector[i] = text.charCodeAt(i)
+  }
+
+  return vector
 }
 
 export { logger };
