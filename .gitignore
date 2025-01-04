@@ -7,3 +7,4 @@ log
 database_resource
 current_database_resource
 tmp
+.DS_Store

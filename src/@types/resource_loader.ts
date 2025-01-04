@@ -23,6 +23,10 @@ export type TFinishedMedicinePermissionDetail = Record<
 export type TLoadedResource = TDrugRecognitionResourceObj &
   TFinishedMedicinePermissionDetail;
 
+export type TResource =
+  | IDrugRecognition
+  | IFinishedMedicinePermissionDetail
+
 export type TResourceData =
   | Array<IDrugRecognition>
-  | Array<IFinishedMedicinePermissionDetail>;
+  | Array<IFinishedMedicinePermissionDetail>

@@ -1,5 +1,7 @@
 import path from "path";
 import logger from "./logger";
+import { headerKeyMap } from "./converter";
+import { replaceDrugRecognition, optimizeDrugRecognition } from "./replace";
 
 export const DATABASE_DIRECTORY_NAME = "./database_resource";
 
@@ -47,17 +49,4 @@ export function getObjectArrayDiff(
   return diff;
 }
 
-// PRINT_FRONT + PRINT_BACK => vector (유니코드 벡터)
-const maxTextLength = 29
-
-export const textToVector = (text: string) => {
-  const vector = new Array<number>(maxTextLength).fill(0)
-
-  for (let i = 0; i < text.length; i++) {
-    vector[i] = text.charCodeAt(i)
-  }
-
-  return vector
-}
-
-export { logger };
+export { logger, headerKeyMap, replaceDrugRecognition, optimizeDrugRecognition };
