@@ -21,6 +21,7 @@ export const DrugRecognitionSchema: ObjectSchema = {
     LINE_FRONT: { type: "string", optional: true }, // 분할선앞
     LINE_BACK: { type: "string", optional: true }, // 분할선뒤
     IMG_REGIST_TS: { type: "string", optional: true }, // 이미지생성일자(약학정보원)
+    CLASS_NAME: { type: "string", optional: true }, // 분류명
     ETC_OTC_CODE: { type: "string", optional: true }, // 전문일반구분
     ITEM_PERMIT_DATE: { type: "string", optional: true }, // 품목허가일자
     // Finished Medicine Permission Detail Schema

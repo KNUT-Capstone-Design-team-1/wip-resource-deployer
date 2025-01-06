@@ -20,6 +20,7 @@ export interface IDrugRecognition {
   THICK: string; // 두께
   IMG_REGIST_TS: string; // 약학 정보원 이미지 생성일
   CLASS_NO: string; // 분류 번호
+  CLASS_NAME: string; // 분류명
   ETC_OTC_CODE: string; // 전문/일반
   ITEM_PERMIT_DATE: string; // 품목 허가 일자
   SHAPE_CODE: string; // 제형 코드

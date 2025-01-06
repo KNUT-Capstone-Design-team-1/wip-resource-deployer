@@ -1,4 +1,5 @@
 // res 데이터 Header Map
+// DB에 사용할 데이터는 여기에 추가
 const resHeaderDrugRecog: Record<string, string> = {
   '품목일련번호': 'ITEM_SEQ',
   '품목명': 'ITEM_NAME',
@@ -13,6 +14,7 @@ const resHeaderDrugRecog: Record<string, string> = {
   '분할선앞': 'LINE_FRONT',
   '분할선뒤': 'LINE_BACK',
   '이미지생성일자(약학정보원)': 'IMG_REGIST_TS',
+  '분류명': 'CLASS_NAME',
   '전문일반구분': 'ETC_OTC_CODE',
   '품목허가일자': 'ITEM_PERMIT_DATE',
 }
