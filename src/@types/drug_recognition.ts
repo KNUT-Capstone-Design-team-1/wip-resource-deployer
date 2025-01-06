@@ -29,5 +29,15 @@ export interface IDrugRecognition {
   MARK_CODE_BACK_IMG: string; // 마크 이미지 (뒤)
   ITEM_ENG_NAME: string; // 제품 영문명
   EDI_CODE: string; // 보험 코드
+  // Add Finished Medicine Permission Detail Schema
+  CHART: string;
+  BAR_CODE: string; // 표준코드
+  MATERIAL_NAME: string; // 원료 성분
+  VALID_TERM: string; // 유효 기간
+  STORAGE_METHOD: string; // 저장 방법
+  PACK_UNIT: string; // 포장 단위
+  MAIN_ITEM_INGR: string; // 주성분명
+  INGR_NAME: string; // 첨가제명
+  // Add Similarity Sort
   VECTOR: number[];
 }

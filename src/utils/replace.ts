@@ -21,7 +21,18 @@ const replaceDrugRecognition = (data: Array<IDrugRecognition>) => {
 const optimizeDrugRecognition = (drugData: Array<IDrugRecognition>, finishedData: Array<IFinishedMedicinePermissionDetail>): Array<IDrugRecognition> => {
   const optimizedDrugData = drugData.filter((drug) => {
     return finishedData.some((finished) => {
-      return finished.ITEM_NAME === drug.ITEM_NAME
+      if (finished.ITEM_SEQ === drug.ITEM_SEQ) {
+        drug.CHART = finished.CHART
+        drug.BAR_CODE = finished.BAR_CODE
+        drug.MATERIAL_NAME = finished.MATERIAL_NAME
+        drug.VALID_TERM = finished.VALID_TERM
+        drug.STORAGE_METHOD = finished.STORAGE_METHOD
+        drug.PACK_UNIT = finished.PACK_UNIT
+        drug.MAIN_ITEM_INGR = finished.MAIN_ITEM_INGR
+        drug.INGR_NAME = finished.INGR_NAME
+        return true
+      }
+      return false
     })
   })
 
