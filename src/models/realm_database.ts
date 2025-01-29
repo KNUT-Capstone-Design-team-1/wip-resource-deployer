@@ -7,6 +7,7 @@ export class RealmDatabase {
     const config = {
       path: realmFilepath,
       schema: [PillDataSchema],
+      schemaVersion: 1,
       encryptionKey: convertStringToInt8Array(
         process.env.REALM_ENCRYPTION_KEY as string
       ),
