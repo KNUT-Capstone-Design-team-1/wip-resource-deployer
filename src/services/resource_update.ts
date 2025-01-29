@@ -14,7 +14,7 @@ function getDeletedResource(
 ): Array<IPillData> {
   const deleted: Array<IPillData> = [];
 
-  for (let i = 0; currentResources.length; i += 1) {
+  for (let i = 0; i < currentResources.length; i += 1) {
     const current = currentResources[i];
 
     const deletedFromNew = !newResources.some(
