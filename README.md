@@ -21,6 +21,5 @@ CLOUD_FLARE_SECRET_ACCESS_KEY="클라우드 플레어 R2 액세스 키"
 
 # execute
 ```bash
-# mode: initial / update
-yarn start {mode}
+yarn start
 ```
