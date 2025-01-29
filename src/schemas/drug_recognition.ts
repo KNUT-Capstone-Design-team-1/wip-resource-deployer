@@ -2,9 +2,9 @@ import { ObjectSchema } from "realm";
 import { DRUG_RECOGNITION } from "../utils";
 
 /**
- * 의약품 낱알식별정보
+ * 알약 데이터
  */
-export const DrugRecognitionSchema: ObjectSchema = {
+export const PillDataSchema: ObjectSchema = {
   name: DRUG_RECOGNITION,
   primaryKey: "ITEM_SEQ",
   properties: {

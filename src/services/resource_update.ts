@@ -1,5 +1,5 @@
 import {
-  DrugRecognitionModel,
+  PillDataModel,
   FinishedMedicinePermissionDetailModel,
 } from "../models";
 import {
@@ -10,7 +10,7 @@ import {
   UPDATE_REALM_FILE_NAME,
 } from "../utils";
 import {
-  IDrugRecognition,
+  IPillData,
   IFinishedMedicinePermissionDetail,
   TLoadedResource,
 } from "../@types";
@@ -19,11 +19,11 @@ function createUpdateResourceData(
   newRes: TLoadedResource,
   currentRes: TLoadedResource
 ): TLoadedResource {
-  const drugRecognition = getObjectArrayDiff(
-    newRes.drugRecognition,
+  const pillData = getObjectArrayDiff(
+    newRes.pillData,
     "ITEM_SEQ",
-    currentRes.drugRecognition
-  ) as Array<IDrugRecognition>;
+    currentRes.pillData
+  ) as Array<IPillData>;
 
   const finishedMedicinePermissionDetail = getObjectArrayDiff(
     newRes.finishedMedicinePermissionDetail,
@@ -32,7 +32,7 @@ function createUpdateResourceData(
   ) as Array<IFinishedMedicinePermissionDetail>;
 
   const updateResourceData: TLoadedResource = {
-    drugRecognition: [...drugRecognition],
+    pillData: [...pillData],
     finishedMedicinePermissionDetail: [...finishedMedicinePermissionDetail],
   };
 
@@ -40,37 +40,37 @@ function createUpdateResourceData(
 }
 
 function getResourceData(realmFilePath: string): TLoadedResource {
-  const drugRecognition = new DrugRecognitionModel(realmFilePath).readAll();
+  const pillData = new PillDataModel(realmFilePath).readAll();
 
   const finishedMedicinePermissionDetail =
     new FinishedMedicinePermissionDetailModel(realmFilePath).readAll();
 
-  return { drugRecognition, finishedMedicinePermissionDetail };
+  return { pillData, finishedMedicinePermissionDetail };
 }
 
 export async function createUpdateResourceFile() {
   logger.info("Compare initial resource current and new");
-  const { drugRecognition, finishedMedicinePermissionDetail } =
+  const { pillData, finishedMedicinePermissionDetail } =
     createUpdateResourceData(
       getResourceData(INITIAL_REALM_FILE_NAME),
       getResourceData(CURRENT_INITIAL_REALM_FILE_NAME)
     );
 
-  const drugRecognitionUpdated = Boolean(drugRecognition.length);
+  const pillDataUpdated = Boolean(pillData.length);
   const finishedMedicinePermissionDetailUpdated = Boolean(
     finishedMedicinePermissionDetail.length
   );
 
-  if (!drugRecognitionUpdated && !finishedMedicinePermissionDetailUpdated) {
+  if (!pillDataUpdated && !finishedMedicinePermissionDetailUpdated) {
     logger.info("No updated data");
     return;
   }
 
   logger.info("Update data is exist. create update resource file");
 
-  if (drugRecognitionUpdated) {
-    new DrugRecognitionModel(UPDATE_REALM_FILE_NAME).upsertMany(
-      drugRecognition
+  if (pillDataUpdated) {
+    new PillDataModel(UPDATE_REALM_FILE_NAME).upsertMany(
+      pillData
     );
   }
 

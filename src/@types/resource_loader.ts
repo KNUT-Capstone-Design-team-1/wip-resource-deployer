@@ -1,18 +1,18 @@
-import { IDrugRecognition } from "./drug_recognition";
+import { IPillData } from "./drug_recognition";
 import { IFinishedMedicinePermissionDetail } from "./finished_medicine_permission_detail";
 
-export type TDrugRecognitionDirectoryName = "drug_recognition";
+export type TPillDataDirectoryName = "drug_recognition";
 
 export type TFinishedMedicinePermissionDetailDirectoryName =
   "finished_medicine_permission_detail";
 
 export type TResourceDirectoryName =
-  | TDrugRecognitionDirectoryName
+  | TPillDataDirectoryName
   | TFinishedMedicinePermissionDetailDirectoryName;
 
-export type TDrugRecognitionResourceObj = Record<
-  "drugRecognition",
-  Array<IDrugRecognition>
+export type TPillDataResourceObj = Record<
+  "pillData",
+  Array<IPillData>
 >;
 
 export type TFinishedMedicinePermissionDetail = Record<
@@ -20,13 +20,13 @@ export type TFinishedMedicinePermissionDetail = Record<
   Array<IFinishedMedicinePermissionDetail>
 >;
 
-export type TLoadedResource = TDrugRecognitionResourceObj &
+export type TLoadedResource = TPillDataResourceObj &
   TFinishedMedicinePermissionDetail;
 
 export type TResource =
-  | IDrugRecognition
+  | IPillData
   | IFinishedMedicinePermissionDetail
 
 export type TResourceData =
-  | Array<IDrugRecognition>
+  | Array<IPillData>
   | Array<IFinishedMedicinePermissionDetail>

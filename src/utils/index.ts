@@ -1,7 +1,7 @@
 import path from "path";
 import logger from "./logger";
 import { headerKeyMap } from "./converter";
-import { replaceDrugRecognition, optimizeDrugRecognition } from "./replace";
+import { replacePillData, optimizePillData } from "./replace";
 
 export const DATABASE_DIRECTORY_NAME = "./database_resource";
 
@@ -19,7 +19,7 @@ export const CURRENT_INITIAL_REALM_FILE_NAME = path.join(
 export const FINISHED_MEDICINE_PERMISSION_DETAIL =
   "FinishedMedicinePermissionDetail";
 
-export const DRUG_RECOGNITION = "DrugRecognition";
+export const DRUG_RECOGNITION = "PillData";
 
 export function convertStringToInt8Array(
   int8ArrayFormatString: string
@@ -49,4 +49,4 @@ export function getObjectArrayDiff(
   return diff;
 }
 
-export { logger, headerKeyMap, replaceDrugRecognition, optimizeDrugRecognition };
+export { logger, headerKeyMap, replacePillData, optimizePillData };

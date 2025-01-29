@@ -1,7 +1,7 @@
-import { IDrugRecognition, IFinishedMedicinePermissionDetail } from "src/@types"
+import { IPillData, IFinishedMedicinePermissionDetail } from "src/@types"
 import { textToVector } from "./converter"
 
-const replaceDrugRecognition = (data: Array<IDrugRecognition>) => {
+const replacePillData = (data: Array<IPillData>) => {
   data.forEach((item) => {
     item.PRINT_FRONT = item.PRINT_FRONT.replace(/\u3000+|=+|\s{2, }/g, " ").replace(/-{2,}|분할선/g, (match) => {
       if (match === "분할선") return "|"
@@ -18,7 +18,7 @@ const replaceDrugRecognition = (data: Array<IDrugRecognition>) => {
   })
 }
 
-const optimizeDrugRecognition = (drugData: Array<IDrugRecognition>, finishedData: Array<IFinishedMedicinePermissionDetail>): Array<IDrugRecognition> => {
+const optimizePillData = (drugData: Array<IPillData>, finishedData: Array<IFinishedMedicinePermissionDetail>): Array<IPillData> => {
   const optimizedDrugData = drugData.filter((drug) => {
     return finishedData.some((finished) => {
       if (finished.ITEM_SEQ === drug.ITEM_SEQ) {
@@ -39,4 +39,4 @@ const optimizeDrugRecognition = (drugData: Array<IDrugRecognition>, finishedData
   return optimizedDrugData
 }
 
-export { replaceDrugRecognition, optimizeDrugRecognition }
+export { replacePillData, optimizePillData }

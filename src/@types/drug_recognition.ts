@@ -1,7 +1,7 @@
 /**
- * 의약품 낱알식별정보
+ * 알약 데이터
  */
-export interface IDrugRecognition {
+export interface IPillData {
   ITEM_SEQ: string; // 품목 일련 번호
   ITEM_NAME: string; // 품목명
   ENTP_SEQ: string; // 업체 일련 번호

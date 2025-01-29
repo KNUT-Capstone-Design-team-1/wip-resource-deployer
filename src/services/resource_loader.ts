@@ -6,10 +6,10 @@ import { Converter } from "csvtojson/v2/Converter";
 import {
   TLoadedResource,
   TResourceData,
-  IDrugRecognition,
+  IPillData,
   IFinishedMedicinePermissionDetail,
   TResourceDirectoryName,
-  TDrugRecognitionDirectoryName,
+  TPillDataDirectoryName,
   TFinishedMedicinePermissionDetailDirectoryName,
   TResource,
 } from "../@types";
@@ -17,13 +17,13 @@ import { headerKeyMap } from "../utils";
 
 export class ResourceLoader {
   private readonly dirPath: string;
-  private readonly drugRecognitionDirName: TDrugRecognitionDirectoryName; // 의약품 낱알식별정보 데이터
+  private readonly pillDataDirName: TPillDataDirectoryName; // 알약 데이터 데이터
   private readonly finishedMedicinePermissionDetailDirName: TFinishedMedicinePermissionDetailDirectoryName; // 완제 의약품 허가 상세 데이터
   private convert: boolean = false; // 최신 데이터 헤더 변경 여부
 
   constructor() {
     this.dirPath = path.join(__dirname, `../../res`);
-    this.drugRecognitionDirName = "drug_recognition";
+    this.pillDataDirName = "drug_recognition";
     this.finishedMedicinePermissionDetailDirName =
       "finished_medicine_permission_detail";
   }
@@ -31,7 +31,7 @@ export class ResourceLoader {
   public async loadResource(convert: boolean = false): Promise<TLoadedResource> {
     this.convert = convert
     const resource: TLoadedResource = {
-      drugRecognition: [],
+      pillData: [],
       finishedMedicinePermissionDetail: [],
     };
 
@@ -48,8 +48,8 @@ export class ResourceLoader {
       const key = resourcePath.split(/\\|\//).pop() as TResourceDirectoryName; // 디렉터리 이름만 추출 (this.~~~dirName)
 
       if (key === "drug_recognition") {
-        resource.drugRecognition =
-          resourceData as unknown as Array<IDrugRecognition>;
+        resource.pillData =
+          resourceData as unknown as Array<IPillData>;
       }
 
       if (key === "finished_medicine_permission_detail") {
@@ -63,7 +63,7 @@ export class ResourceLoader {
 
   private getPathList(): Array<string> {
     return [
-      path.join(`${this.dirPath}/${this.drugRecognitionDirName}`),
+      path.join(`${this.dirPath}/${this.pillDataDirName}`),
       path.join(
         `${this.dirPath}/${this.finishedMedicinePermissionDetailDirName}`
       ),
