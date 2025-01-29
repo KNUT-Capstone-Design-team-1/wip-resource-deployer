@@ -145,6 +145,8 @@ export class ResourceLoader {
       propertyMapEntries.forEach(([from, to]) => {
         resource[to] = resourceData[from as keyof TResourceRaw];
       });
+
+      mappedResources.push(resource as TResource);
     });
 
     return mappedResources;
