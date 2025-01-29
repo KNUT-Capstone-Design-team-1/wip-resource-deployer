@@ -20,7 +20,7 @@ export async function createInitialResourceFile() {
 
   logger.info("Complete pill data creation");
 
-  logger.info("Upsert pill data");
+  logger.info("Upsert pill data. count: %s", pillData.length);
 
   new PillDataModel(INITIAL_REALM_FILE_NAME).upsertMany(pillData);
 

@@ -30,7 +30,12 @@ export async function createUpdateResourceFile() {
     return;
   }
 
-  logger.info("Update data is exist. create update resource file");
+  logger.info(
+    "Update data is exist. create update resource file. new: %s, current: %s, diff: %s",
+    newResources.length,
+    currentResources.length,
+    diff.length
+  );
 
   new PillDataModel(UPDATE_REALM_FILE_NAME).upsertMany(diff);
 
