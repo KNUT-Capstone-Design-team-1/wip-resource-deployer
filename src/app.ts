@@ -23,6 +23,7 @@ async function main() {
   await resourceUploadService.uploadAllResources();
 
   logger.info("------End wip-resource-deployer------");
+  process.exit(0);
 }
 
 main();
