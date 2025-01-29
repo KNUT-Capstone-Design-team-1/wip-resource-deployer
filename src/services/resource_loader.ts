@@ -98,7 +98,7 @@ export class ResourceLoader {
     const fileExtension = fileName.split(".").slice(-1)[0];
 
     const dirName = fileName
-      .split(path.sep)
+      .split(/\\|\//)
       .slice(-2)[0] as TResourceDirectoryName; // 파일 폴더 이름
 
     switch (fileExtension) {
