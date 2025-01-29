@@ -23,7 +23,7 @@ export class ResourceLoader {
 
   constructor() {
     this.dirPath = path.join(__dirname, `../../res`);
-    this.pillDataDirName = "drug_recognition";
+    this.pillDataDirName = "pill_data";
     this.finishedMedicinePermissionDetailDirName =
       "finished_medicine_permission_detail";
   }
@@ -47,7 +47,7 @@ export class ResourceLoader {
       const resourceData = await this.getResourceData(resourcePath, fileList);
       const key = resourcePath.split(/\\|\//).pop() as TResourceDirectoryName; // 디렉터리 이름만 추출 (this.~~~dirName)
 
-      if (key === "drug_recognition") {
+      if (key === "pill_data") {
         resource.pillData =
           resourceData as unknown as Array<IPillData>;
       }

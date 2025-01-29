@@ -1,11 +1,11 @@
 import { ObjectSchema } from "realm";
-import { DRUG_RECOGNITION } from "../utils";
+import { PILL_DATA } from "../utils";
 
 /**
  * 알약 데이터
  */
 export const PillDataSchema: ObjectSchema = {
-  name: DRUG_RECOGNITION,
+  name: PILL_DATA,
   primaryKey: "ITEM_SEQ",
   properties: {
     ITEM_SEQ: "string", // 품목일련번호

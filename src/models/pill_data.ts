@@ -1,7 +1,7 @@
 import Realm from "realm";
 import { RealmDatabase } from "./realm_database";
 import { IPillData } from "../@types";
-import { DRUG_RECOGNITION } from "../utils";
+import { PILL_DATA } from "../utils";
 
 export class PillDataModel {
   private readonly database: Realm;
@@ -9,7 +9,7 @@ export class PillDataModel {
 
   constructor(realmFilepath: string) {
     this.database = RealmDatabase.getInstance(realmFilepath);
-    this.collection = DRUG_RECOGNITION;
+    this.collection = PILL_DATA;
   }
 
   public readAll() {
@@ -23,7 +23,7 @@ export class PillDataModel {
   public upsertMany(data: Array<IPillData>) {
     this.database.write(() => {
       for (let i = 0; i < data.length; i += 1) {
-        this.database.create(DRUG_RECOGNITION, data[i], Realm.UpdateMode.Modified);
+        this.database.create(PILL_DATA, data[i], Realm.UpdateMode.Modified);
       }
     })
   }

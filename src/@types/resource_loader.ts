@@ -1,7 +1,7 @@
-import { IPillData } from "./drug_recognition";
+import { IPillData } from "./pill_data";
 import { IFinishedMedicinePermissionDetail } from "./finished_medicine_permission_detail";
 
-export type TPillDataDirectoryName = "drug_recognition";
+export type TPillDataDirectoryName = "pill_data";
 
 export type TFinishedMedicinePermissionDetailDirectoryName =
   "finished_medicine_permission_detail";

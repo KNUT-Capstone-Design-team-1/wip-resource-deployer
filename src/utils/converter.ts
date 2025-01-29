@@ -49,7 +49,7 @@ const textToVector = (text: string) => {
 }
 
 const headerKeyMap: Record<string, Record<string, string>> = {
-  'drug_recognition': resHeaderDrugRecog,
+  'pill_data': resHeaderDrugRecog,
   'finished_medicine_permission_detail': resHeaderFinished
 }
 

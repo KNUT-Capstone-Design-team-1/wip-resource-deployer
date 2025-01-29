@@ -19,7 +19,7 @@ export const CURRENT_INITIAL_REALM_FILE_NAME = path.join(
 export const FINISHED_MEDICINE_PERMISSION_DETAIL =
   "FinishedMedicinePermissionDetail";
 
-export const DRUG_RECOGNITION = "PillData";
+export const PILL_DATA = "PillData";
 
 export function convertStringToInt8Array(
   int8ArrayFormatString: string
