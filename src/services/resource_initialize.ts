@@ -16,8 +16,6 @@ export async function createInitialResourceFile() {
     update: true,
   }[process.argv[2] || "initial"];
 
-  console.log(process.argv[2]);
-
   logger.info("Start load resource");
   const resourceLoader = new ResourceLoader();
   const { pillData, finishedMedicinePermissionDetail } =
