@@ -14,17 +14,17 @@ function getDeletedResource(
 ): Array<IPillData> {
   const deleted: Array<IPillData> = [];
 
-  currentResources.forEach((current) => {
+  for (let i = 0; currentResources.length; i += 1) {
+    const current = currentResources[i];
+
     const deletedFromNew = !newResources.some(
-      ({ ITEM_SEQ }) => current.ITEM_SEQ === ITEM_SEQ
+      ({ ITEM_SEQ }) => current?.ITEM_SEQ === ITEM_SEQ
     );
 
-    if (!deletedFromNew) {
-      return;
+    if (deletedFromNew) {
+      deleted.push({ ...current, DELETED: true });
     }
-
-    deleted.push({ ...current, DELETED: true });
-  });
+  }
 
   return deleted;
 }
