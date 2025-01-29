@@ -1,25 +1,5 @@
-import path from "path";
 import logger from "./logger";
-import { headerKeyMap } from "./converter";
-import { replacePillData, optimizePillData } from "./replace";
-
-export const DATABASE_DIRECTORY_NAME = "./database_resource";
-
-export const INITIAL_REALM_FILE_NAME = path.join(
-  `${DATABASE_DIRECTORY_NAME}/initial.realm`
-);
-export const UPDATE_REALM_FILE_NAME = path.join(
-  `${DATABASE_DIRECTORY_NAME}/update.realm`
-);
-
-export const CURRENT_INITIAL_REALM_FILE_NAME = path.join(
-  `${DATABASE_DIRECTORY_NAME}/current_initial.realm`
-);
-
-export const FINISHED_MEDICINE_PERMISSION_DETAIL =
-  "FinishedMedicinePermissionDetail";
-
-export const PILL_DATA = "PillData";
+export * from './resource';
 
 export function convertStringToInt8Array(
   int8ArrayFormatString: string
@@ -49,4 +29,17 @@ export function getObjectArrayDiff(
   return diff;
 }
 
-export { logger, headerKeyMap, replacePillData, optimizePillData };
+export function convertTextToVector(text: string) {
+  // PRINT_FRONT + PRINT_BACK => vector (유니코드 벡터)
+  const maxVectorLength = 29;
+
+  const vector = new Array<number>(maxVectorLength).fill(0);
+
+  for (let i = 0; i < text.length; i++) {
+    vector[i] = text.charCodeAt(i);
+  }
+
+  return vector;
+}
+
+export { logger };

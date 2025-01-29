@@ -5,56 +5,59 @@ import iconvLite from "iconv-lite";
 import { Converter } from "csvtojson/v2/Converter";
 import {
   TLoadedResource,
-  TResourceData,
-  IPillData,
+  TResource,
+  IDrugRecognition,
   IFinishedMedicinePermissionDetail,
   TResourceDirectoryName,
-  TPillDataDirectoryName,
+  TDrugRecognitionDirectoryName,
   TFinishedMedicinePermissionDetailDirectoryName,
-  TResource,
+  TResourceRaw,
 } from "../@types";
-import { headerKeyMap } from "../utils";
+import {
+  DRUG_RECOGNITION_PROPERTY_MAP,
+  FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP,
+  RESOURCE_PROPERTY_MAP,
+} from "../utils";
 
 export class ResourceLoader {
   private readonly dirPath: string;
-  private readonly pillDataDirName: TPillDataDirectoryName; // 알약 데이터 데이터
+  private readonly drugRecognitionDirName: TDrugRecognitionDirectoryName; // 의약품 낱알식별정보 데이터
   private readonly finishedMedicinePermissionDetailDirName: TFinishedMedicinePermissionDetailDirectoryName; // 완제 의약품 허가 상세 데이터
-  private convert: boolean = false; // 최신 데이터 헤더 변경 여부
 
   constructor() {
     this.dirPath = path.join(__dirname, `../../res`);
-    this.pillDataDirName = "pill_data";
+
+    this.drugRecognitionDirName = "drug_recognition";
+
     this.finishedMedicinePermissionDetailDirName =
       "finished_medicine_permission_detail";
   }
 
-  public async loadResource(convert: boolean = false): Promise<TLoadedResource> {
-    this.convert = convert
+  public async loadResource(): Promise<TLoadedResource> {
     const resource: TLoadedResource = {
-      pillData: [],
+      drugRecognition: [],
       finishedMedicinePermissionDetail: [],
     };
 
     for await (const resourcePath of this.getPathList()) {
       const fileList = fs.existsSync(resourcePath)
-        ? fs.readdirSync(resourcePath).filter(file => !file.startsWith('.')) // (.)숨김파일 제외
+        ? fs.readdirSync(resourcePath).filter((file) => !file.startsWith(".")) // (.)숨김파일 제외
         : [];
 
       if (fileList.length === 0) {
         continue;
       }
 
-      const resourceData = await this.getResourceData(resourcePath, fileList);
+      const resourceData = await this.getResources(resourcePath, fileList);
       const key = resourcePath.split(/\\|\//).pop() as TResourceDirectoryName; // 디렉터리 이름만 추출 (this.~~~dirName)
 
-      if (key === "pill_data") {
-        resource.pillData =
-          resourceData as unknown as Array<IPillData>;
+      if (key === "drug_recognition") {
+        resource.drugRecognition = resourceData as Array<IDrugRecognition>;
       }
 
       if (key === "finished_medicine_permission_detail") {
         resource.finishedMedicinePermissionDetail =
-          resourceData as unknown as Array<IFinishedMedicinePermissionDetail>;
+          resourceData as Array<IFinishedMedicinePermissionDetail>;
       }
     }
 
@@ -63,76 +66,63 @@ export class ResourceLoader {
 
   private getPathList(): Array<string> {
     return [
-      path.join(`${this.dirPath}/${this.pillDataDirName}`),
+      path.join(`${this.dirPath}/${this.drugRecognitionDirName}`),
       path.join(
         `${this.dirPath}/${this.finishedMedicinePermissionDetailDirName}`
       ),
     ];
   }
 
-  private async getResourceData(
+  private async getResources(
     resourcePath: string,
     fileList: string[]
-  ): Promise<Array<TResourceData>> {
-    const resourceData: Array<TResourceData> = [];
+  ): Promise<Array<TResource>> {
+    const resourceData: Array<TResource> = [];
 
     for await (const fileName of fileList) {
-      const jsonArrOfFile = await this.convertToObject(
+      const fileContents = await this.readFileContents(
         `${resourcePath}/${fileName}`
       );
-      if (jsonArrOfFile.length === 0) {
+
+      if (fileContents.length === 0) {
         continue;
       }
-      resourceData.push(...jsonArrOfFile);
+
+      resourceData.push(...fileContents);
     }
 
     return resourceData;
   }
 
-  private async convertToObject(
-    fileName: string
-  ): Promise<Array<TResourceData>> {
+  private async readFileContents(fileName: string): Promise<Array<TResource>> {
     const fileExtension = fileName.split(".").slice(-1)[0];
-    const dirName = fileName.split(path.sep).slice(-2)[0] // 파일 폴더 이름
+
+    const dirName = fileName
+      .split(path.sep)
+      .slice(-2)[0] as TResourceDirectoryName; // 파일 폴더 이름
 
     switch (fileExtension) {
       case "xlsx":
       case "xls": {
-        const doc: { flat: () => Object[] } = xlsParser.parseXls2Json(fileName);
+        const fileContents: { flat: () => Array<TResourceRaw> } =
+          xlsParser.parseXls2Json(fileName);
 
-        if (this.convert) {
-          return doc.flat().map((item) =>
-            this.mapHeaders(item, headerKeyMap[dirName])
-          ) as unknown as Array<TResourceData>;
-        }
-
-        return doc.flat() as unknown as Array<TResourceData>;
+        return this.mappingProperty(
+          fileContents.flat(),
+          RESOURCE_PROPERTY_MAP[dirName]
+        );
       }
 
       case "csv": {
         const csvString = iconvLite.decode(fs.readFileSync(fileName), "euc-kr");
-        const rows: Array<Object> = await new Converter().fromString(csvString);
+        const fileContents = (await new Converter().fromString(
+          csvString
+        )) as Array<TResourceRaw>;
 
-        if (this.convert) {
-          return rows.map((item) =>
-            this.mapHeaders(item, headerKeyMap[dirName])
-          ) as unknown as Array<TResourceData>;
-        }
-
-        return rows as unknown as Array<TResourceData>;
-      }
-
-      case "json": {
-        const jsonStr = fs.readFileSync(fileName, "utf-8");
-        const jsonData = JSON.parse(jsonStr);
-
-        if (this.convert) {
-          return jsonData.map((item: TResource) =>
-            this.mapHeaders(item, headerKeyMap[dirName])
-          ) as unknown as Array<TResourceData>
-        }
-
-        return JSON.parse(jsonStr) as unknown as Array<TResourceData>;
+        return this.mappingProperty(
+          fileContents,
+          RESOURCE_PROPERTY_MAP[dirName]
+        );
       }
 
       default:
@@ -140,13 +130,23 @@ export class ResourceLoader {
     }
   }
 
-  private mapHeaders(row: Record<string, any>, headerMap: Record<string, string>): TResource {
-    const mappedRow: Record<string, any> = {};
-    for (const [oldKey, newKey] of Object.entries(headerMap)) {
-      if (row.hasOwnProperty(oldKey)) {
-        mappedRow[newKey] = row[oldKey];
-      }
-    }
-    return mappedRow as TResource
+  private mappingProperty(
+    fileContents: Array<TResourceRaw>,
+    propertyMap:
+      | typeof DRUG_RECOGNITION_PROPERTY_MAP
+      | typeof FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP
+  ): Array<TResource> {
+    const mappedResources: Array<TResource> = [];
+    const propertyMapEntries = Object.entries(propertyMap);
+
+    fileContents.forEach((resourceData) => {
+      const resource: Record<string, any> = {};
+
+      propertyMapEntries.forEach(([from, to]) => {
+        resource[to] = resourceData[from as keyof TResourceRaw];
+      });
+    });
+
+    return mappedResources;
   }
 }

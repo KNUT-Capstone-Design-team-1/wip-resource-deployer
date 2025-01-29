@@ -8,6 +8,7 @@ export const PillDataSchema: ObjectSchema = {
   name: PILL_DATA,
   primaryKey: "ITEM_SEQ",
   properties: {
+    // Drug Recognition Schema
     ITEM_SEQ: "string", // 품목일련번호
     ITEM_NAME: "string", // 품목명
     ENTP_SEQ: "string", // 업소일련번호
