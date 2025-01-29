@@ -8,6 +8,27 @@ import {
 } from "../utils";
 import { IPillData } from "../@types";
 
+function getDeletedResource(
+  newResources: Array<IPillData>,
+  currentResources: Array<IPillData>
+): Array<IPillData> {
+  const deleted: Array<IPillData> = [];
+
+  currentResources.forEach((current) => {
+    const deletedFromNew = !newResources.some(
+      ({ ITEM_SEQ }) => current.ITEM_SEQ === ITEM_SEQ
+    );
+
+    if (!deletedFromNew) {
+      return;
+    }
+
+    deleted.push({ ...current, DELETED: true });
+  });
+
+  return deleted;
+}
+
 export async function createUpdateResourceFile() {
   logger.info("Compare initial resource current and new");
 
@@ -23,6 +44,9 @@ export async function createUpdateResourceFile() {
     currentResources
   ) as Array<IPillData>;
 
+  const deleted = getDeletedResource(newResources, currentResources);
+  diff.push(...deleted);
+
   const pillDataUpdated = Boolean(diff.length);
 
   if (!pillDataUpdated) {
@@ -31,10 +55,11 @@ export async function createUpdateResourceFile() {
   }
 
   logger.info(
-    "Update data is exist. create update resource file. new: %s, current: %s, diff: %s",
+    "Update data is exist. create update resource file. new: %s, current: %s, diff: %s, deleted: %s",
     newResources.length,
     currentResources.length,
-    diff.length
+    diff.length,
+    deleted.length
   );
 
   new PillDataModel(UPDATE_REALM_FILE_NAME).upsertMany(diff);

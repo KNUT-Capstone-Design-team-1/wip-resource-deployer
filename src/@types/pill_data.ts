@@ -8,4 +8,5 @@ export interface IPillData
   extends IDrugRecognition,
     IFinishedMedicinePermissionDetail {
   VECTOR: number[];
+  DELETED?: boolean;
 }
