@@ -13,7 +13,7 @@ function preprocessingDrugRecognition(
       .replace(/\u3000+|=+|\s{2, }/g, " ")
       .replace(/-{2,}|분할선/g, (match) => (match === "분할선" ? "|" : ""));
 
-  const processed: Array<IDrugRecognition & Pick<IPillData, "VECTOR">> =
+  const processed: Array<IDrugRecognition & Pick<IPillData, "VECTOR" | "DELETED">> =
     drugRecognition.map((item) => {
       const { PRINT_FRONT, PRINT_BACK, ITEM_NAME } = item;
 
@@ -26,6 +26,7 @@ function preprocessingDrugRecognition(
         PRINT_FRONT: printFront,
         PRINT_BACK: printBack,
         VECTOR: convertTextToVector(printFront + printBack),
+        DELETED: false,
       };
     });
 
