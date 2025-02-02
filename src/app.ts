@@ -18,9 +18,11 @@ async function main() {
   logger.info("------Create update resource file------");
   await createUpdateResourceFile();
 
-  logger.info("------Upload resource file------");
-  const resourceUploadService = new CloudflareUploadService();
-  await resourceUploadService.uploadAllResources();
+  if (process.env.MODE === 'prod') {
+    logger.info("------Upload resource file------");
+    const resourceUploadService = new CloudflareUploadService();
+    await resourceUploadService.uploadAllResources();
+  }
 
   logger.info("------End wip-resource-deployer------");
   process.exit(0);
