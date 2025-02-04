@@ -3,7 +3,7 @@ import {
   IFinishedMedicinePermissionDetail,
   IPillData,
 } from "src/@types";
-import { convertTextToVector } from "../utils";
+import { convertTextToVector, mergeDuplicateObjectArray } from "../utils";
 
 function preprocessingDrugRecognition(
   drugRecognition: Array<IDrugRecognition>
@@ -37,8 +37,10 @@ export function createPillData(
   drugRecognition: Array<IDrugRecognition>,
   finishedMedicinePermission: Array<IFinishedMedicinePermissionDetail>
 ) {
+  const mergedDrugRecognition = mergeDuplicateObjectArray("ITEM_SEQ", drugRecognition);
+
   const preprocessedDrugRecognition =
-    preprocessingDrugRecognition(drugRecognition);
+    preprocessingDrugRecognition(mergedDrugRecognition);
 
   const pillData: Array<IPillData> = [];
 
