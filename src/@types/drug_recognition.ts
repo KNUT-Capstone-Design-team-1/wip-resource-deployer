@@ -18,4 +18,6 @@ export interface IDrugRecognition {
     CLASS_NAME: string; // 분류명
     ETC_OTC_CODE: string; // 전문일반구분
     ITEM_PERMIT_DATE: string; // 품목허가일자
+    MARK_CODE_FRONT: string; // 표기코드앞
+    MARK_CODE_BACK: string; // 표기코드뒤
   }

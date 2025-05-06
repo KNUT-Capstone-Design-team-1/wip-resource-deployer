@@ -36,6 +36,8 @@ export const DRUG_RECOGNITION_PROPERTY_MAP = {
   분류명: "CLASS_NAME",
   전문일반구분: "ETC_OTC_CODE",
   품목허가일자: "ITEM_PERMIT_DATE",
+  표기코드앞: "MARK_CODE_FRONT",
+  표기코드뒤: "MARK_CODE_BACK",
 } as const;
 
 export const FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP = {
