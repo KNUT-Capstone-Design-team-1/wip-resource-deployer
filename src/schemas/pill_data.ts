@@ -34,6 +34,8 @@ export const PillDataSchema: ObjectSchema = {
     PACK_UNIT: { type: "string", optional: true }, // 포장단위
     MAIN_ITEM_INGR: { type: "string", optional: true }, // 주성분명
     INGR_NAME: { type: "string", optional: true }, // 첨가제명
+    MARK_CODE_FRONT: { type: "string", optional: true }, // 표기코드앞
+    MARK_CODE_BACK: { type: "string", optional: true }, // 표기코드뒤
     // Custom
     VECTOR: { type: "list", objectType: 'int', optional: true }, // 정렬벡터값
     DELETED: { type: "bool", optional: true }, // 삭제여부
