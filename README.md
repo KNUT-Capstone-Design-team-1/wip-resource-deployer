@@ -18,10 +18,18 @@ CLOUD_FLARE_SECRET_ACCESS_KEY="클라우드 플레어 R2 액세스 키"
 
 MODE="실행모드. dev | prod"
 ```
-- [의약품 낱알식별](https://nedrug.mfds.go.kr/pbp/CCBGA01/getItem?totalPages=8&limit=10&page=2&&openDataInfoSeq=11)
-- [의약품 제품허가 상세정보](https://nedrug.mfds.go.kr/pbp/CCBGA01/getItem?totalPages=8&limit=10&page=2&&openDataInfoSeq=12)
+
+- 데이터베이스
+  - [의약품 낱알식별](https://nedrug.mfds.go.kr/pbp/CCBGA01/getItem?totalPages=8&limit=10&page=2&&openDataInfoSeq=11)
+  - [의약품 제품허가 상세정보](https://nedrug.mfds.go.kr/pbp/CCBGA01/getItem?totalPages=8&limit=10&page=2&&openDataInfoSeq=12)
 
 # execute
+0. .env 파일 구성
+1. 프로젝트 루트 위치에 `res` 디렉터리 생성
+2. `res` 디렉터리에 `drug_recognition` 및 `finished_medicine_permission_detail` 디렉터리 생성
+3. `res/drug_recognition` 디렉터리에 `의약품 낱알식별` 데이터베이스(xls) 파일 이동
+4. `res/finished_medicine_permission_detail` 디렉터리에 `의약품 제품허가 상세정보` 데이터베이스(xls) 파일 이동
+5. 실행
 ```bash
 yarn start
 ```
