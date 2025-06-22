@@ -38,6 +38,7 @@ export const DRUG_RECOGNITION_PROPERTY_MAP = {
   품목허가일자: "ITEM_PERMIT_DATE",
   표기코드앞: "MARK_CODE_FRONT",
   표기코드뒤: "MARK_CODE_BACK",
+  제형코드: "FORM_CODE",
 } as const;
 
 export const FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP = {

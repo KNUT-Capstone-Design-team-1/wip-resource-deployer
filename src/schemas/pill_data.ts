@@ -27,6 +27,7 @@ export const PillDataSchema: ObjectSchema = {
     ITEM_PERMIT_DATE: { type: "string", optional: true }, // 품목허가일자
     MARK_CODE_FRONT: { type: "string", optional: true }, // 표기코드앞
     MARK_CODE_BACK: { type: "string", optional: true }, // 표기코드뒤
+    FORM_CODE: { type: "string", optional: true }, // 제형코드
     // Finished Medicine Permission Detail Schema
     CHART: { type: "string", optional: true }, // 성상
     BAR_CODE: { type: "string", optional: true }, // 표준코드
@@ -37,7 +38,7 @@ export const PillDataSchema: ObjectSchema = {
     MAIN_ITEM_INGR: { type: "string", optional: true }, // 주성분명
     INGR_NAME: { type: "string", optional: true }, // 첨가제명
     // Custom
-    VECTOR: { type: "list", objectType: 'int', optional: true }, // 정렬벡터값
+    VECTOR: { type: "list", objectType: "int", optional: true }, // 정렬벡터값
     DELETED: { type: "bool", optional: true }, // 삭제여부
   },
 };
