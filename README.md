@@ -20,6 +20,7 @@ CLOUD_FLARE_TOKEN_VALUE="클라우드 플레어 R2 토큰"
 CLOUD_FLARE_ACCESS_KEY_ID="클라우드 플레어 R2 액세스 키 아이디"
 CLOUD_FLARE_SECRET_ACCESS_KEY="클라우드 플레어 R2 액세스 키"
 
+# 자동 업로드 시 prod로 변경
 MODE="실행모드. dev | prod"
 ```
 
