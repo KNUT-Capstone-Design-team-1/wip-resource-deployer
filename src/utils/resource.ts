@@ -1,17 +1,19 @@
 import path from "path";
+import moment from "moment";
 import { TResourceDirectoryName } from "src/@types";
+import config from "../../config.json";
 
 export const DATABASE_DIRECTORY_NAME = "./database_resource";
 
+const resourceVersion = `${config.schemaVersion}_${moment().format(
+  "YYYYMMDD"
+)}${config.schemaMinorVersion ? `_${config.schemaMinorVersion}` : ``}`;
+
 export const INITIAL_REALM_FILE_NAME = path.join(
-  `${DATABASE_DIRECTORY_NAME}/initial.realm`
+  `${DATABASE_DIRECTORY_NAME}/initial_${resourceVersion}.realm`
 );
 export const UPDATE_REALM_FILE_NAME = path.join(
-  `${DATABASE_DIRECTORY_NAME}/update.realm`
-);
-
-export const CURRENT_INITIAL_REALM_FILE_NAME = path.join(
-  `${DATABASE_DIRECTORY_NAME}/current_initial.realm`
+  `${DATABASE_DIRECTORY_NAME}/update_${resourceVersion}.realm`
 );
 
 export const FINISHED_MEDICINE_PERMISSION_DETAIL =

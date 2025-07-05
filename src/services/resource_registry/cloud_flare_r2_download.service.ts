@@ -17,7 +17,7 @@ export class CloudFlareDownloadService {
   constructor() {
     this.client = CloudFlareR2Client.get();
     this.bucket = process.env.CLOUD_FLARE_RESOURCE_BUCKET as string;
-    this.resourcePath = DATABASE_DIRECTORY_NAME;
+    this.resourcePath = path.join(DATABASE_DIRECTORY_NAME, `/current`);
   }
 
   public async downloadAllResources() {
@@ -52,12 +52,12 @@ export class CloudFlareDownloadService {
 
   private async createFile(fileName: string, streamData: Stream) {
     if (!fs.existsSync(this.resourcePath)) {
-      fs.mkdirSync(this.resourcePath);
+      fs.mkdirSync(this.resourcePath, { recursive: true });
     }
 
     return new Promise((resolve, reject) => {
       const fileStream = fs.createWriteStream(
-        path.join(this.resourcePath, `/current_${fileName}`)
+        path.join(this.resourcePath, fileName)
       );
 
       const passThroughStream = new PassThrough();

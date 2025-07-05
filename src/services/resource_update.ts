@@ -1,10 +1,12 @@
+import fs from "fs";
+import path from "path";
 import { PillDataModel } from "../models";
 import {
-  CURRENT_INITIAL_REALM_FILE_NAME,
   getObjectArrayDiff,
   logger,
   INITIAL_REALM_FILE_NAME,
   UPDATE_REALM_FILE_NAME,
+  DATABASE_DIRECTORY_NAME,
 } from "../utils";
 import { IPillData } from "../@types";
 
@@ -34,8 +36,21 @@ export async function createUpdateResourceFile() {
 
   const newResources = new PillDataModel(INITIAL_REALM_FILE_NAME).readAll();
 
+  const currentResourceFilePath = path.join(DATABASE_DIRECTORY_NAME, "current");
+  const currentResourceFiles = fs.readdirSync(currentResourceFilePath);
+  const currentInitialResourceFileName = currentResourceFiles.find((v) =>
+    v?.startsWith("initial")
+  );
+  if (!currentInitialResourceFileName) {
+    logger.info(
+      `No current initial resource file. path: %s, files: %s`,
+      currentResourceFilePath,
+      currentResourceFiles.join(", ")
+    );
+  }
+
   const currentResources = new PillDataModel(
-    CURRENT_INITIAL_REALM_FILE_NAME
+    path.join(currentResourceFilePath, currentInitialResourceFileName as string)
   ).readAll();
 
   const diff = getObjectArrayDiff(
