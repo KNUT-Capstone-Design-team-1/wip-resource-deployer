@@ -29,7 +29,7 @@ MODE="실행모드. dev | prod"
 ```json
 {
   "schemaVersion": 2, // 스키마 버전
-  "schemaMinorVersion": "" // 스키마 마이너 버전. 메인 형상인 경우 main 으로 설정
+  "schemaMinorVersion": "test" // 스키마 마이너 버전. 메인 형상인 경우 main 으로 설정
 }
 ```
 

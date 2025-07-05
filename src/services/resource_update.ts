@@ -40,7 +40,7 @@ export async function createUpdateResourceFile() {
   const currentResourceFilePath = path.join(DATABASE_DIRECTORY_NAME, "current");
   const currentResourceFiles = fs.readdirSync(currentResourceFilePath);
   const currentInitialResourceFileName = currentResourceFiles.find(
-    (v) => v?.split("_")?.[3] === (config.schemaMinorVersion || undefined) // schemaMinorVersion이 ''인 경우를 고려
+    (v) => v?.split("_")?.[3] === (config.schemaMinorVersion)
   );
 
   if (!currentInitialResourceFileName) {

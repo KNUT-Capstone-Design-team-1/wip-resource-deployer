@@ -7,7 +7,7 @@ export const DATABASE_DIRECTORY_NAME = "./database_resource";
 
 const resourceVersion = `${config.schemaVersion}_${moment().format(
   "YYYYMMDD"
-)}${config.schemaMinorVersion ? `_${config.schemaMinorVersion}` : ``}`;
+)}${config.schemaMinorVersion ? `_${config.schemaMinorVersion}` : `_test`}`;
 
 export const INITIAL_REALM_FILE_NAME = path.join(
   `${DATABASE_DIRECTORY_NAME}/initial_${resourceVersion}.realm`
