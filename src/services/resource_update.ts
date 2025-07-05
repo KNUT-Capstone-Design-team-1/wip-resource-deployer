@@ -46,10 +46,11 @@ export async function createUpdateResourceFile() {
 
   if (!currentInitialResourceFileName) {
     logger.info(
-      `No current initial resource file. path: %s, files: %s`,
+      `No current initial resource file. copy initial realm file to update realm file.`,
       currentResourceFilePath,
       currentResourceFiles.join(", ")
     );
+    fs.copyFileSync(INITIAL_REALM_FILE_NAME, UPDATE_REALM_FILE_NAME);
     return;
   }
 
