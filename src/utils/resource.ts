@@ -16,9 +16,6 @@ export const UPDATE_REALM_FILE_NAME = path.join(
   `${DATABASE_DIRECTORY_NAME}/update_${resourceVersion}.realm`
 );
 
-export const FINISHED_MEDICINE_PERMISSION_DETAIL =
-  "FinishedMedicinePermissionDetail";
-
 export const PILL_DATA = "PillData";
 
 export const DRUG_RECOGNITION_PROPERTY_MAP = {
