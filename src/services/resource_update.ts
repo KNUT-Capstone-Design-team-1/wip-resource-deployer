@@ -9,6 +9,7 @@ import {
   DATABASE_DIRECTORY_NAME,
 } from "../utils";
 import { IPillData } from "../@types";
+import config from "../../config.json";
 
 function getDeletedResource(
   newResources: Array<IPillData>,
@@ -38,15 +39,17 @@ export async function createUpdateResourceFile() {
 
   const currentResourceFilePath = path.join(DATABASE_DIRECTORY_NAME, "current");
   const currentResourceFiles = fs.readdirSync(currentResourceFilePath);
-  const currentInitialResourceFileName = currentResourceFiles.find((v) =>
-    v?.startsWith("initial")
+  const currentInitialResourceFileName = currentResourceFiles.find(
+    (v) => v?.split("_")?.[3] === (config.schemaMinorVersion || undefined) // schemaMinorVersion이 ''인 경우를 고려
   );
+
   if (!currentInitialResourceFileName) {
     logger.info(
       `No current initial resource file. path: %s, files: %s`,
       currentResourceFilePath,
       currentResourceFiles.join(", ")
     );
+    return;
   }
 
   const currentResources = new PillDataModel(
