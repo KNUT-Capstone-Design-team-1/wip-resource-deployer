@@ -1,1 +1,1 @@
-export * from './pill_data';
+export * from "./pill_data";

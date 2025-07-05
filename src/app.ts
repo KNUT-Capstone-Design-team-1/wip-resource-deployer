@@ -18,7 +18,7 @@ async function main() {
   logger.info("------Create update resource file------");
   await createUpdateResourceFile();
 
-  if (process.env.MODE === 'prod') {
+  if (process.env.MODE === "prod") {
     logger.info("------Upload resource file------");
     const resourceUploadService = new CloudflareUploadService();
     await resourceUploadService.uploadAllResources();

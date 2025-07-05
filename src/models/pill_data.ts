@@ -14,9 +14,7 @@ export class PillDataModel {
 
   public readAll() {
     return Array.from(
-      this.database.objects(
-        this.collection
-      ) as unknown as Array<IPillData>
+      this.database.objects(this.collection) as unknown as Array<IPillData>
     );
   }
 
@@ -25,6 +23,6 @@ export class PillDataModel {
       for (let i = 0; i < data.length; i += 1) {
         this.database.create(PILL_DATA, data[i], Realm.UpdateMode.Modified);
       }
-    })
+    });
   }
 }
