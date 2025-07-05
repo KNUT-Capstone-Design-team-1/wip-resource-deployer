@@ -39,9 +39,10 @@ export async function createUpdateResourceFile() {
 
   const currentResourceFilePath = path.join(DATABASE_DIRECTORY_NAME, "current");
   const currentResourceFiles = fs.readdirSync(currentResourceFilePath);
-  const currentInitialResourceFileName = currentResourceFiles.find(
+  const currentInitialResourceFileNames = currentResourceFiles.filter(
     (v) => v?.split("_")?.[3]?.split(".")?.[0] === config.schemaMinorVersion
   );
+  const currentInitialResourceFileName = currentInitialResourceFileNames.at(-1);
 
   if (!currentInitialResourceFileName) {
     logger.info(
@@ -68,7 +69,8 @@ export async function createUpdateResourceFile() {
   const pillDataUpdated = Boolean(diff.length);
 
   if (!pillDataUpdated) {
-    logger.info("No updated data");
+    logger.info("No updated data. copy initial realm file to update realm file.");
+    fs.copyFileSync(INITIAL_REALM_FILE_NAME, UPDATE_REALM_FILE_NAME);
     return;
   }
 
