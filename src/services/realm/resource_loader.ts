@@ -6,10 +6,10 @@ import { Converter } from "csvtojson/v2/Converter";
 import {
   IDrugRecognition,
   IFinishedMedicinePermissionDetail,
-} from "../../@types/realm";
-import {
   TDrugRecognitionDirectoryName,
   TFinishedMedicinePermissionDetailDirectoryName,
+} from "../../@types/realm";
+import {
   TLoadedResource,
   TResourceDirectoryName,
   TResource,

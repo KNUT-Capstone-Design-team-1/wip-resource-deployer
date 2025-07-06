@@ -9,7 +9,7 @@ import {
   CloudflareUploadService,
 } from "./services/cloudflare_service";
 
-async function updateRealmDB() {
+async function deployRealmDB() {
   logger.info("------Create initial resource file------");
   await createInitialResourceFile();
 
@@ -29,7 +29,7 @@ async function updateRealmDB() {
   logger.info("------End update realm from wip-resource-deployer------");
 }
 
-async function updateD1DB() {
+async function deployD1DB() {
   logger.info("------Create sql file------");
 
   if (process.env.MODE === "prod") {
@@ -44,16 +44,16 @@ async function main() {
 
   switch (mode) {
     case "realm":
-      await updateRealmDB();
+      await deployRealmDB();
       break;
 
     case "d1":
-      await updateD1DB();
+      await deployD1DB();
       break;
 
     default:
-      await updateRealmDB();
-      await updateD1DB();
+      await deployRealmDB();
+      await deployD1DB();
   }
 
   process.exit(0);

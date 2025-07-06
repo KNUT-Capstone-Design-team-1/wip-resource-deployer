@@ -16,3 +16,27 @@ export interface IFinishedMedicinePermissionDetail {
   MAIN_ITEM_INGR: string; // 주성분명
   INGR_NAME: string; // 첨가제명
 }
+
+export type TFinishedMedicinePermissionRaw = {
+  품목일련번호: string;
+  품목명: string;
+  업체명: string;
+  허가일자: string;
+  전문일반: string;
+  성상: string;
+  표준코드: string;
+  원료성분: string;
+  유효기간: string;
+  저장방법: string;
+  포장단위: string;
+  주성분명: string;
+  첨가제명: string;
+};
+
+export type TFinishedMedicinePermissionDetail = Record<
+  "finishedMedicinePermissionDetail",
+  Array<IFinishedMedicinePermissionDetail>
+>;
+
+export type TFinishedMedicinePermissionDetailDirectoryName =
+  "finished_medicine_permission_detail";
