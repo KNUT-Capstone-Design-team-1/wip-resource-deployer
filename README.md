@@ -86,3 +86,15 @@ yarn realm
 # D1 DB 업데이트
 yarn d1
 ```
+
+# Trouble Shooting
+
+#### D1 주변약국 데이터베이스 업데이트 안되는 경우
+
+1. 브라우저에서 cloudflare 로그인
+
+2. 프로젝트 터미널에서 아래 명령 실행 후 브라우저에서 허용
+
+```bash
+wrangler login
+```
