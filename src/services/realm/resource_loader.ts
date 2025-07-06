@@ -4,6 +4,8 @@ import xlsParser from "simple-excel-to-json";
 import iconvLite from "iconv-lite";
 import { Converter } from "csvtojson/v2/Converter";
 import {
+  DRUG_RECOGNITION_PROPERTY_MAP,
+  FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP,
   IDrugRecognition,
   IFinishedMedicinePermissionDetail,
   TDrugRecognitionDirectoryName,
@@ -14,12 +16,8 @@ import {
   TResourceDirectoryName,
   TResource,
   TResourceRaw,
-} from "src/@types/resource";
-import {
-  DRUG_RECOGNITION_PROPERTY_MAP,
-  FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP,
-  RESOURCE_PROPERTY_MAP,
-} from "../../utils";
+} from "../../@types/resource";
+import { RESOURCE_PROPERTY_MAP } from "../../utils";
 
 export class ResourceLoader {
   private readonly dirPath: string;

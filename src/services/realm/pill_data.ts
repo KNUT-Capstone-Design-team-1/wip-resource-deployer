@@ -2,7 +2,7 @@ import {
   IDrugRecognition,
   IFinishedMedicinePermissionDetail,
   IPillData,
-} from "src/@types/realm";
+} from "../../@types/realm";
 import { convertTextToVector, mergeDuplicateObjectArray } from "../../utils";
 
 function preprocessingDrugRecognition(

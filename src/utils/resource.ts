@@ -1,7 +1,11 @@
 import path from "path";
 import moment from "moment";
 import config from "../../config.json";
-import { TResourceDirectoryName } from "src/@types/resource";
+import { TResourceDirectoryName } from "../@types/resource";
+import {
+  DRUG_RECOGNITION_PROPERTY_MAP,
+  FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP,
+} from "../@types/realm";
 
 export const DATABASE_DIRECTORY_NAME = "./database_resource";
 
@@ -17,44 +21,6 @@ export const UPDATE_REALM_FILE_NAME = path.join(
 );
 
 export const PILL_DATA = "PillData";
-
-export const DRUG_RECOGNITION_PROPERTY_MAP = {
-  품목일련번호: "ITEM_SEQ",
-  품목명: "ITEM_NAME",
-  업소일련번호: "ENTP_SEQ",
-  업소명: "ENTP_NAME",
-  큰제품이미지: "ITEM_IMAGE",
-  표시앞: "PRINT_FRONT",
-  표시뒤: "PRINT_BACK",
-  의약품제형: "DRUG_SHAPE",
-  색상앞: "COLOR_CLASS1",
-  색상뒤: "COLOR_CLASS2",
-  분할선앞: "LINE_FRONT",
-  분할선뒤: "LINE_BACK",
-  "이미지생성일자(약학정보원)": "IMG_REGIST_TS",
-  분류명: "CLASS_NAME",
-  전문일반구분: "ETC_OTC_CODE",
-  품목허가일자: "ITEM_PERMIT_DATE",
-  표기코드앞: "MARK_CODE_FRONT",
-  표기코드뒤: "MARK_CODE_BACK",
-  제형코드: "FORM_CODE",
-} as const;
-
-export const FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP = {
-  품목일련번호: "ITEM_SEQ",
-  품목명: "ITEM_NAME",
-  업체명: "ENTP_NAME",
-  허가일자: "ITEM_PERMIT_DATE",
-  전문일반: "ETC_OTC_CODE",
-  성상: "CHART",
-  표준코드: "BAR_CODE",
-  원료성분: "MATERIAL_NAME",
-  유효기간: "VALID_TERM",
-  저장방법: "STORAGE_METHOD",
-  포장단위: "PACK_UNIT",
-  주성분명: "MAIN_ITEM_INGR",
-  첨가제명: "INGR_NAME",
-} as const;
 
 export const RESOURCE_PROPERTY_MAP: Record<
   TResourceDirectoryName,

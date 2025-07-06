@@ -40,3 +40,19 @@ export type TFinishedMedicinePermissionDetail = Record<
 
 export type TFinishedMedicinePermissionDetailDirectoryName =
   "finished_medicine_permission_detail";
+
+export const FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP = {
+  품목일련번호: "ITEM_SEQ",
+  품목명: "ITEM_NAME",
+  업체명: "ENTP_NAME",
+  허가일자: "ITEM_PERMIT_DATE",
+  전문일반: "ETC_OTC_CODE",
+  성상: "CHART",
+  표준코드: "BAR_CODE",
+  원료성분: "MATERIAL_NAME",
+  유효기간: "VALID_TERM",
+  저장방법: "STORAGE_METHOD",
+  포장단위: "PACK_UNIT",
+  주성분명: "MAIN_ITEM_INGR",
+  첨가제명: "INGR_NAME",
+} as const;

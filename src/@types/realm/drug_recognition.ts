@@ -48,3 +48,25 @@ export type TDrugRecognitionResource = Record<
 >;
 
 export type TDrugRecognitionDirectoryName = "drug_recognition";
+
+export const DRUG_RECOGNITION_PROPERTY_MAP = {
+  품목일련번호: "ITEM_SEQ",
+  품목명: "ITEM_NAME",
+  업소일련번호: "ENTP_SEQ",
+  업소명: "ENTP_NAME",
+  큰제품이미지: "ITEM_IMAGE",
+  표시앞: "PRINT_FRONT",
+  표시뒤: "PRINT_BACK",
+  의약품제형: "DRUG_SHAPE",
+  색상앞: "COLOR_CLASS1",
+  색상뒤: "COLOR_CLASS2",
+  분할선앞: "LINE_FRONT",
+  분할선뒤: "LINE_BACK",
+  "이미지생성일자(약학정보원)": "IMG_REGIST_TS",
+  분류명: "CLASS_NAME",
+  전문일반구분: "ETC_OTC_CODE",
+  품목허가일자: "ITEM_PERMIT_DATE",
+  표기코드앞: "MARK_CODE_FRONT",
+  표기코드뒤: "MARK_CODE_BACK",
+  제형코드: "FORM_CODE",
+} as const;
