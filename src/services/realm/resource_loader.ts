@@ -25,7 +25,7 @@ export class ResourceLoader {
   private readonly finishedMedicinePermissionDetailDirName: TFinishedMedicinePermissionDetailDirectoryName; // 완제 의약품 허가 상세 데이터
 
   constructor() {
-    this.dirPath = path.join(__dirname, `../../res`);
+    this.dirPath = path.join(__dirname, `../../../res`);
 
     this.drugRecognitionDirName = "drug_recognition";
 

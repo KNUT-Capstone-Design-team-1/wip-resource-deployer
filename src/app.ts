@@ -1,11 +1,13 @@
 import "dotenv/config";
 import {
   createInitialResourceFile,
-  CloudFlareDownloadService,
   createUpdateResourceFile,
-  CloudflareUploadService,
 } from "./services/realm";
 import { logger } from "./utils";
+import {
+  CloudFlareDownloadService,
+  CloudflareUploadService,
+} from "./services/cloudflare_service";
 
 async function updateRealmDB() {
   logger.info("------Create initial resource file------");

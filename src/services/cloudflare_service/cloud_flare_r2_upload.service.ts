@@ -6,7 +6,7 @@ import {
   INITIAL_REALM_FILE_NAME,
   logger,
   UPDATE_REALM_FILE_NAME,
-} from "../../../utils";
+} from "../../utils";
 
 export class CloudflareUploadService {
   private readonly client: S3Client;
