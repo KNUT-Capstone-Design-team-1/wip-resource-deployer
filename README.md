@@ -53,15 +53,19 @@ database_id = ""  # D1 대시보드에서 확인
 
 - [의약품 낱알식별](https://nedrug.mfds.go.kr/pbp/CCBGA01/getItem?totalPages=8&limit=10&page=2&&openDataInfoSeq=11)
 - [의약품 제품허가 상세정보](https://nedrug.mfds.go.kr/pbp/CCBGA01/getItem?totalPages=8&limit=10&page=2&&openDataInfoSeq=12)
+- [전국 병의원 및 약국 현황 / 2.약국정보서비스](https://opendata.hira.or.kr/op/opc/selectOpenData.do?sno=11925&publDataTpCd=&searchCnd=ttl&searchWrd=%EC%A0%84%EA%B5%)
 
 # execute
 
 0. .env 파일 구성
 1. 프로젝트 루트 위치에 `res` 디렉터리 생성
-2. `res` 디렉터리에 `drug_recognition` 및 `finished_medicine_permission_detail` 디렉터리 생성
-3. `res/drug_recognition` 디렉터리에 `의약품 낱알식별` 데이터베이스(xls) 파일 이동
-4. `res/finished_medicine_permission_detail` 디렉터리에 `의약품 제품허가 상세정보` 데이터베이스(xls) 파일 이동
-5. 스키마 버전 설정 (`config.json`)
+2. `res` 디렉터리에 아래 디렉터리 생성
+
+- `drug_recognition` (의약품 낱알식별 / xls)
+- `finished_medicine_permission_detail` (의약품 제품허가 상세정보 / xls)
+- `nearby_pharmacies` (전국 병의원 및 약국 현황 / 2.약국정보서비스)
+
+3. 데이터베이스 리소스 버전 설정 (`config.json`)
 
 - 스키마 버전: `schemaVersion`
   - (ex) 스키마가 변경된 경우 기존 1이면 2로 변경
@@ -70,7 +74,7 @@ database_id = ""  # D1 대시보드에서 확인
   - 기타 테스트 버전인 경우 영어 및 숫자로 자유롭게 설정
     - (ex) 2mukee
 
-7. 실행
+4. 실행
 
 ```bash
 # realm DB 및 cloudflare D1 DB 업데이트

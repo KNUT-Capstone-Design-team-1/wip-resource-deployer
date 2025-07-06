@@ -1,0 +1,17 @@
+-- DROP TABLE IF EXISTS NearbyPharmacies;
+
+-- DELETE FROM NearbyPharmacies;
+
+CREATE TABLE IF NOT EXISTS NearbyPharmacies (
+  id VARCHAR(255) PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  states VARCHAR(255) NULL,
+  region VARCHAR(255) NULL,
+  district VARCHAR(255) NULL,
+  postalCode VARCHAR(255) NULL,
+  address VARCHAR(255) NULL,
+  telephone VARCHAR(255) NULL,
+  openData VARCHAR(255) NULL,
+  x DOUBLE NULL NULL,
+  y DOUBLE NULL NULL
+);

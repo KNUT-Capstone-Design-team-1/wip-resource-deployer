@@ -6,7 +6,7 @@
   "scripts": {
     "start": "ts-node ./src/app.ts",
     "realm": "ts-node ./src/app.ts realm",
-    "d1": "ts-node ./src/app.ts realm"
+    "d1": "ts-node ./src/app.ts d1"
   },
   "repository": {
     "type": "git",

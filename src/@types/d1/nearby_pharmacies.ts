@@ -5,7 +5,7 @@ export interface INearbyPharmacies {
   id: string; // 암호화요양기호
   name: string; // 요양기관명
   states: string; // 시도코드명
-  regoin: string; // 시군구코드명
+  region: string; // 시군구코드명
   district: string; // 읍면동
   postalCode: string; // 우편번호
   address: string; // 주소
@@ -44,9 +44,10 @@ export const NEARBY_PHARMACIES_PROPERTY_MAP = {
   암호화요양기호: "id",
   요양기관명: "name",
   시도코드명: "states",
-  시군구코드명: "regoin",
+  시군구코드명: "region",
   읍면동: "district",
   우편번호: "postalCode",
+  주소: "address",
   전화번호: "telephone",
   개설일자: "openData",
   "좌표(X)": "x",

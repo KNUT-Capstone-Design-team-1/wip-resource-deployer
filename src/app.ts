@@ -1,14 +1,9 @@
 import "dotenv/config";
-import {
-  createInitialResourceFile,
-  createUpdateResourceFile,
-} from "./services/realm";
-import { logger } from "./utils";
-import {
-  CloudFlareDownloadService,
-  CloudflareUploadService,
-} from "./services/cloudflare_service";
+import * as RealmService from "./services/realm";
+import * as CloudflareService from "./services/cloudflare_service";
+import * as D1Service from "./services/d1";
 import { ResourceLoader } from "./services/resource_loader";
+import { logger } from "./utils";
 import {
   TLoadedResource,
   TResourceDirectoryName,
@@ -16,33 +11,40 @@ import {
 } from "./@types/resource";
 
 async function deployRealmDB(resource: TLoadedResource) {
-  logger.info("------Create initial resource file------");
-  await createInitialResourceFile(resource);
+  logger.info("------[REALM] Create initial resource file------");
+  await RealmService.createInitialResourceFile(resource);
 
-  logger.info("------Download current resource file------");
-  const resourceDownloadService = new CloudFlareDownloadService();
+  logger.info("------[REALM] Download current resource file------");
+  const resourceDownloadService =
+    new CloudflareService.CloudFlareDownloadService();
   await resourceDownloadService.downloadAllResources();
 
-  logger.info("------Create update resource file------");
-  await createUpdateResourceFile();
+  logger.info("------[REALM] Create update resource file------");
+  await RealmService.createUpdateResourceFile();
 
   if (process.env.MODE === "prod") {
-    logger.info("------Upload resource file------");
-    const resourceUploadService = new CloudflareUploadService();
+    logger.info("------[REALM] Upload resource file------");
+    const resourceUploadService =
+      new CloudflareService.CloudflareUploadService();
     await resourceUploadService.uploadAllResources();
   }
 
-  logger.info("------End deploy realm from wip-resource-deployer------");
+  logger.info(
+    "------[REALM] End deploy realm from wip-resource-deployer------"
+  );
 }
 
 async function deployD1DB(resource: TLoadedResource) {
-  logger.info("------Create sql file------");
-
-  if (process.env.MODE === "prod") {
-    logger.info("------Apply update to D1 DB------");
+  if (process.env.MODE !== "prod") {
+    logger.info("------[D1] D1 resource is only execute prod mode------");
+    return;
   }
 
-  logger.info("------End deploy D1 from wip-resource-deployer------");
+  logger.info("------[D1] Upsert database------");
+
+  D1Service.updateNearbyPharmacies(resource);
+
+  logger.info("------[D1] End deploy D1 from wip-resource-deployer------");
 }
 
 async function loadResource(resourceType: TResourceType) {
@@ -80,8 +82,6 @@ async function loadResource(resourceType: TResourceType) {
 
 async function main() {
   const resourceType = process.argv[2] as TResourceType;
-
-  logger.info("Resource Type = %s", resourceType || "all");
 
   const resource = await loadResource(resourceType);
 
