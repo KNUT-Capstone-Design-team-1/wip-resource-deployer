@@ -1,5 +1,4 @@
-import { IDrugRecognition } from "./drug_recognition";
-import { IFinishedMedicinePermissionDetail } from "./finished_medicine_permission_detail";
+import { IDrugRecognition, IFinishedMedicinePermissionDetail } from "./realm";
 
 export type TDrugRecognitionDirectoryName = "drug_recognition";
 

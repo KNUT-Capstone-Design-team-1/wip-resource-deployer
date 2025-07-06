@@ -8,7 +8,7 @@ import {
   UPDATE_REALM_FILE_NAME,
   DATABASE_DIRECTORY_NAME,
 } from "../../utils";
-import { IPillData } from "../../@types";
+import { IPillData } from "../../@types/realm";
 import config from "../../../config.json";
 
 function getDeletedResource(

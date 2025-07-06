@@ -1,6 +1,6 @@
 import Realm from "realm";
 import { RealmDatabase } from "./realm_database";
-import { IPillData } from "../@types";
+import { IPillData } from "../@types/realm";
 import { PILL_DATA } from "../utils";
 
 export class PillDataModel {

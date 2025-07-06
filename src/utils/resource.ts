@@ -1,7 +1,7 @@
 import path from "path";
 import moment from "moment";
-import { TResourceDirectoryName } from "src/@types";
 import config from "../../config.json";
+import { TResourceDirectoryName } from "src/@types/resource";
 
 export const DATABASE_DIRECTORY_NAME = "./database_resource";
 

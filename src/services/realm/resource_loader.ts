@@ -4,15 +4,17 @@ import xlsParser from "simple-excel-to-json";
 import iconvLite from "iconv-lite";
 import { Converter } from "csvtojson/v2/Converter";
 import {
-  TLoadedResource,
-  TResource,
   IDrugRecognition,
   IFinishedMedicinePermissionDetail,
-  TResourceDirectoryName,
+} from "../../@types/realm";
+import {
   TDrugRecognitionDirectoryName,
   TFinishedMedicinePermissionDetailDirectoryName,
+  TLoadedResource,
+  TResourceDirectoryName,
+  TResource,
   TResourceRaw,
-} from "../../@types";
+} from "src/@types/resource";
 import {
   DRUG_RECOGNITION_PROPERTY_MAP,
   FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP,
