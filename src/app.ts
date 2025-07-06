@@ -8,10 +8,16 @@ import {
   CloudFlareDownloadService,
   CloudflareUploadService,
 } from "./services/cloudflare_service";
+import { ResourceLoader } from "./services/resource_loader";
+import {
+  TLoadedResource,
+  TResourceDirectoryName,
+  TResourceType,
+} from "./@types/resource";
 
-async function deployRealmDB() {
+async function deployRealmDB(resource: TLoadedResource) {
   logger.info("------Create initial resource file------");
-  await createInitialResourceFile();
+  await createInitialResourceFile(resource);
 
   logger.info("------Download current resource file------");
   const resourceDownloadService = new CloudFlareDownloadService();
@@ -26,34 +32,71 @@ async function deployRealmDB() {
     await resourceUploadService.uploadAllResources();
   }
 
-  logger.info("------End update realm from wip-resource-deployer------");
+  logger.info("------End deploy realm from wip-resource-deployer------");
 }
 
-async function deployD1DB() {
+async function deployD1DB(resource: TLoadedResource) {
   logger.info("------Create sql file------");
 
   if (process.env.MODE === "prod") {
-    logger.info("------Update D1 DB------");
+    logger.info("------Apply update to D1 DB------");
   }
 
-  logger.info("------End update D1 from wip-resource-deployer------");
+  logger.info("------End deploy D1 from wip-resource-deployer------");
 }
 
-async function main() {
-  const mode = process.argv[2];
+async function loadResource(resourceType: TResourceType) {
+  const targetResources: Array<TResourceDirectoryName> = [];
 
-  switch (mode) {
+  switch (resourceType) {
     case "realm":
-      await deployRealmDB();
+      targetResources.push(
+        "drug_recognition",
+        "finished_medicine_permission_detail"
+      );
       break;
 
     case "d1":
-      await deployD1DB();
+      targetResources.push("nearby_pharmacies");
       break;
 
     default:
-      await deployRealmDB();
-      await deployD1DB();
+      targetResources.push(
+        "drug_recognition",
+        "finished_medicine_permission_detail",
+        "nearby_pharmacies"
+      );
+  }
+
+  logger.info("Start load resource");
+
+  const resourceLoader = new ResourceLoader(targetResources);
+  const resource = await resourceLoader.loadResource();
+
+  logger.info("Complete load resource");
+
+  return resource;
+}
+
+async function main() {
+  const resourceType = process.argv[2] as TResourceType;
+
+  logger.info("Resource Type = %s", resourceType || "all");
+
+  const resource = await loadResource(resourceType);
+
+  switch (resourceType) {
+    case "realm":
+      await deployRealmDB(resource);
+      break;
+
+    case "d1":
+      await deployD1DB(resource);
+      break;
+
+    default:
+      await deployRealmDB(resource);
+      await deployD1DB(resource);
   }
 
   process.exit(0);

@@ -6,6 +6,7 @@ import {
   DRUG_RECOGNITION_PROPERTY_MAP,
   FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP,
 } from "../@types/realm";
+import { NEARBY_PHARMACIES_PROPERTY_MAP } from "../@types/d1/nearby_pharmacies";
 
 export const DATABASE_DIRECTORY_NAME = "./database_resource";
 
@@ -26,8 +27,10 @@ export const RESOURCE_PROPERTY_MAP: Record<
   TResourceDirectoryName,
   | typeof DRUG_RECOGNITION_PROPERTY_MAP
   | typeof FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP
+  | typeof NEARBY_PHARMACIES_PROPERTY_MAP
 > = {
   drug_recognition: DRUG_RECOGNITION_PROPERTY_MAP,
   finished_medicine_permission_detail:
     FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP,
+  nearby_pharmacies: NEARBY_PHARMACIES_PROPERTY_MAP,
 } as const;

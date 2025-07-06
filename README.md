@@ -26,11 +26,27 @@ MODE="실행모드. dev | prod"
 
 #### config.json
 
+- realm 구성 설정
+
 ```json
 {
   "schemaVersion": 2, // 스키마 버전
   "schemaMinorVersion": "test" // 스키마 마이너 버전. 메인 형상인 경우 main 으로 설정
 }
+```
+
+#### wrangler.toml
+
+- cloudflare DB 구성 설정
+
+```toml
+name = "" # 프로젝트 이름
+compatibility_date = "2025-07-06" # 프로젝트 호환성 날짜
+
+[[d1_databases]]
+binding = "" # 데이터베이스 바인딩 이름
+database_name = "" # 데이터베이스 이름
+database_id = ""  # D1 대시보드에서 확인
 ```
 
 #### 데이터베이스
@@ -57,5 +73,12 @@ MODE="실행모드. dev | prod"
 7. 실행
 
 ```bash
+# realm DB 및 cloudflare D1 DB 업데이트
 yarn start
+
+# realm DB 업데이트
+yarn realm
+
+# D1 DB 업데이트
+yarn d1
 ```

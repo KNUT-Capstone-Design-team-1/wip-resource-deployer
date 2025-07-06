@@ -8,35 +8,35 @@ import {
   FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP,
   IDrugRecognition,
   IFinishedMedicinePermissionDetail,
-  TDrugRecognitionDirectoryName,
-  TFinishedMedicinePermissionDetailDirectoryName,
-} from "../../@types/realm";
+} from "../@types/realm";
 import {
   TLoadedResource,
   TResourceDirectoryName,
   TResource,
   TResourceRaw,
-} from "../../@types/resource";
-import { RESOURCE_PROPERTY_MAP } from "../../utils";
+} from "../@types/resource";
+import {
+  INearbyPharmacies,
+  NEARBY_PHARMACIES_PROPERTY_MAP,
+} from "../@types/d1/nearby_pharmacies";
+import { RESOURCE_PROPERTY_MAP } from "../utils";
+
+type TTargetResources = Array<TResourceDirectoryName>;
 
 export class ResourceLoader {
   private readonly dirPath: string;
-  private readonly drugRecognitionDirName: TDrugRecognitionDirectoryName; // 의약품 낱알식별정보 데이터
-  private readonly finishedMedicinePermissionDetailDirName: TFinishedMedicinePermissionDetailDirectoryName; // 완제 의약품 허가 상세 데이터
+  private readonly targetResources: TTargetResources;
 
-  constructor() {
-    this.dirPath = path.join(__dirname, `../../../res`);
-
-    this.drugRecognitionDirName = "drug_recognition";
-
-    this.finishedMedicinePermissionDetailDirName =
-      "finished_medicine_permission_detail";
+  constructor(targetResources: TTargetResources) {
+    this.dirPath = path.join(__dirname, `../../res`);
+    this.targetResources = targetResources;
   }
 
   public async loadResource(): Promise<TLoadedResource> {
     const resource: TLoadedResource = {
       drugRecognition: [],
       finishedMedicinePermissionDetail: [],
+      nearbyPharmacies: [],
     };
 
     for await (const resourcePath of this.getPathList()) {
@@ -59,18 +59,19 @@ export class ResourceLoader {
         resource.finishedMedicinePermissionDetail =
           resourceData as Array<IFinishedMedicinePermissionDetail>;
       }
+
+      if (key === "nearby_pharmacies") {
+        resource.nearbyPharmacies = resourceData as Array<INearbyPharmacies>;
+      }
     }
 
     return resource;
   }
 
   private getPathList(): Array<string> {
-    return [
-      path.join(`${this.dirPath}/${this.drugRecognitionDirName}`),
-      path.join(
-        `${this.dirPath}/${this.finishedMedicinePermissionDetailDirName}`
-      ),
-    ];
+    return this.targetResources.map((dirName) =>
+      path.join(`${this.dirPath}/${dirName}`)
+    );
   }
 
   private async getResources(
@@ -135,6 +136,7 @@ export class ResourceLoader {
     propertyMap:
       | typeof DRUG_RECOGNITION_PROPERTY_MAP
       | typeof FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP
+      | typeof NEARBY_PHARMACIES_PROPERTY_MAP
   ): Array<TResource> {
     const mappedResources: Array<TResource> = [];
     const propertyMapEntries = Object.entries(propertyMap);

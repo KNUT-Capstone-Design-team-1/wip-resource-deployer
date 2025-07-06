@@ -1,21 +1,33 @@
 import {
+  INearbyPharmacies,
+  TNearbyPharmaciesDirectoryName,
+  TNearbyPharmaciesResource,
+} from "./d1/nearby_pharmacies";
+import {
   IDrugRecognition,
   IFinishedMedicinePermissionDetail,
   TDrugRecognitionDirectoryName,
   TDrugRecognitionRaw,
   TDrugRecognitionResource,
-  TFinishedMedicinePermissionDetail,
+  TFinishedMedicinePermissionDetailResource,
   TFinishedMedicinePermissionDetailDirectoryName,
   TFinishedMedicinePermissionRaw,
 } from "./realm";
 
 export type TResourceDirectoryName =
   | TDrugRecognitionDirectoryName
-  | TFinishedMedicinePermissionDetailDirectoryName;
+  | TFinishedMedicinePermissionDetailDirectoryName
+  | TNearbyPharmaciesDirectoryName;
 
 export type TLoadedResource = TDrugRecognitionResource &
-  TFinishedMedicinePermissionDetail;
+  TFinishedMedicinePermissionDetailResource &
+  TNearbyPharmaciesResource;
 
 export type TResourceRaw = TDrugRecognitionRaw | TFinishedMedicinePermissionRaw;
 
-export type TResource = IDrugRecognition | IFinishedMedicinePermissionDetail;
+export type TResource =
+  | IDrugRecognition
+  | IFinishedMedicinePermissionDetail
+  | INearbyPharmacies;
+
+export type TResourceType = "realm" | "d1";

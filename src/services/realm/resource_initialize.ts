@@ -1,16 +1,9 @@
 import { logger, INITIAL_REALM_FILE_NAME } from "../../utils";
 import { PillDataModel } from "../../models";
-import { ResourceLoader } from "./resource_loader";
 import * as PillDataService from "./pill_data";
+import { TLoadedResource } from "../../@types/resource";
 
-export async function createInitialResourceFile() {
-  logger.info("Start load resource");
-
-  const resourceLoader = new ResourceLoader();
-  const resource = await resourceLoader.loadResource();
-
-  logger.info("Complete load resource");
-
+export async function createInitialResourceFile(resource: TLoadedResource) {
   logger.info("Create pill data");
 
   const pillData = PillDataService.createPillData(

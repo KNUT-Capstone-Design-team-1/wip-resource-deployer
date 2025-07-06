@@ -33,7 +33,7 @@ export type TFinishedMedicinePermissionRaw = {
   첨가제명: string;
 };
 
-export type TFinishedMedicinePermissionDetail = Record<
+export type TFinishedMedicinePermissionDetailResource = Record<
   "finishedMedicinePermissionDetail",
   Array<IFinishedMedicinePermissionDetail>
 >;

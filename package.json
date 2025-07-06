@@ -4,7 +4,9 @@
   "description": "wip resource deploy module",
   "main": "app.ts",
   "scripts": {
-    "start": "ts-node ./src/app.ts"
+    "start": "ts-node ./src/app.ts",
+    "realm": "ts-node ./src/app.ts realm",
+    "d1": "ts-node ./src/app.ts realm"
   },
   "repository": {
     "type": "git",
