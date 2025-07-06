@@ -11,8 +11,9 @@ function upsert(
 
   const values: string[] = [];
   for (let i = 0; i < nearbyPharmacies.length; i += 1) {
-    const queryValues = Object.values(nearbyPharmacies[i])
-      .map((v) => (typeof v === "string" ? `'${v?.replace(/'/g, "''")}'` : v));
+    const queryValues = Object.values(nearbyPharmacies[i]).map((v) =>
+      typeof v === "string" ? `'${v?.replace(/'/g, "''")}'` : v
+    );
 
     values.push(`(${queryValues.join(",")})`);
   }
@@ -36,11 +37,11 @@ export function updateNearbyPharmacies(resource: TLoadedResource) {
 
   let temp: TNearbyPharmaciesResource["nearbyPharmacies"] = [];
   for (let i = 0; i < nearbyPharmacies.length; i += 1) {
-    if (i > 0 && i % maxRows === 0) {
+    temp.push(nearbyPharmacies[i]);
+
+    if (temp.length === maxRows) {
       upsert(temp);
       temp = [];
-    } else {
-      temp.push(nearbyPharmacies[i]);
     }
   }
 }
