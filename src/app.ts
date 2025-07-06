@@ -4,10 +4,10 @@ import {
   CloudFlareDownloadService,
   createUpdateResourceFile,
   CloudflareUploadService,
-} from "./services";
+} from "./services/realm";
 import { logger } from "./utils";
 
-async function main() {
+async function updateRealmDB() {
   logger.info("------Create initial resource file------");
   await createInitialResourceFile();
 
@@ -24,7 +24,36 @@ async function main() {
     await resourceUploadService.uploadAllResources();
   }
 
-  logger.info("------End wip-resource-deployer------");
+  logger.info("------End update realm from wip-resource-deployer------");
+}
+
+async function updateD1DB() {
+  logger.info("------Create sql file------");
+
+  if (process.env.MODE === "prod") {
+    logger.info("------Update D1 DB------");
+  }
+
+  logger.info("------End update D1 from wip-resource-deployer------");
+}
+
+async function main() {
+  const mode = process.argv[2];
+
+  switch (mode) {
+    case "realm":
+      await updateRealmDB();
+      break;
+
+    case "d1":
+      await updateD1DB();
+      break;
+
+    default:
+      await updateRealmDB();
+      await updateD1DB();
+  }
+
   process.exit(0);
 }
 

@@ -6,7 +6,7 @@ import {
 import { PassThrough, Stream } from "stream";
 import fs from "fs";
 import path from "path";
-import { DATABASE_DIRECTORY_NAME, logger } from "../../utils";
+import { DATABASE_DIRECTORY_NAME, logger } from "../../../utils";
 import { CloudFlareR2Client } from "./cloud_flare_r2_client";
 
 export class CloudFlareDownloadService {

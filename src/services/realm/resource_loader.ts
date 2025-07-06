@@ -12,12 +12,12 @@ import {
   TDrugRecognitionDirectoryName,
   TFinishedMedicinePermissionDetailDirectoryName,
   TResourceRaw,
-} from "../@types";
+} from "../../@types";
 import {
   DRUG_RECOGNITION_PROPERTY_MAP,
   FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP,
   RESOURCE_PROPERTY_MAP,
-} from "../utils";
+} from "../../utils";
 
 export class ResourceLoader {
   private readonly dirPath: string;

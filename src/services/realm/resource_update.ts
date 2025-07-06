@@ -1,15 +1,15 @@
 import fs from "fs";
 import path from "path";
-import { PillDataModel } from "../models";
+import { PillDataModel } from "../../models";
 import {
   getObjectArrayDiff,
   logger,
   INITIAL_REALM_FILE_NAME,
   UPDATE_REALM_FILE_NAME,
   DATABASE_DIRECTORY_NAME,
-} from "../utils";
-import { IPillData } from "../@types";
-import config from "../../config.json";
+} from "../../utils";
+import { IPillData } from "../../@types";
+import config from "../../../config.json";
 
 function getDeletedResource(
   newResources: Array<IPillData>,

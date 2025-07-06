@@ -1,5 +1,5 @@
-import { logger, INITIAL_REALM_FILE_NAME } from "../utils";
-import { PillDataModel } from "../models";
+import { logger, INITIAL_REALM_FILE_NAME } from "../../utils";
+import { PillDataModel } from "../../models";
 import { ResourceLoader } from "./resource_loader";
 import * as PillDataService from "./pill_data";
 

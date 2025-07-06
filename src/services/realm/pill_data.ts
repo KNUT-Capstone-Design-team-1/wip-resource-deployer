@@ -3,7 +3,7 @@ import {
   IFinishedMedicinePermissionDetail,
   IPillData,
 } from "src/@types";
-import { convertTextToVector, mergeDuplicateObjectArray } from "../utils";
+import { convertTextToVector, mergeDuplicateObjectArray } from "../../utils";
 
 function preprocessingDrugRecognition(
   drugRecognition: Array<IDrugRecognition>
