@@ -27,7 +27,7 @@ export const PillDataSchema: ObjectSchema = {
     ITEM_PERMIT_DATE: { type: "string", optional: true }, // 품목허가일자
     MARK_CODE_FRONT: { type: "string", optional: true }, // 표기코드앞
     MARK_CODE_BACK: { type: "string", optional: true }, // 표기코드뒤
-    FORM_CODE: { type: "string", optional: true }, // 제형코드
+    FORM_CODE: { type: "string", optional: true }, // 제형코드명
     // Finished Medicine Permission Detail Schema
     CHART: { type: "string", optional: true }, // 성상
     BAR_CODE: { type: "string", optional: true }, // 표준코드

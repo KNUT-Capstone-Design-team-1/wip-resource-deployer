@@ -20,7 +20,7 @@ export interface IDrugRecognition {
   ITEM_PERMIT_DATE: string; // 품목허가일자
   MARK_CODE_FRONT: string; // 표기코드앞
   MARK_CODE_BACK: string; // 표기코드뒤
-  FORM_CODE: string; // 제형코드
+  FORM_CODE: string; // 제형코드명
 }
 
 export type TDrugRecognitionRaw = {
@@ -68,5 +68,5 @@ export const DRUG_RECOGNITION_PROPERTY_MAP = {
   품목허가일자: "ITEM_PERMIT_DATE",
   표기코드앞: "MARK_CODE_FRONT",
   표기코드뒤: "MARK_CODE_BACK",
-  제형코드: "FORM_CODE",
+  제형코드명: "FORM_CODE",
 } as const;
