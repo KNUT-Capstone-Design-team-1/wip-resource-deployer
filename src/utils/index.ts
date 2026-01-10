@@ -1,59 +1,43 @@
+import {
+  TResourceDirectoryName,
+  DRUG_RECOGNITION_PROPERTY_MAP,
+  FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP,
+  NEARBY_PHARMACIES_PROPERTY_MAP,
+} from "../types";
 import logger from "./logger";
-export * from "./resource";
 
-export function convertStringToInt8Array(
-  int8ArrayFormatString: string
-): Int8Array {
-  const res = int8ArrayFormatString.match(/-?\d+/g)?.map(Number);
+export { logger };
+export { MarkImageCrawler } from "./mark_image_crawler";
+export { ResourceLoader } from "./resource_loader";
 
-  return new Int8Array(res ?? []);
-}
+/**
+ * 리소스 별 프로퍼티 맵
+ */
+export const RESOURCE_PROPERTY_MAP: Record<
+  TResourceDirectoryName,
+  | typeof DRUG_RECOGNITION_PROPERTY_MAP
+  | typeof FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP
+  | typeof NEARBY_PHARMACIES_PROPERTY_MAP
+> = {
+  drug_recognition: DRUG_RECOGNITION_PROPERTY_MAP,
+  finished_medicine_permission_detail:
+    FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP,
+  nearby_pharmacies: NEARBY_PHARMACIES_PROPERTY_MAP,
+} as const;
 
-export function getObjectArrayDiff(
-  criteria: Array<Record<string, any>>,
-  criteriaKey: string,
-  compare: Array<Record<string, any>>
-) {
-  const diff: Array<Record<string, any>> = [];
-
-  for (let i = 0; i < criteria.length; i += 1) {
-    const criteriaItem = criteria[i];
-
-    const sameItem = compare.find(
-      (c) => c[criteriaKey] === criteriaItem[criteriaKey]
-    );
-
-    if (
-      !sameItem ||
-      JSON.stringify(criteriaItem) !== JSON.stringify(sameItem)
-    ) {
-      diff.push(criteriaItem);
-    }
-  }
-
-  return diff;
-}
-
-export function convertTextToVector(text: string) {
-  // PRINT_FRONT + PRINT_BACK => vector (유니코드 벡터)
-  const maxVectorLength = 29;
-
-  const vector = new Array<number>(maxVectorLength).fill(0);
-
-  for (let i = 0; i < text.length; i++) {
-    vector[i] = text.charCodeAt(i);
-  }
-
-  return vector;
-}
-
+/**
+ * 객체 배열 내 객체 간 ID 값을 기준으로 중복되는 항목을 병합
+ * @param idColumn ID 컬럼명
+ * @param objectArray 병합 대상 객체 배열
+ * @returns
+ */
 export function mergeDuplicateObjectArray(
   idColumn: string,
-  objects: Array<Record<string, any>>
+  objectArray: Array<Record<string, any>>
 ) {
   const mergedMap = new Map();
 
-  objects.forEach((object) => {
+  objectArray.forEach((object) => {
     const existing = mergedMap.get(object[idColumn]);
 
     if (!existing) {
@@ -79,5 +63,3 @@ export function mergeDuplicateObjectArray(
 
   return Array.from(mergedMap.values());
 }
-
-export { logger };

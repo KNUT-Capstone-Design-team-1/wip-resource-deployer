@@ -5,35 +5,9 @@
 # function
 
 - 리소스 파일을 데이터베이스 파일로 변환
-- 데이터베이스 파일을 리소스 저장소에 업로드를 수행
+- 리소스 파일을 리소스 저장소에 업로드를 수행 (일부 리소스 미지원)
 
 # requirement
-
-#### .env
-
-```
-REALM_ENCRYPTION_KEY="realm 데이터베이스 암호화 키"
-
-CLOUD_FLARE_RESOURCE_DOWNLOAD_URL="클라우드 플레어 리소스 스토리지 URL"
-CLOUD_FLARE_RESOURCE_BUCKET="클라우드 플레어 리소스 버킷 이름"
-CLOUD_FLARE_TOKEN_VALUE="클라우드 플레어 R2 토큰"
-CLOUD_FLARE_ACCESS_KEY_ID="클라우드 플레어 R2 액세스 키 아이디"
-CLOUD_FLARE_SECRET_ACCESS_KEY="클라우드 플레어 R2 액세스 키"
-
-# 자동 업로드 시 prod로 변경
-MODE="실행모드. dev | prod"
-```
-
-#### config.json
-
-- realm 구성 설정
-
-```json
-{
-  "schemaVersion": 2, // 스키마 버전
-  "schemaMinorVersion": "test" // 스키마 마이너 버전. 메인 형상인 경우 main 으로 설정
-}
-```
 
 #### wrangler.toml
 
@@ -57,34 +31,22 @@ database_id = ""  # D1 대시보드에서 확인
 
 # execute
 
-0. .env 파일 구성
 1. 프로젝트 루트 위치에 `res` 디렉터리 생성
+
 2. `res` 디렉터리에 아래 디렉터리 생성
 
 - `drug_recognition` (의약품 낱알식별 / xls)
 - `finished_medicine_permission_detail` (의약품 제품허가 상세정보 / xls)
 - `nearby_pharmacies` (전국 병의원 및 약국 현황 / 2.약국정보서비스)
 
-3. 데이터베이스 리소스 버전 설정 (`config.json`)
+3. `config.json`에서 생성 및 배포하고자 하는 리소스 타입의 `_` 제거
 
-- 스키마 버전: `schemaVersion`
-  - (ex) 스키마가 변경된 경우 기존 1이면 2로 변경
-- 스키마 마이너 버전: `schemaMinorVersion`
-  - 메인 버전인 경우 `main`으로 설정
-  - 기타 테스트 버전인 경우 영어 및 숫자로 자유롭게 설정
-    - (ex) 2mukee
+- common > targetResource
 
 4. 실행
 
 ```bash
-# realm DB 및 cloudflare D1 DB 업데이트
 yarn start
-
-# realm DB 업데이트
-yarn realm
-
-# D1 DB 업데이트
-yarn d1
 ```
 
 # Trouble Shooting

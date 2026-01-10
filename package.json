@@ -1,12 +1,10 @@
 {
   "name": "wip-resource-deployer",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "wip resource deploy module",
   "main": "app.ts",
   "scripts": {
-    "start": "ts-node ./src/app.ts",
-    "realm": "ts-node ./src/app.ts realm",
-    "d1": "ts-node ./src/app.ts d1"
+    "start": "ts-node ./src/app.ts"
   },
   "repository": {
     "type": "git",
@@ -19,19 +17,16 @@
   },
   "homepage": "https://github.com/KNUT-Capstone-Design-team-1/wip-resource-deployer#readme",
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.685.0",
-    "@types/node": "^22.9.1",
     "csvtojson": "^2.0.10",
-    "dotenv": "^16.4.5",
     "fs": "^0.0.1-security",
     "iconv-lite": "^0.6.3",
-    "moment": "^2.30.1",
-    "realm": "^12.13.2",
+    "puppeteer": "^24.34.0",
     "simple-excel-to-json": "^2.3.0",
     "typescript": "^5.6.3",
     "winston": "^3.17.0"
   },
   "devDependencies": {
+    "@types/node": "^22.9.1",
     "ts-node": "^10.9.2"
   }
 }

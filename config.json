@@ -1,5 +1,13 @@
 {
-  "schemaVersion": 2,
-  "schemaMinorVersion": "main",
-  "maxRows": 30
+  "common": {
+    "targetResource": ["pillData", "_nearbyPharmacies", "_markImage"]
+  },
+  "nearbyPharmacies": {
+    "maxRows": 30
+  },
+  "markImage": {
+    "targetURL": "https://nedrug.mfds.go.kr/pbp/CCBSB12/markSearchPopup",
+    "totalPages": 13,
+    "limit": 50
+  }
 }
