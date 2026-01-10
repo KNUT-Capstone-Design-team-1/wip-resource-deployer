@@ -9,6 +9,33 @@
 
 # requirement
 
+#### .env
+
+```
+REALM_ENCRYPTION_KEY="realm 데이터베이스 암호화 키"
+
+CLOUD_FLARE_RESOURCE_DOWNLOAD_URL="클라우드 플레어 리소스 스토리지 URL"
+CLOUD_FLARE_RESOURCE_BUCKET="클라우드 플레어 리소스 버킷 이름"
+CLOUD_FLARE_TOKEN_VALUE="클라우드 플레어 R2 토큰"
+CLOUD_FLARE_ACCESS_KEY_ID="클라우드 플레어 R2 액세스 키 아이디"
+CLOUD_FLARE_SECRET_ACCESS_KEY="클라우드 플레어 R2 액세스 키"
+
+# 자동 업로드 시 prod로 변경
+MODE="실행모드. dev | prod"
+```
+
+#### config.json
+
+- realm 구성 설정
+
+```json
+{
+  "schemaVersion": 2, // 스키마 버전
+  "schemaMinorVersion": "test", // 스키마 마이너 버전. 메인 형상인 경우 main 으로 설정
+  "maxRows": 30, // 주변 약국 데이터 upsert 시 1회당 row 개수
+}
+```
+
 #### wrangler.toml
 
 - cloudflare DB 구성 설정
