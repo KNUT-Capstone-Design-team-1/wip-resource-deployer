@@ -1,6 +1,6 @@
 {
   "common": {
-    "targetResource": ["pillData", "_nearbyPharmacies", "_markImage"]
+    "targetResource": ["_pillData", "_nearbyPharmacies", "markImage"]
   },
   "nearbyPharmacies": {
     "maxRows": 30
