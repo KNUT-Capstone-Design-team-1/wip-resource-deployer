@@ -7,6 +7,8 @@
 - 리소스 파일을 데이터베이스 파일로 변환
 - 리소스 파일을 리소스 저장소에 업로드를 수행 (일부 리소스 미지원)
 
+# Requirement
+
 #### wrangler.toml
 
 - cloudflare DB 구성 설정
@@ -44,6 +46,8 @@ database_id = ""  # D1 대시보드에서 확인
 4. 실행
 
 ```bash
+yarn install
+
 yarn start
 ```
 
