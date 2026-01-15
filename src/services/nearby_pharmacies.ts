@@ -61,10 +61,7 @@ export async function deployNearbyPharmaciesResource() {
   try {
     logger.info("[NEARBY-PHARMACIES] Start load resource");
 
-    const resourceLoader = new ResourceLoader([
-      "drug_recognition",
-      "finished_medicine_permission_detail",
-    ]);
+    const resourceLoader = new ResourceLoader(["nearby_pharmacies"]);
 
     const resource = await resourceLoader.loadResource();
 
