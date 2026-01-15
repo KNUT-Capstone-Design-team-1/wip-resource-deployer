@@ -52,6 +52,6 @@ export async function createMarkImageResource() {
 
     logger.info("[MARK-IMAGE] Complete create mark image resource file");
   } catch (e) {
-    logger.error("[MARK-IMAGE] Failed to create mark image resource file");
+    logger.error("[MARK-IMAGE] Failed to create mark image resource file. %s", e.stack || e);
   }
 }
