@@ -32,7 +32,7 @@ function createMarkImageResourceFile(imageDatas: Array<IMarkImageData>) {
     fs.rmSync(filePath, { force: true });
   }
 
-  fs.writeFileSync(filePath, JSON.stringify(imageDatas, null, 2));
+  fs.writeFileSync(filePath, JSON.stringify(imageDatas));
 }
 
 /**

@@ -1,15 +1,15 @@
 import {
   IDrugRecognition,
   TDrugRecognitionDirectoryName,
-  TDrugRecognitionRaw,
   TDrugRecognitionResource,
   IFinishedMedicinePermissionDetail,
   TFinishedMedicinePermissionDetailDirectoryName,
   TFinishedMedicinePermissionDetailResource,
-  TFinishedMedicinePermissionRaw,
   INearbyPharmacies,
   TNearbyPharmaciesDirectoryName,
   TNearbyPharmaciesResource,
+  FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP,
+  DRUG_RECOGNITION_PROPERTY_MAP,
 } from "./";
 
 export type TResourceDirectoryName =
@@ -21,7 +21,7 @@ export type TLoadedResource = TDrugRecognitionResource &
   TFinishedMedicinePermissionDetailResource &
   TNearbyPharmaciesResource;
 
-export type TResourceRaw = TDrugRecognitionRaw | TFinishedMedicinePermissionRaw;
+export type TResourceRaw = typeof DRUG_RECOGNITION_PROPERTY_MAP | typeof FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP;
 
 export type TResource =
   | IDrugRecognition

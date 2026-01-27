@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import axios from "axios";
 import {
   IDrugRecognition,
   IPillData,
@@ -13,7 +14,7 @@ import { logger, mergeDuplicateObjectArray, ResourceLoader } from "../utils";
  * @returns
  */
 function preprocessingDrugRecognition(
-  drugRecognition: Array<IDrugRecognition>
+  drugRecognition: Array<IDrugRecognition>,
 ) {
   const replacePrint = (print: string) =>
     print
@@ -38,36 +39,68 @@ function preprocessingDrugRecognition(
 }
 
 /**
+ * 의약품 낱알식별 정보 데이터의 별도 문서 데이터를 의약품 안전나라에서 xml으로 받아온다
+ * @param itemSeq 알약 ID
+ * @returns
+ */
+async function getDocData(itemSeq: string) {
+  const baseUrl = `https://nedrug.mfds.go.kr/pbp/cmn/xml/drb/${itemSeq}`;
+
+  try {
+    const EE = await axios.get(`${baseUrl}/EE`);
+    const UD = await axios.get(`${baseUrl}/UD`);
+    const NB = await axios.get(`${baseUrl}/NB`);
+
+    const nedrugData = {
+      EE_DOC_DATA: EE.data,
+      UD_DOC_DATA: UD.data,
+      NB_DOC_DATA: NB.data,
+    };
+
+    console.log("get data (%s)", itemSeq);
+
+    return nedrugData;
+  } catch (e) {
+    console.log("Failed to get doc data. item_seq: %s. %s", e.stack || e);
+
+    return { EE_DOC_DATA: "", UD_DOC_DATA: "", NB_DOC_DATA: "" };
+  }
+}
+
+/**
  * pill_data 생성
  * @param drugRecognition 의약품 낱알식별정보 데이터
  * @param finishedMedicinePermission 완제 의약품 허가 상세 데이터
  * @returns
  */
-function createPillData(
+async function createPillData(
   drugRecognition: Array<IDrugRecognition>,
-  finishedMedicinePermission: Array<IFinishedMedicinePermissionDetail>
+  finishedMedicinePermission: Array<IFinishedMedicinePermissionDetail>,
 ) {
   const mergedDrugRecognition = mergeDuplicateObjectArray(
     "ITEM_SEQ",
-    drugRecognition
+    drugRecognition,
   );
 
   const preprocessedDrugRecognition = preprocessingDrugRecognition(
-    mergedDrugRecognition
-  );
+    mergedDrugRecognition,
+  ) as IDrugRecognition[];
 
   const pillData: Array<IPillData> = [];
 
-  preprocessedDrugRecognition.forEach((drug) => {
+  for (let i = 0; i < preprocessedDrugRecognition.length; i += 1) {
+    const drug = preprocessedDrugRecognition[i];
+
     const finished = finishedMedicinePermission.find(
-      ({ ITEM_SEQ }) => drug.ITEM_SEQ === ITEM_SEQ
+      ({ ITEM_SEQ }) => drug.ITEM_SEQ === ITEM_SEQ,
     );
 
     if (!finished) {
-      return;
+      continue;
     }
 
     const {
+      ITEM_SEQ,
       CHART,
       BAR_CODE,
       MATERIAL_NAME,
@@ -77,6 +110,9 @@ function createPillData(
       MAIN_ITEM_INGR,
       INGR_NAME,
     } = finished;
+
+    const { EE_DOC_DATA, UD_DOC_DATA, NB_DOC_DATA } =
+      await getDocData(ITEM_SEQ);
 
     pillData.push({
       ...drug,
@@ -88,8 +124,11 @@ function createPillData(
       PACK_UNIT,
       MAIN_ITEM_INGR,
       INGR_NAME,
+      EE_DOC_DATA,
+      UD_DOC_DATA,
+      NB_DOC_DATA,
     });
-  });
+  }
 
   return pillData;
 }
@@ -98,14 +137,29 @@ function createPillData(
  * pill_data 리소스 파일 생성
  * @param pillData pill_data 데이터
  */
-async function createResourceFile(pillData: IPillData[]) {
-  const filePath = path.resolve(__dirname, "../../pill_data.json");
+function createResourceFile(pillData: IPillData[]): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const filePath = path.resolve(__dirname, "../../pill_data.json");
 
-  if (fs.existsSync(filePath)) {
-    fs.rmSync(filePath, { force: true });
-  }
+    if (fs.existsSync(filePath)) {
+      fs.rmSync(filePath, { force: true });
+    }
 
-  fs.writeFileSync(filePath, JSON.stringify({ resources: pillData }, null, 2));
+    const stream = fs.createWriteStream(filePath, { encoding: "utf8" });
+
+    stream.on("finish", resolve);
+    stream.on("error", reject);
+
+    stream.write('{"resources":[');
+
+    pillData.forEach((resource, index) => {
+      if (index > 0) stream.write(",");
+      stream.write(JSON.stringify(resource));
+    });
+
+    stream.write("]}");
+    stream.end();
+  });
 }
 
 /**
@@ -126,22 +180,22 @@ export async function generatePillDataResourceFile() {
 
     logger.info("[PILL-DATA] Start create pill data");
 
-    const pillData = createPillData(
+    const pillData = await createPillData(
       resource.drugRecognition,
-      resource.finishedMedicinePermissionDetail
+      resource.finishedMedicinePermissionDetail,
     );
 
     logger.info("[PILL-DATA] Complete create pill data");
 
     logger.info("[PILL-DATA] Start create pill data resource file");
 
-    createResourceFile(pillData);
+    await createResourceFile(pillData);
 
     logger.info("[PILL-DATA] Complete create pill data resource file");
   } catch (e) {
     logger.error(
       "[PILL-DATA] Failed to create pill data resource file. %s",
-      e.stack || e
+      e.stack || e,
     );
   }
 }

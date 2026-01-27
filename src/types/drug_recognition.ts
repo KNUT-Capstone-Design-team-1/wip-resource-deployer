@@ -24,25 +24,6 @@ export interface IDrugRecognition {
   FORM_CODE: string; // 제형코드명
 }
 
-export type TDrugRecognitionRaw = {
-  품목일련번호: string;
-  품목명: string;
-  업소일련번호: string;
-  업소명: string;
-  큰제품이미지: string;
-  표시앞: string;
-  표시뒤: string;
-  의약품제형: string;
-  색상앞: string;
-  색상뒤: string;
-  분할선앞: string;
-  분할선뒤: string;
-  "이미지생성일자(약학정보원)": string;
-  분류명: string;
-  전문일반구분: string;
-  품목허가일자: string;
-};
-
 export type TDrugRecognitionResource = Record<
   "drugRecognition",
   Array<IDrugRecognition>
