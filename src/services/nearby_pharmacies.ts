@@ -1,44 +1,101 @@
-import cp from "child_process";
 import { TLoadedResource, TNearbyPharmaciesResource } from "../types";
 import { logger, ResourceLoader } from "../utils";
 import config from "../../config.json";
+import { runQuery } from "./util";
 
 /**
- * D1 DB에 upsert 수행
+ * 테이블 및 인덱스 / FTS5 생성
+ */
+function createTable() {
+  const createTableQuery = `
+  CREATE TABLE NearbyPharmacies (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    states TEXT,
+    region TEXT,
+    district TEXT,
+    postalCode TEXT,
+    address TEXT,
+    telephone TEXT,
+    openData TEXT,
+    x DOUBLE,
+    y DOUBLE
+  )`;
+  runQuery(createTableQuery);
+
+  const createCordinatesIndexQuery = `CREATE INDEX idx_pharmacies_xy ON NearbyPharmacies(x, y)`;
+  runQuery(createCordinatesIndexQuery);
+
+  const createFTS5Query = `
+  CREATE VIRTUAL TABLE nearby_pharmacies_fts
+  USING fts5(
+    name,
+    states,
+    region,
+    district,
+    address,
+    openData,
+    content='NearbyPharmacies',
+    content_rowid='rowid'
+  )`;
+  runQuery(createFTS5Query);
+}
+
+/**
+ * 테이블 DROP
+ */
+function dropTable() {
+  const dropTableQuery = `DROP TABLE IF EXISTS NearbyPharmacies`;
+  runQuery(dropTableQuery);
+}
+
+/**
+ * D1 DB에 insert 수행
  * @param nearbyPharmacies
  * @returns
  */
-function upsert(
-  nearbyPharmacies: TNearbyPharmaciesResource["nearbyPharmacies"]
+function insert(
+  nearbyPharmacies: TNearbyPharmaciesResource["nearbyPharmacies"],
 ) {
-  let command = `wrangler d1 execute wip --remote --command "INSERT INTO NearbyPharmacies (id, name, states, region, district, postalCode, address, telephone, openData, x, y) VALUES `;
+  let insertQuery = `
+  INSERT OR IGNORE INTO NearbyPharmacies (
+    id, 
+    name, 
+    states, 
+    region, 
+    district, 
+    postalCode, 
+    address, 
+    telephone, 
+    openData, 
+    x, 
+    y
+  ) VALUES `;
 
   const values: string[] = [];
   for (let i = 0; i < nearbyPharmacies.length; i += 1) {
     const queryValues = Object.values(nearbyPharmacies[i]).map((v) =>
-      typeof v === "string" ? `'${v?.replace(/'/g, "''")}'` : v
+      typeof v === "string" ? `'${v?.replace(/'/g, "''")}'` : v,
     );
 
     values.push(`(${queryValues.join(",")})`);
   }
 
   if (!values.length) {
-    logger.warn("No upsert values");
+    logger.warn("No insert values");
     return;
   }
 
-  command += values.join(",");
-  command += ` ON CONFLICT(id) DO UPDATE SET name = excluded.name, states = excluded.states, region = excluded.region, district = excluded.district, postalCode = excluded.postalCode, address = excluded.address, telephone = excluded.telephone, openData = excluded.openData, x = excluded.x, y = excluded.y`;
-  command += `"`;
+  insertQuery += values.join(",");
 
-  cp.execSync(command, { encoding: "utf8", stdio: "inherit" });
+  runQuery(insertQuery);
 }
 
 /**
  * 주변 약국 데이터 업데이트
  * @param resource 리소스 데이터
  */
-function updateNearbyPharmacies(resource: TLoadedResource) {
+function insertAll(resource: TLoadedResource) {
   const { maxRows } = config.nearbyPharmacies;
 
   const { nearbyPharmacies } = resource;
@@ -48,7 +105,7 @@ function updateNearbyPharmacies(resource: TLoadedResource) {
     temp.push(nearbyPharmacies[i]);
 
     if (temp.length === maxRows) {
-      upsert(temp);
+      insert(temp);
       temp = [];
     }
   }
@@ -69,13 +126,15 @@ export async function deployNearbyPharmaciesResource() {
 
     logger.info("[NEARBY-PHARMACIES] Start deploy nearby pharmacies data");
 
-    updateNearbyPharmacies(resource);
+    dropTable();
+    createTable();
+    insertAll(resource);
 
     logger.info("[NEARBY-PHARMACIES] Complete deploy nearby pharmacies data");
   } catch (e) {
     logger.error(
       "[NEARBY-PHARMACIES] Failed to deploy nearby pharmacies data. %s",
-      e.stack || e
+      e.stack || e,
     );
   }
 }
