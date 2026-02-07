@@ -2,9 +2,6 @@
   "common": {
     "targetResource": ["_pillData", "_nearbyPharmacies", "_markImage"]
   },
-  "nearbyPharmacies": {
-    "maxRows": 30
-  },
   "markImage": {
     "targetURL": "https://nedrug.mfds.go.kr/pbp/CCBSB12/markSearchPopup",
     "totalPages": 13,
