@@ -8,15 +8,15 @@ import {
 async function main() {
   const { targetResource } = config.common;
 
-  if (targetResource.includes("pillData")) {
+  if (targetResource.includes("pill_data")) {
     await PillDataService.generatePillDataResourceFile();
   }
 
-  if (targetResource.includes("nearbyPharmacies")) {
+  if (targetResource.includes("nearby_pharmacies")) {
     await NearbyPharmaciesService.deployNearbyPharmaciesResource();
   }
 
-  if (targetResource.includes("markImage")) {
+  if (targetResource.includes("mark_images")) {
     await MarkImageService.createMarkImageResource();
   }
 
