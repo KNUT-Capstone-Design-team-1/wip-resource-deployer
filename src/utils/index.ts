@@ -101,24 +101,27 @@ export async function createResourceFile(
   resourceFileName: string,
   resourceData: Record<string, any>[],
   useStream: boolean,
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const filePath = path.resolve(
-      __dirname,
-      `../../resources/${resourceFileName}`,
+) {
+  const filePath = path.resolve(
+    __dirname,
+    `../../resources/${resourceFileName}`,
+  );
+
+  createResourcesDirectory();
+
+  if (fs.existsSync(filePath)) {
+    fs.rmSync(filePath, { force: true });
+  }
+
+  if (!useStream) {
+    fs.writeFileSync(
+      filePath,
+      JSON.stringify({ resources: resourceData }, null, 2),
     );
+    return;
+  }
 
-    createResourcesDirectory();
-
-    if (fs.existsSync(filePath)) {
-      fs.rmSync(filePath, { force: true });
-    }
-
-    if (!useStream) {
-      fs.writeFileSync(filePath, JSON.stringify(resourceData, null, 2));
-      return;
-    }
-
+  return new Promise((resolve, reject) => {
     const stream = fs.createWriteStream(filePath, { encoding: "utf8" });
 
     stream.on("finish", resolve);
