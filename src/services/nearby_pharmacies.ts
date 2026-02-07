@@ -18,6 +18,7 @@ export async function deployNearbyPharmaciesResource() {
     await createResourceFile(
       "nearby_pharmacies.json",
       nearbyPharmaciesData.nearbyPharmacies,
+      false,
     );
 
     logger.info("[NEARBY-PHARMACIES] Complete deploy nearby pharmacies data");

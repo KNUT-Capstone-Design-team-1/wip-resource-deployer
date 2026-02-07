@@ -33,7 +33,7 @@ export async function createMarkImageResource() {
 
     logger.info("[MARK-IMAGE] Start create mark image resource file");
 
-    await createResourceFile("mark_images.json", markImageData);
+    await createResourceFile("mark_images.json", markImageData, false);
 
     logger.info("[MARK-IMAGE] Complete create mark image resource file");
   } catch (e) {

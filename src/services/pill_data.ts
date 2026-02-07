@@ -126,7 +126,7 @@ export async function generatePillDataResourceFile() {
 
     logger.info("[PILL-DATA] Start create pill data resource file");
 
-    await createResourceFile("pill_data.json", pillData);
+    await createResourceFile("pill_data.json", pillData, false);
 
     logger.info("[PILL-DATA] Complete create pill data resource file");
   } catch (e) {
