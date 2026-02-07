@@ -1,7 +1,6 @@
 import { IMarkImageData } from "../types";
-import { logger, MarkImageCrawler } from "../utils";
+import { createResourceFile, logger, MarkImageCrawler } from "../utils";
 import config from "../../config.json";
-import { createResourceFile } from "./util";
 
 /**
  * 마크 이미지 크롤링 요청

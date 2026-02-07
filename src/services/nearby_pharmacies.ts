@@ -1,5 +1,4 @@
-import { logger, ResourceLoader } from "../utils";
-import { createResourceFile, runQuery } from "./util";
+import { createResourceFile, logger, ResourceLoader } from "../utils";
 
 /**
  * 주변 약국 리소스 배포

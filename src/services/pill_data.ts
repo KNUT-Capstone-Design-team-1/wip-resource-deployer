@@ -3,8 +3,12 @@ import {
   IPillData,
   IFinishedMedicinePermissionDetail,
 } from "../types";
-import { logger, mergeDuplicateObjectArray, ResourceLoader } from "../utils";
-import { createResourceFile } from "./util";
+import {
+  createResourceFile,
+  logger,
+  mergeDuplicateObjectArray,
+  ResourceLoader,
+} from "../utils";
 
 /**
  * 의약품 낱알식별정보 데이터 전처리
