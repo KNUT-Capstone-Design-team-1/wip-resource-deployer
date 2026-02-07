@@ -1,5 +1,5 @@
 import axios from "axios";
-import { logger } from "src/utils";
+import { logger } from "../utils";
 
 /**
  * 의약품 낱알식별 정보 데이터의 별도 문서 데이터를 의약품 안전나라에서 xml으로 받아온다
