@@ -1,8 +1,7 @@
-import path from "path";
-import fs from "fs";
 import { IMarkImageData } from "../types";
 import { logger, MarkImageCrawler } from "../utils";
 import config from "../../config.json";
+import { createResourceFile } from "./util";
 
 /**
  * 마크 이미지 크롤링 요청
@@ -25,30 +24,17 @@ async function getImageDatas() {
 /**
  * 마크 이미지 리소스 파일 생성
  */
-function createMarkImageResourceFile(imageDatas: Array<IMarkImageData>) {
-  const filePath = path.resolve(__dirname, "../../mark_image_data.json");
-
-  if (fs.existsSync(filePath)) {
-    fs.rmSync(filePath, { force: true });
-  }
-
-  fs.writeFileSync(filePath, JSON.stringify(imageDatas));
-}
-
-/**
- * 마크 이미지 리소스 파일 생성
- */
 export async function createMarkImageResource() {
   try {
     logger.info("[MARK-IMAGE] Start crawling mark image data");
 
-    const imageDatas = await getImageDatas();
+    const markImageData = await getImageDatas();
 
     logger.info("[MARK-IMAGE] Complete crawling mark image data");
 
     logger.info("[MARK-IMAGE] Start create mark image resource file");
 
-    createMarkImageResourceFile(imageDatas);
+    await createResourceFile("mark_images.json", markImageData);
 
     logger.info("[MARK-IMAGE] Complete create mark image resource file");
   } catch (e) {

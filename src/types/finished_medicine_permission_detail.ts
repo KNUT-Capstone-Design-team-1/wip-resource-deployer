@@ -11,9 +11,6 @@ export interface IFinishedMedicinePermissionDetail {
   CHART: string; // 성상
   BAR_CODE: string; // 표준코드
   MATERIAL_NAME: string; // 원료성분
-  EE_DOC_DATA: string; // 효능효과
-  UD_DOC_DATA: string; // 용법용량
-  NB_DOC_DATA: string; // 주의사항
   VALID_TERM: string; // 유효기간
   STORAGE_METHOD: string; // 저장방법
   PACK_UNIT: string; // 포장단위
@@ -38,9 +35,6 @@ export const FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP = {
   성상: "CHART",
   표준코드: "BAR_CODE",
   원료성분: "MATERIAL_NAME",
-  효능효과: "EE_DOC_DATA",
-  용법용량: "UD_DOC_DATA",
-  주의사항: "NB_DOC_DATA",
   유효기간: "VALID_TERM",
   저장방법: "STORAGE_METHOD",
   포장단위: "PACK_UNIT",

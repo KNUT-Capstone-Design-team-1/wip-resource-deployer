@@ -1,5 +1,9 @@
 import config from "../config.json";
-import { NearbyPharmaciesService, PillDataService, MarkImageService } from "./services";
+import {
+  NearbyPharmaciesService,
+  PillDataService,
+  MarkImageService,
+} from "./services";
 
 async function main() {
   const { targetResource } = config.common;
