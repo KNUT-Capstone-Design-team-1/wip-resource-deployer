@@ -3,6 +3,7 @@ import {
   NearbyPharmaciesService,
   PillDataService,
   MarkImageService,
+  UnifiedSearchService,
 } from "./services";
 
 async function main() {
@@ -18,6 +19,10 @@ async function main() {
 
   if (targetResource.includes("mark_images")) {
     await MarkImageService.createMarkImageResource();
+  }
+
+  if (targetResource.includes("unified_search")) {
+    await UnifiedSearchService.updateUnifiedSearchDB();
   }
 
   process.exit(0);

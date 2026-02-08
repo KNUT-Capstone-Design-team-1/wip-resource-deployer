@@ -81,6 +81,22 @@ export function runQuery(query: string) {
 }
 
 /**
+ * wrangler에 SQL 파일 쿼리 실행
+ * @param resourceFileName 파일명
+ * @returns
+ */
+export function runQueryForSQLFile(resourceFileName: string) {
+  const filePath = path.resolve(
+    __dirname,
+    `../../resources/${resourceFileName}`,
+  );
+
+  const command = `wrangler d1 execute wip --remote --file=${filePath} --yes`;
+
+  return cp.execSync(command, { encoding: "utf8", stdio: "inherit" });
+}
+
+/**
  * 원천 데이터를 저장할 디렉터리 생성
  */
 export function createResourcesDirectory() {
@@ -139,4 +155,60 @@ export async function createResourceFile(
     stream.write("]}");
     stream.end();
   });
+}
+
+/**
+ * SQL 파일 생성
+ * @param resourceFileName 파일명
+ * @param query 쿼리
+ */
+export function createSQLFile(resourceFileName: string, query: string) {
+  const filePath = path.resolve(
+    __dirname,
+    `../../resources/${resourceFileName}`,
+  );
+
+  createResourcesDirectory();
+
+  if (fs.existsSync(filePath)) {
+    fs.rmSync(filePath, { force: true });
+  }
+
+  fs.writeFileSync(filePath, query);
+}
+
+/**
+ * XML / HTML 섞인 문자열을 순수 텍스트로 정제
+ * @param input 대상 텍스트
+ * @returns
+ */
+export function normalizeText(input: string): string {
+  if (!input) {
+    return "";
+  }
+
+  let text = input;
+
+  // HTML 엔티티 직접 처리 (DOMParser 없는 환경 대비)
+  text = text
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'");
+
+  // CDATA 제거
+  text = text.replace(/<!\[CDATA\[(.*?)\]\]>/g, "$1");
+
+  // XML / HTML 태그 제거
+  text = text.replace(/<[^>]+>/g, "");
+
+  // 특수문자 제거 (한글 / 영문 / 숫자 / 공백만 유지)
+  text = text.replace(/[^ㄱ-ㅎ가-힣a-zA-Z0-9\s]/g, " ");
+
+  // 공백 정리
+  text = text.replace(/\s+/g, " ").trim();
+
+  return text;
 }
