@@ -1,12 +1,12 @@
 import axios from "axios";
 import {
-  logger,
-  mergeDuplicateObjectArray,
-  ResourceLoader,
-  runQuery,
-  normalizeText,
-  createSQLFile,
-  runQueryForSQLFile,
+    logger,
+    mergeDuplicateObjectArray,
+    ResourceLoader,
+    runQuery,
+    normalizeText,
+    createSQLFile,
+    runQueryForSQLFile,
 } from "../utils";
 import { IDrugRecognition, IFinishedMedicinePermissionDetail } from "../types";
 import { IUnifiedSearchData } from "src/types/unified_search";
@@ -15,27 +15,27 @@ import { IUnifiedSearchData } from "src/types/unified_search";
  * 테이블 DROP
  */
 function dropTable() {
-  const dropTableQuery = `DROP TABLE IF EXISTS unified_search`;
-  runQuery(dropTableQuery);
+    const dropTableQuery = `DROP TABLE IF EXISTS unified_search`;
+    runQuery(dropTableQuery);
 
-  const dropFTS5Query = `DROP TABLE IF EXISTS unified_search_fts`;
-  runQuery(dropFTS5Query);
+    const dropFTS5Query = `DROP TABLE IF EXISTS unified_search_fts`;
+    runQuery(dropFTS5Query);
 }
 
 /**
  * 테이블 및 인덱스 / FTS5 생성
  */
 function createTable() {
-  const createTableQuery = `
+    const createTableQuery = `
   CREATE TABLE unified_search (
     ITEM_SEQ TEXT PRIMARY KEY,
     EE_DOC_DATA TEXT,
     UD_DOC_DATA TEXT,
     NB_DOC_DATA TEXT
   )`;
-  runQuery(createTableQuery);
+    runQuery(createTableQuery);
 
-  const createFTS5Query = `
+    const createFTS5Query = `
   CREATE VIRTUAL TABLE unified_search_fts
   USING fts5(
     EE_DOC_DATA,
@@ -44,7 +44,7 @@ function createTable() {
     content='unified_search',
     content_rowid='rowid'
   )`;
-  runQuery(createFTS5Query);
+    runQuery(createFTS5Query);
 }
 
 /**
@@ -54,31 +54,31 @@ function createTable() {
  * @returns
  */
 function getPillDataIDs(
-  drugRecognition: Array<IDrugRecognition>,
-  finishedMedicinePermission: Array<IFinishedMedicinePermissionDetail>,
+    drugRecognition: Array<IDrugRecognition>,
+    finishedMedicinePermission: Array<IFinishedMedicinePermissionDetail>,
 ) {
-  const mergedDrugRecognition = mergeDuplicateObjectArray(
-    "ITEM_SEQ",
-    drugRecognition,
-  );
-
-  const pillDataIDs: string[] = [];
-
-  for (let i = 0; i < mergedDrugRecognition.length; i += 1) {
-    const drug = mergedDrugRecognition[i];
-
-    const finished = finishedMedicinePermission.find(
-      ({ ITEM_SEQ }) => drug.ITEM_SEQ === ITEM_SEQ,
+    const mergedDrugRecognition = mergeDuplicateObjectArray(
+        "ITEM_SEQ",
+        drugRecognition,
     );
 
-    if (!finished) {
-      continue;
+    const pillDataIDs: string[] = [];
+
+    for (let i = 0; i < mergedDrugRecognition.length; i += 1) {
+        const drug = mergedDrugRecognition[i];
+
+        const finished = finishedMedicinePermission.find(
+            ({ ITEM_SEQ }) => drug.ITEM_SEQ === ITEM_SEQ,
+        );
+
+        if (!finished) {
+            continue;
+        }
+
+        pillDataIDs.push(drug.ITEM_SEQ);
     }
 
-    pillDataIDs.push(drug.ITEM_SEQ);
-  }
-
-  return pillDataIDs;
+    return pillDataIDs;
 }
 
 /**
@@ -88,27 +88,27 @@ function getPillDataIDs(
  * @returns
  */
 async function getDocData(itemSeq: string) {
-  const baseUrl = `https://nedrug.mfds.go.kr/pbp/cmn/xml/drb/${itemSeq}`;
+    const baseUrl = `https://nedrug.mfds.go.kr/pbp/cmn/xml/drb/${itemSeq}`;
 
-  try {
-    const EE = await axios.get<string>(`${baseUrl}/EE`);
-    const UD = await axios.get<string>(`${baseUrl}/UD`);
-    const NB = await axios.get<string>(`${baseUrl}/NB`);
+    try {
+        const EE = await axios.get<string>(`${baseUrl}/EE`);
+        const UD = await axios.get<string>(`${baseUrl}/UD`);
+        const NB = await axios.get<string>(`${baseUrl}/NB`);
 
-    const nedrugData = {
-      EE_DOC_DATA: normalizeText(EE.data),
-      UD_DOC_DATA: normalizeText(UD.data),
-      NB_DOC_DATA: normalizeText(NB.data),
-    };
+        const nedrugData = {
+            EE_DOC_DATA: normalizeText(EE.data),
+            UD_DOC_DATA: normalizeText(UD.data),
+            NB_DOC_DATA: normalizeText(NB.data),
+        };
 
-    logger.info("get data (%s)", itemSeq);
+        logger.info("get data (%s)", itemSeq);
 
-    return nedrugData;
-  } catch (e) {
-    logger.info("Failed to get doc data. item_seq: %s. %s", e.stack || e);
+        return nedrugData;
+    } catch (e) {
+        logger.info("Failed to get doc data. item_seq: %s. %s", e.stack || e);
 
-    return { EE_DOC_DATA: "", UD_DOC_DATA: "", NB_DOC_DATA: "" };
-  }
+        return { EE_DOC_DATA: "", UD_DOC_DATA: "", NB_DOC_DATA: "" };
+    }
 }
 
 /**
@@ -117,7 +117,7 @@ async function getDocData(itemSeq: string) {
  * @returns
  */
 async function insert(unifiedSearchData: IUnifiedSearchData) {
-  let insertQuery = `
+    let insertQuery = `
   INSERT OR IGNORE INTO unified_search (
     ITEM_SEQ, 
     EE_DOC_DATA, 
@@ -125,14 +125,14 @@ async function insert(unifiedSearchData: IUnifiedSearchData) {
     NB_DOC_DATA
   ) VALUES `;
 
-  const queryValues = Object.values(unifiedSearchData)
-    .map((v) => (typeof v === "string" ? `'${v?.replace(/'/g, "''")}'` : v))
-    .join(",");
+    const queryValues = Object.values(unifiedSearchData)
+        .map((v) => (typeof v === "string" ? `'${v?.replace(/'/g, "''")}'` : v))
+        .join(",");
 
-  insertQuery += `(${queryValues})`;
+    insertQuery += `(${queryValues});`;
 
-  createSQLFile("unified_search.sql", insertQuery);
-  runQueryForSQLFile("unified_search.sql");
+    createSQLFile("unified_search.sql", insertQuery);
+    runQueryForSQLFile("unified_search.sql");
 }
 
 /**
@@ -140,49 +140,49 @@ async function insert(unifiedSearchData: IUnifiedSearchData) {
  * @param resource 리소스 데이터
  */
 async function insertAll(pillDataIDs: string[]) {
-  for await (const itemSeq of pillDataIDs) {
-    const docData = await getDocData(itemSeq);
+    for await (const itemSeq of pillDataIDs) {
+        const docData = await getDocData(itemSeq);
 
-    insert({ ITEM_SEQ: itemSeq, ...docData });
-  }
+        insert({ ITEM_SEQ: itemSeq, ...docData });
+    }
 }
 
 /**
  * 통합 검색 DB 업데이트
  */
 export async function updateUnifiedSearchDB() {
-  try {
-    logger.info("[UNIFIED-SEARCH] Start load resource");
+    try {
+        logger.info("[UNIFIED-SEARCH] Start load resource");
 
-    const resourceLoader = new ResourceLoader([
-      "drug_recognition",
-      "finished_medicine_permission_detail",
-    ]);
+        const resourceLoader = new ResourceLoader([
+            "drug_recognition",
+            "finished_medicine_permission_detail",
+        ]);
 
-    const resource = await resourceLoader.loadResource();
+        const resource = await resourceLoader.loadResource();
 
-    logger.info("[UNIFIED-SEARCH] Complete load resource");
+        logger.info("[UNIFIED-SEARCH] Complete load resource");
 
-    logger.info("[UNIFIED-SEARCH] Start create pill data ID array");
+        logger.info("[UNIFIED-SEARCH] Start create pill data ID array");
 
-    const pillDataIDs = getPillDataIDs(
-      resource.drugRecognition,
-      resource.finishedMedicinePermissionDetail,
-    );
+        const pillDataIDs = getPillDataIDs(
+            resource.drugRecognition,
+            resource.finishedMedicinePermissionDetail,
+        );
 
-    logger.info("[UNIFIED-SEARCH] Complete create pill data ID array");
+        logger.info("[UNIFIED-SEARCH] Complete create pill data ID array");
 
-    logger.info("[UNIFIED-SEARCH] Start update search data");
+        logger.info("[UNIFIED-SEARCH] Start update search data");
 
-    dropTable();
-    createTable();
-    await insertAll(pillDataIDs);
+        dropTable();
+        createTable();
+        await insertAll(pillDataIDs);
 
-    logger.info("[UNIFIED-SEARCH] Complete create pill data resource file");
-  } catch (e) {
-    logger.error(
-      "[UNIFIED-SEARCH] Failed to create pill data resource file. %s",
-      e.stack || e,
-    );
-  }
+        logger.info("[UNIFIED-SEARCH] Complete create pill data resource file");
+    } catch (e) {
+        logger.error(
+            "[UNIFIED-SEARCH] Failed to create pill data resource file. %s",
+            e.stack || e,
+        );
+    }
 }
