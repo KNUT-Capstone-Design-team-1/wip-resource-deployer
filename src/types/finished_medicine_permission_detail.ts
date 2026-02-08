@@ -1,7 +1,6 @@
 /**
  * 완제 의약품 허가 상세
  */
-
 export interface IFinishedMedicinePermissionDetail {
   ITEM_SEQ: string; // 품목일련번호
   ITEM_NAME: string; // 품목명

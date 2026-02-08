@@ -1,7 +1,6 @@
 /**
  * 주변 약국
  */
-
 export interface INearbyPharmacies {
   id: string; // 암호화요양기호
   name: string; // 요양기관명

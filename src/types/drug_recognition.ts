@@ -1,7 +1,6 @@
 /**
  * 의약품 낱알식별정보
  */
-
 export interface IDrugRecognition {
   ITEM_SEQ: string; // 품목일련번호
   ITEM_NAME: string; // 품목명
