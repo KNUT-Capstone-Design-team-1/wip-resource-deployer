@@ -10,7 +10,7 @@ export interface INearbyPharmacies {
   postalCode: string; // 우편번호
   address: string; // 주소
   telephone: string; // 전화번호
-  openData: string; // 개설일자
+  openData: number; // 개설일자
   x: number; // 좌표(X)
   y: number; // 좌표(Y)
 }
