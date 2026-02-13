@@ -1,6 +1,6 @@
 {
   "common": {
-    "targetResource": ["_pillData", "_nearbyPharmacies", "_markImage", "_unified_search"]
+    "targetResource": ["_pill_data", "_nearby_pharmacies", "_mark_images", "_unified_search"]
   },
   "markImage": {
     "targetURL": "https://nedrug.mfds.go.kr/pbp/CCBSB12/markSearchPopup",
