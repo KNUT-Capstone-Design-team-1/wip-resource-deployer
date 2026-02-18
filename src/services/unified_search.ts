@@ -1,4 +1,6 @@
 import axios from "axios";
+import fs from "fs";
+import path from "path";
 import {
   logger,
   mergeDuplicateObjectArray,
@@ -7,6 +9,7 @@ import {
   normalizeText,
   createSQLFile,
   runQueryForSQLFile,
+  createResourcesDirectory,
 } from "../utils";
 import { IDrugRecognition, IFinishedMedicinePermissionDetail } from "../types";
 import { IUnifiedSearchData } from "src/types/unified_search";
@@ -147,6 +150,30 @@ async function insert(unifiedSearchData: IUnifiedSearchData) {
 }
 
 /**
+ * INSERT에 실패한 데이터를 JSON 파일로 생성
+ * @param unifiedSearchData INSERT에 실패한 데이터
+ */
+async function writeFailedData(unifiedSearchData: IUnifiedSearchData) {
+  const resourceFileName = "unified_search_insert_failed.json";
+
+  const filePath = path.resolve(
+    __dirname,
+    `../../resources/${resourceFileName}`,
+  );
+
+  createResourcesDirectory();
+
+  try {
+    fs.appendFileSync(filePath, JSON.stringify(unifiedSearchData, null, 2));
+  } catch (e) {
+    logger.error(
+      "[UNIFIED-SEARCH] Failed to write failed data. error: %s",
+      e.stack || e,
+    );
+  }
+}
+
+/**
  * 통합 검색 DB 업데이트
  * @param resource 리소스 데이터
  */
@@ -154,7 +181,18 @@ async function insertAll(pillDataIDs: string[]) {
   for await (const itemSeq of pillDataIDs) {
     const docData = await getDocData(itemSeq);
 
-    insert({ ITEM_SEQ: itemSeq, ...docData });
+    const insertData = { ITEM_SEQ: itemSeq, ...docData };
+
+    try {
+      insert(insertData);
+    } catch (e) {
+      logger.error(
+        "[UNIFIED-SEARCH] Failed to insert data. error: %s",
+        e.stack || e,
+      );
+
+      await writeFailedData(insertData);
+    }
   }
 }
 
