@@ -184,7 +184,7 @@ async function insertAll(pillDataIDs: string[]) {
     const insertData = { ITEM_SEQ: itemSeq, ...docData };
 
     try {
-      insert(insertData);
+      await insert(insertData);
     } catch (e) {
       logger.error(
         "[UNIFIED-SEARCH] Failed to insert data. error: %s",
