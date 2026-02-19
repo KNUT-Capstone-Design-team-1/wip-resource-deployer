@@ -26,7 +26,7 @@ async function main() {
     await UnifiedSearchService.updateUnifiedSearchDB();
   }
 
-  if (targetResource.includes("unified_search")) {
+  if (targetResource.includes("unified_search_insert_failed")) {
     await UnifiedSearchInsertFailedService.insertFailedRetryAll();
   }
 
