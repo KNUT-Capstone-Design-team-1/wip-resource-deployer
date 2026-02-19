@@ -130,7 +130,7 @@ async function getDocData(itemSeq: string) {
  * @param unifiedSearchData 통합 검색 데이터
  * @returns
  */
-async function insert(unifiedSearchData: IUnifiedSearchData) {
+export async function insert(unifiedSearchData: IUnifiedSearchData) {
   let insertQuery = `
   INSERT OR IGNORE INTO unified_search (
     ITEM_SEQ, 

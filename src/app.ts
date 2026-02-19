@@ -4,6 +4,7 @@ import {
   PillDataService,
   MarkImageService,
   UnifiedSearchService,
+  UnifiedSearchInsertFailedService,
 } from "./services";
 
 async function main() {
@@ -23,6 +24,10 @@ async function main() {
 
   if (targetResource.includes("unified_search")) {
     await UnifiedSearchService.updateUnifiedSearchDB();
+  }
+
+  if (targetResource.includes("unified_search")) {
+    await UnifiedSearchInsertFailedService.insertFailedRetryAll();
   }
 
   process.exit(0);
