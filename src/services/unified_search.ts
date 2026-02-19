@@ -12,7 +12,7 @@ import {
   createResourcesDirectory,
 } from "../utils";
 import { IDrugRecognition, IFinishedMedicinePermissionDetail } from "../types";
-import { IUnifiedSearchData } from "src/types/unified_search";
+import { IUnifiedSearchData } from "../types/unified_search";
 
 /**
  * 테이블 DROP

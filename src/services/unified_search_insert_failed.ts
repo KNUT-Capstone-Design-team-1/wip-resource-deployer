@@ -1,7 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import * as UnifiedSearchService from "./unified_search";
-import { logger } from "src/utils";
+import { logger } from "../utils";
 
 /**
  * 통합 검색 DB에 INSERT 하는데 실패한 데이터를 INSERT
