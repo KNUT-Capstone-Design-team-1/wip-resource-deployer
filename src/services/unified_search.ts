@@ -154,17 +154,26 @@ async function insert(unifiedSearchData: IUnifiedSearchData) {
  * @param unifiedSearchData INSERT에 실패한 데이터
  */
 async function writeFailedData(unifiedSearchData: IUnifiedSearchData) {
-  const resourceFileName = "unified_search_insert_failed.json";
-
-  const filePath = path.resolve(
-    __dirname,
-    `../../resources/${resourceFileName}`,
-  );
-
-  createResourcesDirectory();
-
   try {
-    fs.appendFileSync(filePath, JSON.stringify(unifiedSearchData, null, 2));
+    createResourcesDirectory();
+
+    const resourceDirectoryName = "unified_search_insert_failed";
+
+    const dirPath = path.resolve(
+      __dirname,
+      `../../resources/${resourceDirectoryName}`,
+    );
+
+    if (!fs.existsSync(dirPath)) {
+      fs.mkdirSync(dirPath, { recursive: true });
+    }
+
+    const filePath = path.resolve(
+      dirPath,
+      `${unifiedSearchData.ITEM_SEQ}.json`,
+    );
+
+    fs.writeFileSync(filePath, JSON.stringify(unifiedSearchData, null, 2));
   } catch (e) {
     logger.error(
       "[UNIFIED-SEARCH] Failed to write failed data. error: %s",
