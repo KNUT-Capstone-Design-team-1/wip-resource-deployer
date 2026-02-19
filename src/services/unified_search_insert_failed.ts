@@ -1,4 +1,4 @@
-import fs from "fs/promises";
+import fs from "fs";
 import path from "path";
 import * as UnifiedSearchService from "./unified_search";
 import { logger } from "../utils";
@@ -9,7 +9,7 @@ import { logger } from "../utils";
  */
 async function insertFailedRetry(filePath: string) {
   try {
-    const fileContent = await fs.readFile(filePath, "utf-8");
+    const fileContent = fs.readFileSync(filePath, "utf-8");
     const parsed = JSON.parse(fileContent);
 
     await UnifiedSearchService.insert(parsed);
@@ -19,7 +19,7 @@ async function insertFailedRetry(filePath: string) {
       fileContent,
     );
 
-    fs.unlink(filePath);
+    fs.unlinkSync(filePath);
   } catch (e) {
     logger.error(
       `[UNIFIED-SEARCH-INSERT-FAILED] Failed to read file %s. error: %s`,
@@ -41,9 +41,9 @@ export async function insertFailedRetryAll() {
   );
 
   try {
-    await fs.access(dirPath);
+    fs.accessSync(dirPath);
 
-    const files = await fs.readdir(dirPath);
+    const files = fs.readdirSync(dirPath);
 
     const jsonFiles = files.filter((file) => file.endsWith(".json"));
 
