@@ -116,6 +116,26 @@ export class ResourceLoader {
         workbook.SheetNames.forEach((sheetName) => {
           const worksheet = workbook.Sheets[sheetName];
 
+          // !ref가 실제 데이터보다 작게 잡혀있는 경우를 대비해 범위 재계산
+          const range = { s: { c: 0, r: 0 }, e: { c: 0, r: 0 } };
+          Object.keys(worksheet).forEach((cell) => {
+            if (cell[0] === "!") {
+              return;
+            }
+
+            const decoded = XLSX.utils.decode_cell(cell);
+
+            if (range.e.r < decoded.r) {
+              range.e.r = decoded.r;
+            }
+
+            if (range.e.c < decoded.c) {
+              range.e.c = decoded.c;
+            }
+          });
+
+          worksheet["!ref"] = XLSX.utils.encode_range(range);
+
           // 첫 줄을 헤더로 인식하여 JSON 배열로 변환
           const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
           allData.push(...jsonData);
@@ -152,16 +172,30 @@ export class ResourceLoader {
     propertyMap: Record<string, string>,
   ): Array<TResource> {
     const mappedResources: Array<TResource> = [];
-    const propertyMapEntries = Object.entries(propertyMap);
+
+    // propertyMap의 key에서 공백 및 줄바꿈 제거한 정규화된 맵 생성
+    const normalizedPropertyMap: Record<string, string> = {};
+    Object.entries(propertyMap).forEach(([from, to]) => {
+      normalizedPropertyMap[from.replace(/\s/g, "")] = to;
+    });
 
     fileContents.forEach((resourceData) => {
       const resource: Record<string, any> = {};
 
-      propertyMapEntries.forEach(([from, to]) => {
-        resource[to] = resourceData[from];
+      // 각 행 데이터의 key에서도 공백 및 줄바꿈을 제거하여 매핑
+      Object.entries(resourceData).forEach(([key, value]) => {
+        const normalizedKey = key.replace(/\s/g, "");
+        const targetProperty = normalizedPropertyMap[normalizedKey];
+
+        if (targetProperty) {
+          resource[targetProperty] = value;
+        }
       });
 
-      mappedResources.push(resource as TResource);
+      // 매핑된 결과가 비어있지 않은 경우에만 추가
+      if (Object.keys(resource).length > 0) {
+        mappedResources.push(resource as TResource);
+      }
     });
 
     return mappedResources;
