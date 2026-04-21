@@ -1,7 +1,7 @@
 import path from "path";
 import fs from "fs";
+import * as XLSX from "xlsx";
 import iconvLite from "iconv-lite";
-const xlsParser = require("simple-excel-to-json");
 import { Converter } from "csvtojson/v2/Converter";
 import { TLoadedResource, TResourceDirectoryName, TResource } from "../types";
 import { RESOURCE_PROPERTY_MAP } from "../utils";
@@ -103,17 +103,25 @@ export class ResourceLoader {
 
     const dirName = fileName
       .split(/\\|\//)
-      .slice(-2)[0] as TResourceDirectoryName; // 파일 폴더 이름
+      .slice(-2)[0] as TResourceDirectoryName;
 
     switch (fileExtension) {
       case "xlsx":
       case "xls": {
-        const fileContents = xlsParser.parseXls2Json(fileName);
+        // 엑셀 파일 읽기
+        const workbook = XLSX.readFile(fileName);
+        const allData: any[] = [];
 
-        return this.mappingProperty(
-          fileContents.flat() as any[],
-          RESOURCE_PROPERTY_MAP[dirName],
-        );
+        // 모든 시트의 데이터를 합침
+        workbook.SheetNames.forEach((sheetName) => {
+          const worksheet = workbook.Sheets[sheetName];
+
+          // 첫 줄을 헤더로 인식하여 JSON 배열로 변환
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+          allData.push(...jsonData);
+        });
+
+        return this.mappingProperty(allData, RESOURCE_PROPERTY_MAP[dirName]);
       }
 
       case "csv": {
