@@ -1,9 +1,9 @@
 import { createResourceFile, logger, ResourceLoader } from "../utils";
 
 /**
- * 주변 약국 리소스 배포
+ * 주변 약국 리소스 생성
  */
-export async function deployNearbyPharmaciesResource() {
+export async function createNearbyPharmaciesResource() {
   try {
     logger.info("[NEARBY-PHARMACIES] Start load resource");
 

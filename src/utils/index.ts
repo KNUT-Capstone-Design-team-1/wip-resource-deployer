@@ -10,7 +10,6 @@ import {
 import logger from "./logger";
 
 export { logger };
-export { MarkImageCrawler } from "./mark_image_crawler";
 export { ResourceLoader } from "./resource_loader";
 
 /**

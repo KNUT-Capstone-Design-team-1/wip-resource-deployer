@@ -11,8 +11,7 @@ import {
   runQueryForSQLFile,
   createResourcesDirectory,
 } from "../utils";
-import { IDrugRecognition, IFinishedMedicinePermissionDetail } from "../types";
-import { IUnifiedSearchData } from "../types/unified_search";
+import { IDrugRecognition, IFinishedMedicinePermissionDetail, IUnifiedSearchData } from "../types";
 
 /**
  * 테이블 DROP

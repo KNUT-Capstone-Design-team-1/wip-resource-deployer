@@ -102,7 +102,7 @@ async function createPillData(
 /**
  * pill_data 리소스 파일 생성
  */
-export async function generatePillDataResourceFile() {
+export async function createPillDataResourceFile() {
   try {
     logger.info("[PILL-DATA] Start load resource");
 

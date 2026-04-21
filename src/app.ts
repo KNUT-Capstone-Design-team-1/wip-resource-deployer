@@ -11,11 +11,11 @@ async function main() {
   const { targetResource } = config.common;
 
   if (targetResource.includes("pill_data")) {
-    await PillDataService.generatePillDataResourceFile();
+    await PillDataService.createPillDataResourceFile();
   }
 
   if (targetResource.includes("nearby_pharmacies")) {
-    await NearbyPharmaciesService.deployNearbyPharmaciesResource();
+    await NearbyPharmaciesService.createNearbyPharmaciesResource();
   }
 
   if (targetResource.includes("mark_images")) {
