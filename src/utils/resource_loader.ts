@@ -111,11 +111,10 @@ export class ResourceLoader {
     switch (fileExtension) {
       case "xlsx":
       case "xls": {
-        const fileContents: { flat: () => Array<TResourceRaw> } =
-          xlsParser.parseXls2Json(fileName);
+        const fileContents = xlsParser.parseXls2Json(fileName);
 
         return this.mappingProperty(
-          fileContents.flat(),
+          fileContents.flat() as any[],
           RESOURCE_PROPERTY_MAP[dirName]
         );
       }
@@ -124,7 +123,7 @@ export class ResourceLoader {
         const csvString = iconvLite.decode(fs.readFileSync(fileName), "euc-kr");
         const fileContents = (await new Converter().fromString(
           csvString
-        )) as Array<TResourceRaw>;
+        )) as any[];
 
         return this.mappingProperty(
           fileContents,

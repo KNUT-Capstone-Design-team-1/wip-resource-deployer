@@ -1,36 +1,27 @@
-declare module 'simple-excel-to-json';
-
-class XlsParser {
-  constructor(trans) {
-    this.transforms = typeof trans !== 'undefined' ? trans : [];
+declare module "simple-excel-to-json" {
+  interface ParseOption {
+    isToCamelCase?: boolean;
+    isNested?: boolean;
   }
 
-  setTranseform(func) {
-    this.transforms = func;
+  class XlsParser {
+    constructor(trans?: any[]);
+    setTranseform(func: any): void;
+    parseXls2Json(
+      path: string,
+      option?: ParseOption,
+      xlsxParseOption?: any
+    ): any[][];
   }
 
-  parseXls2Json(path, option, xlsxParseOption) {
-    const obj = xlsx.parse(path, xlsxParseOption); // parses a file
-    const xlsDoc = [];
+  const parser: {
+    XlsParser: typeof XlsParser;
+    parseXls2Json: (
+      path: string,
+      option?: ParseOption,
+      xlsxParseOption?: any
+    ) => any[][];
+  };
 
-    obj.forEach((e, i) => {
-      //sheet
-      let isToCamelCase = false;
-      if (option && typeof option.isToCamelCase !== 'undefined')
-        isToCamelCase = option.isToCamelCase;
-
-      const o = parse(e, this.transforms ? this.transforms[i] : [], isToCamelCase, i);
-      if (typeof o !== 'undefined') {
-        if (option && option.isNested) {
-          xlsDoc.push(convert2NestedObj(o));
-        } else {
-          xlsDoc.push(o);
-        }
-      }
-    });
-
-    return xlsDoc;
-  }
+  export = parser;
 }
-
-export { XlsParser, parseXls2Json };

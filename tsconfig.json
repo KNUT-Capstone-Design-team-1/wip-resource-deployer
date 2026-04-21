@@ -3,12 +3,12 @@
     "target": "es2016",
     "module": "commonjs",
     "rootDir": "./",
-    "typeRoots": ["./node_modules/@types", "./src/@types"],
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "useUnknownInCatchVariables": false,
     "skipLibCheck": true
-  }
+  },
+  "include": ["src/**/*"]
 }
