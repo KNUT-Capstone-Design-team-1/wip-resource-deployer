@@ -30,13 +30,6 @@ export type TLoadedResource = TDrugRecognitionResource &
   TNarcoticsResource &
   TPasychotropicsResource;
 
-export type TResourceRaw =
-  | typeof DRUG_RECOGNITION_PROPERTY_MAP
-  | typeof FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP
-  | typeof CANNABIS_PROPERTY_MAP
-  | typeof NARCOTICS_PROPERTY_MAP
-  | typeof PASYCHOTROPICS_PROPERTY_MAP;
-
 export type TResource =
   | IDrugRecognition
   | IFinishedMedicinePermissionDetail

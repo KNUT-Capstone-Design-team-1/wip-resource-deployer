@@ -1,14 +1,9 @@
 import path from "path";
 import fs from "fs";
-import xlsParser from "simple-excel-to-json";
 import iconvLite from "iconv-lite";
+const xlsParser = require("simple-excel-to-json");
 import { Converter } from "csvtojson/v2/Converter";
-import {
-  TLoadedResource,
-  TResourceDirectoryName,
-  TResource,
-  TResourceRaw,
-} from "../types";
+import { TLoadedResource, TResourceDirectoryName, TResource } from "../types";
 import { RESOURCE_PROPERTY_MAP } from "../utils";
 
 type TTargetResources = Array<TResourceDirectoryName>;
@@ -34,7 +29,7 @@ export class ResourceLoader {
 
     // 초기값 세팅
     for (const dirName of Object.keys(
-      RESOURCE_PROPERTY_MAP
+      RESOURCE_PROPERTY_MAP,
     ) as TResourceDirectoryName[]) {
       const key = this.snakeToCamel(dirName) as keyof T;
       resource[key] = [] as any;
@@ -50,7 +45,9 @@ export class ResourceLoader {
       }
 
       const resourceData = await this.getResources(resourcePath, fileList);
-      const dirName = resourcePath.split(/\\|\//).pop() as TResourceDirectoryName;
+      const dirName = resourcePath
+        .split(/\\|\//)
+        .pop() as TResourceDirectoryName;
       const key = this.snakeToCamel(dirName) as keyof T;
 
       resource[key] = resourceData as any;
@@ -65,7 +62,7 @@ export class ResourceLoader {
    */
   private getPathList(): Array<string> {
     return this.targetResources.map((dirName) =>
-      path.join(`${this.dirPath}/${dirName}`)
+      path.join(`${this.dirPath}/${dirName}`),
     );
   }
 
@@ -77,13 +74,13 @@ export class ResourceLoader {
    */
   private async getResources(
     resourcePath: string,
-    fileList: string[]
+    fileList: string[],
   ): Promise<Array<TResource>> {
     const resourceData: Array<TResource> = [];
 
     for await (const fileName of fileList) {
       const fileContents = await this.readFileContents(
-        `${resourcePath}/${fileName}`
+        `${resourcePath}/${fileName}`,
       );
 
       if (fileContents.length === 0) {
@@ -115,19 +112,19 @@ export class ResourceLoader {
 
         return this.mappingProperty(
           fileContents.flat() as any[],
-          RESOURCE_PROPERTY_MAP[dirName]
+          RESOURCE_PROPERTY_MAP[dirName],
         );
       }
 
       case "csv": {
         const csvString = iconvLite.decode(fs.readFileSync(fileName), "euc-kr");
         const fileContents = (await new Converter().fromString(
-          csvString
+          csvString,
         )) as any[];
 
         return this.mappingProperty(
           fileContents,
-          RESOURCE_PROPERTY_MAP[dirName]
+          RESOURCE_PROPERTY_MAP[dirName],
         );
       }
 
@@ -144,7 +141,7 @@ export class ResourceLoader {
    */
   private mappingProperty(
     fileContents: Array<any>,
-    propertyMap: Record<string, string>
+    propertyMap: Record<string, string>,
   ): Array<TResource> {
     const mappedResources: Array<TResource> = [];
     const propertyMapEntries = Object.entries(propertyMap);
@@ -169,7 +166,7 @@ export class ResourceLoader {
    */
   private snakeToCamel(str: string): string {
     return str.replace(/([-_][a-z])/g, (group) =>
-      group.toUpperCase().replace("-", "").replace("_", "")
+      group.toUpperCase().replace("-", "").replace("_", ""),
     );
   }
 }
