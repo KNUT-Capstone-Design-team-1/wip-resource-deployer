@@ -5,6 +5,9 @@ import {
   MarkImageService,
   UnifiedSearchService,
   UnifiedSearchInsertFailedService,
+  CannabisService,
+  NarcoticsService,
+  PsychotropicsService,
 } from "./services";
 
 async function main() {
@@ -28,6 +31,18 @@ async function main() {
 
   if (targetResource.includes("unified_search_insert_failed")) {
     await UnifiedSearchInsertFailedService.insertFailedRetryAll();
+  }
+
+  if (targetResource.includes("cannabis")) {
+    await CannabisService.createCannabisResource();
+  }
+
+  if (targetResource.includes("narcotics")) {
+    await NarcoticsService.createNarcoticsResource();
+  }
+
+  if (targetResource.includes("pasychotropics")) {
+    await PsychotropicsService.createPasychotropicsResource();
   }
 
   process.exit(0);

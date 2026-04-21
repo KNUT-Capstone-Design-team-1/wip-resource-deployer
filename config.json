@@ -1,14 +1,14 @@
 {
   "common": {
     "targetResource": [
-      "pill_data",
-      "nearby_pharmacies",
-      "mark_images",
-      "unified_search",
-      "unified_search_insert_failed",
-      "cannabis",
-      "narcotics",
-      "pasychotropics"
+      "_pill_data",
+      "_nearby_pharmacies",
+      "_mark_images",
+      "_unified_search",
+      "_unified_search_insert_failed",
+      "_cannabis",
+      "_narcotics",
+      "_pasychotropics"
     ]
   },
   "markImage": {
