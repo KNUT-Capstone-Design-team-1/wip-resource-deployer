@@ -28,6 +28,7 @@ database_id = ""  # D1 대시보드에서 확인
 - [의약품 낱알식별](https://nedrug.mfds.go.kr/pbp/CCBGA01/getItem?totalPages=8&limit=10&page=2&&openDataInfoSeq=11)
 - [의약품 제품허가 상세정보](https://nedrug.mfds.go.kr/pbp/CCBGA01/getItem?totalPages=8&limit=10&page=2&&openDataInfoSeq=12)
 - [전국 병의원 및 약국 현황 / 2.약국정보서비스](https://opendata.hira.or.kr/op/opc/selectOpenData.do?sno=11925&publDataTpCd=&searchCnd=ttl&searchWrd=%EC%A0%84%EA%B5%)
+- [마약정보데이터베이스](https://www.nifds.go.kr/toxinfo/kind/kr/index.do)
 
 # execute
 
@@ -38,6 +39,9 @@ database_id = ""  # D1 대시보드에서 확인
 - `drug_recognition` (의약품 낱알식별 / xls)
 - `finished_medicine_permission_detail` (의약품 제품허가 상세정보 / xls)
 - `nearby_pharmacies` (전국 병의원 및 약국 현황 / 2.약국정보서비스)
+- `cannabis` (대마 데이터 / xlsx)
+- `narcotics` (마약류 데이터 / xlsx)
+- `pasychotropics` (향정신성 약물 데이터 / xlsx)
 
 3. `config.json`에서 생성 및 배포하고자 하는 리소스 타입의 `_` 제거
 

@@ -22,9 +22,6 @@ export type TFinishedMedicinePermissionDetailResource = Record<
   Array<IFinishedMedicinePermissionDetail>
 >;
 
-export type TFinishedMedicinePermissionDetailDirectoryName =
-  "finished_medicine_permission_detail";
-
 export const FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP = {
   품목일련번호: "ITEM_SEQ",
   품목명: "ITEM_NAME",

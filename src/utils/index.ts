@@ -6,6 +6,9 @@ import {
   DRUG_RECOGNITION_PROPERTY_MAP,
   FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP,
   NEARBY_PHARMACIES_PROPERTY_MAP,
+  CANNABIS_PROPERTY_MAP,
+  NARCOTICS_PROPERTY_MAP,
+  PASYCHOTROPICS_PROPERTY_MAP,
 } from "../types";
 import logger from "./logger";
 
@@ -17,14 +20,15 @@ export { ResourceLoader } from "./resource_loader";
  */
 export const RESOURCE_PROPERTY_MAP: Record<
   TResourceDirectoryName,
-  | typeof DRUG_RECOGNITION_PROPERTY_MAP
-  | typeof FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP
-  | typeof NEARBY_PHARMACIES_PROPERTY_MAP
+  Record<string, string>
 > = {
   drug_recognition: DRUG_RECOGNITION_PROPERTY_MAP,
   finished_medicine_permission_detail:
     FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP,
   nearby_pharmacies: NEARBY_PHARMACIES_PROPERTY_MAP,
+  cannabis: CANNABIS_PROPERTY_MAP,
+  narcotics: NARCOTICS_PROPERTY_MAP,
+  pasychotropics: PASYCHOTROPICS_PROPERTY_MAP,
 } as const;
 
 /**

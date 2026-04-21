@@ -8,12 +8,6 @@ import {
   TResourceDirectoryName,
   TResource,
   TResourceRaw,
-  INearbyPharmacies,
-  NEARBY_PHARMACIES_PROPERTY_MAP,
-  IDrugRecognition,
-  IFinishedMedicinePermissionDetail,
-  DRUG_RECOGNITION_PROPERTY_MAP,
-  FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP,
 } from "../types";
 import { RESOURCE_PROPERTY_MAP } from "../utils";
 
@@ -35,12 +29,16 @@ export class ResourceLoader {
    * 리소스 파일을 JSON Object로 로드
    * @returns
    */
-  public async loadResource(): Promise<TLoadedResource> {
-    const resource: TLoadedResource = {
-      drugRecognition: [],
-      finishedMedicinePermissionDetail: [],
-      nearbyPharmacies: [],
-    };
+  public async loadResource<T extends TLoadedResource>(): Promise<T> {
+    const resource = {} as T;
+
+    // 초기값 세팅
+    for (const dirName of Object.keys(
+      RESOURCE_PROPERTY_MAP
+    ) as TResourceDirectoryName[]) {
+      const key = this.snakeToCamel(dirName) as keyof T;
+      resource[key] = [] as any;
+    }
 
     for await (const resourcePath of this.getPathList()) {
       const fileList = fs.existsSync(resourcePath)
@@ -52,20 +50,10 @@ export class ResourceLoader {
       }
 
       const resourceData = await this.getResources(resourcePath, fileList);
-      const key = resourcePath.split(/\\|\//).pop() as TResourceDirectoryName; // 디렉터리 이름만 추출 (this.~~~dirName)
+      const dirName = resourcePath.split(/\\|\//).pop() as TResourceDirectoryName;
+      const key = this.snakeToCamel(dirName) as keyof T;
 
-      if (key === "drug_recognition") {
-        resource.drugRecognition = resourceData as Array<IDrugRecognition>;
-      }
-
-      if (key === "finished_medicine_permission_detail") {
-        resource.finishedMedicinePermissionDetail =
-          resourceData as Array<IFinishedMedicinePermissionDetail>;
-      }
-
-      if (key === "nearby_pharmacies") {
-        resource.nearbyPharmacies = resourceData as Array<INearbyPharmacies>;
-      }
+      resource[key] = resourceData as any;
     }
 
     return resource;
@@ -156,11 +144,8 @@ export class ResourceLoader {
    * @returns
    */
   private mappingProperty(
-    fileContents: Array<TResourceRaw>,
-    propertyMap:
-      | typeof DRUG_RECOGNITION_PROPERTY_MAP
-      | typeof FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP
-      | typeof NEARBY_PHARMACIES_PROPERTY_MAP
+    fileContents: Array<any>,
+    propertyMap: Record<string, string>
   ): Array<TResource> {
     const mappedResources: Array<TResource> = [];
     const propertyMapEntries = Object.entries(propertyMap);
@@ -169,12 +154,23 @@ export class ResourceLoader {
       const resource: Record<string, any> = {};
 
       propertyMapEntries.forEach(([from, to]) => {
-        resource[to] = resourceData[from as keyof TResourceRaw];
+        resource[to] = resourceData[from];
       });
 
       mappedResources.push(resource as TResource);
     });
 
     return mappedResources;
+  }
+
+  /**
+   * snake_case를 camelCase로 변환
+   * @param str 대상 문자열
+   * @returns
+   */
+  private snakeToCamel(str: string): string {
+    return str.replace(/([-_][a-z])/g, (group) =>
+      group.toUpperCase().replace("-", "").replace("_", "")
+    );
   }
 }

@@ -28,8 +28,6 @@ export type TDrugRecognitionResource = Record<
   Array<IDrugRecognition>
 >;
 
-export type TDrugRecognitionDirectoryName = "drug_recognition";
-
 export const DRUG_RECOGNITION_PROPERTY_MAP = {
   품목일련번호: "ITEM_SEQ",
   품목명: "ITEM_NAME",
