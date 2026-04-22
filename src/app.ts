@@ -41,8 +41,8 @@ async function main() {
     await NarcoticsService.createNarcoticsResource();
   }
 
-  if (targetResource.includes("pasychotropics")) {
-    await PsychotropicsService.createPasychotropicsResource();
+  if (targetResource.includes("psychotropics")) {
+    await PsychotropicsService.createpsychotropicsResource();
   }
 
   process.exit(0);

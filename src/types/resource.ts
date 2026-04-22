@@ -9,9 +9,9 @@ import {
   DRUG_RECOGNITION_PROPERTY_MAP,
   TCannabisResource,
   TNarcoticsResource,
-  TPasychotropicsResource,
+  TpsychotropicsResource,
   CANNABIS_PROPERTY_MAP,
-  PASYCHOTROPICS_PROPERTY_MAP,
+  psychotropics_PROPERTY_MAP,
   NARCOTICS_PROPERTY_MAP,
 } from "./";
 
@@ -21,14 +21,14 @@ export type TResourceDirectoryName =
   | "nearby_pharmacies"
   | "cannabis"
   | "narcotics"
-  | "pasychotropics";
+  | "psychotropics";
 
 export type TLoadedResource = TDrugRecognitionResource &
   TFinishedMedicinePermissionDetailResource &
   TNearbyPharmaciesResource &
   TCannabisResource &
   TNarcoticsResource &
-  TPasychotropicsResource;
+  TpsychotropicsResource;
 
 export type TResource =
   | IDrugRecognition

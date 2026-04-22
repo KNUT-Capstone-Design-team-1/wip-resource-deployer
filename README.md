@@ -41,7 +41,7 @@ database_id = ""  # D1 대시보드에서 확인
 - `nearby_pharmacies` (전국 병의원 및 약국 현황 / 2.약국정보서비스)
 - `cannabis` (대마 데이터 / xlsx)
 - `narcotics` (마약류 데이터 / xlsx)
-- `pasychotropics` (향정신성 약물 데이터 / xlsx)
+- `psychotropics` (향정신성 약물 데이터 / xlsx)
 
 3. `config.json`에서 생성 및 배포하고자 하는 리소스 타입의 `_` 제거
 

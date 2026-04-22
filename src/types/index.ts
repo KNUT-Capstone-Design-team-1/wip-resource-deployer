@@ -7,4 +7,4 @@ export * from "./mark_image";
 export * from "./unified_search";
 export * from "./cannabis";
 export * from "./narcotics";
-export * from "./pasychotropics";
+export * from "./psychotropics";

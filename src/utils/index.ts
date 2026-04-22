@@ -8,7 +8,7 @@ import {
   NEARBY_PHARMACIES_PROPERTY_MAP,
   CANNABIS_PROPERTY_MAP,
   NARCOTICS_PROPERTY_MAP,
-  PASYCHOTROPICS_PROPERTY_MAP,
+  psychotropics_PROPERTY_MAP,
 } from "../types";
 import logger from "./logger";
 
@@ -28,7 +28,7 @@ export const RESOURCE_PROPERTY_MAP: Record<
   nearby_pharmacies: NEARBY_PHARMACIES_PROPERTY_MAP,
   cannabis: CANNABIS_PROPERTY_MAP,
   narcotics: NARCOTICS_PROPERTY_MAP,
-  pasychotropics: PASYCHOTROPICS_PROPERTY_MAP,
+  psychotropics: psychotropics_PROPERTY_MAP,
 } as const;
 
 /**

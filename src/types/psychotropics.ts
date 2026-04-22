@@ -1,7 +1,7 @@
 /**
  * 향정신성 약물
  */
-export interface IPasychotropics {
+export interface Ipsychotropics {
   chemicalNameKr: string;
   chemicalNameEn: string;
   synonyms: string;
@@ -11,12 +11,12 @@ export interface IPasychotropics {
   molecularWeight: string;
 }
 
-export type TPasychotropicsResource = Record<
-  "pasychotropics",
-  Array<IPasychotropics>
+export type TpsychotropicsResource = Record<
+  "psychotropics",
+  Array<Ipsychotropics>
 >;
 
-export const PASYCHOTROPICS_PROPERTY_MAP = {
+export const psychotropics_PROPERTY_MAP = {
   "품명(국문)": "chemicalNameKr",
   "품명(영문)": "chemicalNameEn",
   이명: "synonyms",
