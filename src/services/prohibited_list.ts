@@ -21,10 +21,10 @@ export async function createProhibitedListResource() {
       false,
     );
 
-    logger.info("[PROHIBITED_LIST] Complete deploy prohibited list data");
+    logger.info("[PROHIBITED_LIST] Complete create prohibited list data");
   } catch (e) {
     logger.error(
-      "[PROHIBITED_LIST] Failed to deploy prohibited list data. %s",
+      "[PROHIBITED_LIST] Failed to create prohibited list data. %s",
       e.stack || e,
     );
   }

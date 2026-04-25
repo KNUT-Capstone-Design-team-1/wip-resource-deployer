@@ -17,8 +17,8 @@ export async function createpsychotropicsResource() {
 
     await createResourceFile("psychotropics.json", psychotropicsData.psychotropics, false);
 
-    logger.info("[PSYCHOTORIPICS] Complete deploy psychotropics data");
+    logger.info("[PSYCHOTORIPICS] Complete create psychotropics data");
   } catch (e) {
-    logger.error("[PSYCHOTORIPICS] Failed to deploy psychotropics data. %s", e.stack || e);
+    logger.error("[PSYCHOTORIPICS] Failed to create psychotropics data. %s", e.stack || e);
   }
 }
