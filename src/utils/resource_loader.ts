@@ -126,9 +126,11 @@ export class ResourceLoader {
 
       case "pdf":
         const config = PDF_RESOURCE_CONFIG[dirName];
+
         if (!config) {
           throw new Error(`No PDF configuration for ${dirName}`);
         }
+
         return await this.processPDFWithLLM(fileName, config);
 
       default:
@@ -202,33 +204,23 @@ export class ResourceLoader {
     const text = await this.extractText(filePath);
     const results: T[] = [];
 
-    if (config.sectionRegex) {
-      const matches = [...text.matchAll(config.sectionRegex)];
+    if (!config.sectionRegex) {
+      return await this.executeLLMClassify(config, text);
+    }
 
-      for (let i = 0; i < matches.length; i++) {
-        const category = matches[i][0];
-        const start = matches[i].index!;
-        const end = matches[i + 1]?.index ?? text.length;
-        const content = text.slice(start, end);
+    const matches = [...text.matchAll(config.sectionRegex)];
 
-        const prompt = config.promptGenerator(content, category);
-        const items = (await this.classifyWithLLM(prompt)) as any[];
+    for (let i = 0; i < matches.length; i++) {
+      const category = matches[i][0];
 
-        if (config.postProcessor) {
-          results.push(...config.postProcessor(items, category));
-        } else {
-          results.push(...items);
-        }
-      }
-    } else {
-      const prompt = config.promptGenerator(text);
-      const items = (await this.classifyWithLLM(prompt)) as any[];
+      const start = matches[i].index!;
+      const end = matches[i + 1]?.index ?? text.length;
 
-      if (config.postProcessor) {
-        results.push(...config.postProcessor(items));
-      } else {
-        results.push(...items);
-      }
+      const content = text.slice(start, end);
+
+      results.push(
+        ...(await this.executeLLMClassify(config, content, category)),
+      );
     }
 
     return results;
@@ -258,6 +250,32 @@ export class ResourceLoader {
     }
 
     return fullText;
+  }
+
+  /**
+   * LLM을 실행하여 PDF 내용 분류 및 구조화
+   * @param config PDF 프로세서 설정
+   * @param text PDF 텍스트 내용
+   * @param category 카테고리
+   * @returns 분류된 데이터 배열
+   */
+  private async executeLLMClassify<T>(
+    config: IPDFProcessorConfig<T>,
+    text: string,
+    category?: string,
+  ): Promise<T[]> {
+    const prompt = config.promptGenerator(text, category);
+    const items = (await this.classifyWithLLM(prompt)) as any[];
+
+    const results: T[] = [];
+
+    if (config.postProcessor) {
+      results.push(...config.postProcessor(items, category));
+    } else {
+      results.push(...items);
+    }
+
+    return results;
   }
 
   /**
