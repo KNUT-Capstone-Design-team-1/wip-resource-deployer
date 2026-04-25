@@ -42,31 +42,59 @@ export const PDF_RESOURCE_CONFIG: Record<string, IPDFProcessorConfig<any>> = {
     promptGenerator: (content: string) => `
 You are a strict medical substance extraction system specialized in anti-doping documents.
 
-Extract ONLY actual prohibited substances (drug or chemical names).
+Your task is to extract prohibited substances with BOTH English and Korean names whenever possible.
 
-Rules:
-- Ignore section titles (e.g., S1, S2, S3, etc.)
-- Ignore descriptions and sentences
-- Extract only substance names from bullet lists or comma-separated lists
-- If a name contains parentheses, extract:
-  - genericEn: main English name (outside parentheses)
-  - genericKr: Korean name if explicitly present nearby, otherwise empty ""
-- If multiple aliases exist in parentheses, ignore them
-- Do NOT invent translations
-- Only extract from lines that look like lists (start with •, -, or bullet-like patterns)
-- Return ONLY valid JSON
-- Do not include markdown (no \`\`\`json)
-- Do not include explanations
-- Do not include any text before or after JSON
-- Remove duplicates
-- Return ONLY valid JSON
-- No explanation
+CRITICAL RULES (VERY IMPORTANT):
+
+1. Extract ONLY substance names from bullet lists or list-like lines.
+   - Lines must start with symbols like "•", "-", or be clearly comma-separated lists.
+   - Ignore paragraphs, explanations, and descriptions.
+
+2. Korean mapping (VERY IMPORTANT):
+   - The document contains BOTH English and Korean sections.
+   - The Korean section is usually a DIRECT TRANSLATION of the English list.
+   - Match Korean names using:
+     a) The same line (if Korean exists together)
+     b) Nearby Korean lines with SAME ORDER
+   - If a Korean name exists ANYWHERE nearby, you MUST use it.
+   - DO NOT leave genericKr empty if Korean exists in the text.
+
+3. Parentheses handling:
+   - If format: "English (something)"
+     → genericEn = English only
+     → Ignore aliases inside parentheses
+   - If Korean appears in parentheses → use it as genericKr
+
+4. Do NOT invent translations.
+   - Only use Korean text that actually exists in the document.
+
+5. Category extraction:
+   - category: S1, S2, S3, etc.
+   - categoryKr: extract from Korean section (e.g., "동화작용제")
+   - categoryEn: extract from English section (e.g., "Anabolic agents")
+
+6. Always assume:
+   - inGameProhibited = true
+   - outGameProhibited = true
+
+7. Deduplicate substances.
+
+8. Output STRICT JSON ONLY:
+   - No markdown
+   - No explanation
+   - No extra text
+   - Must be valid JSON
 
 Output format:
 [
   {
     "genericEn": "",
-    "genericKr": ""
+    "genericKr": "",
+    "category": "",
+    "categoryKr": "",
+    "categoryEn": "",
+    "inGameProhibited": true,
+    "outGameProhibited": true
   }
 ]
 
@@ -74,21 +102,14 @@ Text:
 ${content}
 `,
     postProcessor: (items: any[], category?: string): IProhibitedList[] => {
-      const categoryInfo = CATEGORY_MAP[category || ""] || {
-        kr: "기타",
-        en: "Others",
-        inGame: 0,
-        outGame: 0,
-      };
-
       return items.map((item) => ({
         genericKr: item.genericKr,
         genericEn: item.genericEn,
         category: category as any,
-        categoryKr: categoryInfo.kr as any,
-        categoryEn: categoryInfo.en as any,
-        inGameProhibited: categoryInfo.inGame,
-        outGameProhibited: categoryInfo.outGame,
+        categoryKr: item.kr as any,
+        categoryEn: item.en as any,
+        inGameProhibited: item.inGame,
+        outGameProhibited: item.outGame,
       }));
     },
   },
