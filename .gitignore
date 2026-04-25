@@ -1,6 +1,6 @@
 .env
 node_modules
-res
+origin_data
 log
 *.realm
 *.realm.lock

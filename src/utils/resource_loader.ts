@@ -16,7 +16,7 @@ export class ResourceLoader {
   private readonly targetResources: TTargetResources;
 
   constructor(targetResources: TTargetResources) {
-    this.dirPath = path.join(__dirname, `../../res`);
+    this.dirPath = path.join(__dirname, `../../origin_data`);
     this.targetResources = targetResources;
   }
 
