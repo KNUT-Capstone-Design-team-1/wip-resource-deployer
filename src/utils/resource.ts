@@ -8,7 +8,13 @@ import {
   CANNABIS_PROPERTY_MAP,
   NARCOTICS_PROPERTY_MAP,
   psychotropics_PROPERTY_MAP,
+  PROHIBITED_LIST_PROPERTY_MAP,
+  CATEGORY_MAP,
+  CATEGORY_REGEX,
+  IProhibitedList,
 } from "../types";
+import { createResourcesDirectory } from "./shared";
+import { IPDFProcessorConfig } from "./pdf";
 
 /**
  * 리소스 별 프로퍼티 맵
@@ -24,18 +30,51 @@ export const RESOURCE_PROPERTY_MAP: Record<
   cannabis: CANNABIS_PROPERTY_MAP,
   narcotics: NARCOTICS_PROPERTY_MAP,
   psychotropics: psychotropics_PROPERTY_MAP,
+  prohibited_list: PROHIBITED_LIST_PROPERTY_MAP,
 } as const;
 
 /**
- * 원천 데이터를 저장할 디렉터리 생성
+ * PDF 리소스용 설정
  */
-function createResourcesDirectory() {
-  const dirPath = path.resolve(__dirname, "../../resources");
+export const PDF_RESOURCE_CONFIG: Record<string, IPDFProcessorConfig<any>> = {
+  prohibited_list: {
+    sectionRegex: CATEGORY_REGEX,
+    promptGenerator: (content: string) => `
+You are a medical data extractor.
 
-  if (!fs.existsSync(dirPath)) {
-    fs.mkdirSync(dirPath, { recursive: true });
+Extract drug names from the text.
+
+Return JSON array:
+[
+  {
+    "genericEn": "...",
+    "genericKr": "..."
   }
-}
+]
+
+Text:
+${content}
+`,
+    postProcessor: (items: any[], category?: string): IProhibitedList[] => {
+      const categoryInfo = CATEGORY_MAP[category || ""] || {
+        kr: "기타",
+        en: "Others",
+        inGame: false,
+        outGame: false,
+      };
+
+      return items.map((item) => ({
+        genericKr: item.genericKr,
+        genericEn: item.genericEn,
+        category: category as any,
+        categoryKr: categoryInfo.kr as any,
+        categoryEn: categoryInfo.en as any,
+        inGameProhibited: categoryInfo.inGame,
+        outGameProhibited: categoryInfo.outGame,
+      }));
+    },
+  },
+};
 
 /**
  * 원천 데이터 파일 생성

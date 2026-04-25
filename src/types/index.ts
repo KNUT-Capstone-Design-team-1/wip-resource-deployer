@@ -8,3 +8,4 @@ export * from "./unified_search";
 export * from "./cannabis";
 export * from "./narcotics";
 export * from "./psychotropics";
+export * from "./prohibited_list";

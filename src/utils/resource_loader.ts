@@ -4,7 +4,11 @@ import * as XLSX from "xlsx";
 import iconvLite from "iconv-lite";
 import { Converter } from "csvtojson/v2/Converter";
 import { TLoadedResource, TResourceDirectoryName, TResource } from "../types";
-import { RESOURCE_PROPERTY_MAP } from "../utils";
+import {
+  RESOURCE_PROPERTY_MAP,
+  PDF_RESOURCE_CONFIG,
+  processPDFWithLLM,
+} from "../utils";
 
 type TTargetResources = Array<TResourceDirectoryName>;
 
@@ -107,58 +111,81 @@ export class ResourceLoader {
 
     switch (fileExtension) {
       case "xlsx":
-      case "xls": {
-        // 엑셀 파일 읽기
-        const workbook = XLSX.readFile(fileName);
-        const allData: any[] = [];
-
-        // 모든 시트의 데이터를 합침
-        workbook.SheetNames.forEach((sheetName) => {
-          const worksheet = workbook.Sheets[sheetName];
-
-          // !ref가 실제 데이터보다 작게 잡혀있는 경우를 대비해 범위 재계산
-          const range = { s: { c: 0, r: 0 }, e: { c: 0, r: 0 } };
-          Object.keys(worksheet).forEach((cell) => {
-            if (cell[0] === "!") {
-              return;
-            }
-
-            const decoded = XLSX.utils.decode_cell(cell);
-
-            if (range.e.r < decoded.r) {
-              range.e.r = decoded.r;
-            }
-
-            if (range.e.c < decoded.c) {
-              range.e.c = decoded.c;
-            }
-          });
-
-          worksheet["!ref"] = XLSX.utils.encode_range(range);
-
-          // 첫 줄을 헤더로 인식하여 JSON 배열로 변환
-          const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-          allData.push(...jsonData);
-        });
-
-        return this.mappingProperty(allData, RESOURCE_PROPERTY_MAP[dirName]);
-      }
-
-      case "csv": {
-        const csvString = iconvLite.decode(fs.readFileSync(fileName), "euc-kr");
-        const fileContents = (await new Converter().fromString(
-          csvString,
-        )) as any[];
-
+      case "xls":
         return this.mappingProperty(
-          fileContents,
+          await this.readExcelContents(fileName),
           RESOURCE_PROPERTY_MAP[dirName],
         );
-      }
+
+      case "csv":
+        return this.mappingProperty(
+          await this.readCSVContents(fileName),
+          RESOURCE_PROPERTY_MAP[dirName],
+        );
+
+      case "pdf":
+        const config = PDF_RESOURCE_CONFIG[dirName];
+        if (!config) {
+          throw new Error(`No PDF configuration for ${dirName}`);
+        }
+        return await processPDFWithLLM(fileName, config);
 
       default:
         throw new Error(`Invalid file extension ${fileExtension}`);
     }
+  }
+
+  /**
+   * 엑셀 파일 로드
+   * @param fileName 파일 이름
+   * @returns
+   */
+  private async readExcelContents(fileName: string) {
+    const workbook = XLSX.readFile(fileName);
+    const allData: any[] = [];
+
+    // 모든 시트의 데이터를 합침
+    workbook.SheetNames.forEach((sheetName) => {
+      const worksheet = workbook.Sheets[sheetName];
+
+      // !ref가 실제 데이터보다 작게 잡혀있는 경우를 대비해 범위 재계산
+      const range = { s: { c: 0, r: 0 }, e: { c: 0, r: 0 } };
+      Object.keys(worksheet).forEach((cell) => {
+        if (cell[0] === "!") {
+          return;
+        }
+
+        const decoded = XLSX.utils.decode_cell(cell);
+
+        if (range.e.r < decoded.r) {
+          range.e.r = decoded.r;
+        }
+
+        if (range.e.c < decoded.c) {
+          range.e.c = decoded.c;
+        }
+      });
+
+      worksheet["!ref"] = XLSX.utils.encode_range(range);
+
+      // 첫 줄을 헤더로 인식하여 JSON 배열로 변환
+      const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+      allData.push(...jsonData);
+    });
+
+    return allData;
+  }
+
+  /**
+   * CSV 파일 로드
+   * @param fileName 파일 이름
+   * @returns
+   */
+  private async readCSVContents(fileName: string) {
+    const csvString = iconvLite.decode(fs.readFileSync(fileName), "euc-kr");
+    const fileContents = (await new Converter().fromString(csvString)) as any[];
+
+    return fileContents;
   }
 
   /**

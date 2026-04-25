@@ -6,3 +6,4 @@ export * as UnifiedSearchInsertFailedService from "./unified_search_insert_faile
 export * as CannabisService from "./cannabis";
 export * as NarcoticsService from "./narcotics";
 export * as PsychotropicsService from "./psychotropics";
+export * as ProhibitedListService from "./prohibited_list";
