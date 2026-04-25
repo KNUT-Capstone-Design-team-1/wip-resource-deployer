@@ -8,6 +8,7 @@ import {
   CannabisService,
   NarcoticsService,
   PsychotropicsService,
+  ProhibitedListService,
 } from "./services";
 
 async function main() {
@@ -43,6 +44,10 @@ async function main() {
 
   if (targetResource.includes("psychotropics")) {
     await PsychotropicsService.createpsychotropicsResource();
+  }
+
+  if (targetResource.includes("prohibited_list")) {
+    await ProhibitedListService.createProhibitedListResource();
   }
 
   process.exit(0);

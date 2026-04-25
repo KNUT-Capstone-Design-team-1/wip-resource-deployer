@@ -1,6 +1,5 @@
 import fs from "fs";
 import axios from "axios";
-import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 
 /**
  * PDF 파일로 부터 텍스트 추출
@@ -9,6 +8,8 @@ import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
  */
 export async function extractText(filePath: string): Promise<string> {
   const data = new Uint8Array(fs.readFileSync(filePath));
+
+  const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
 
   const pdf = await pdfjsLib.getDocument({ data }).promise;
 
