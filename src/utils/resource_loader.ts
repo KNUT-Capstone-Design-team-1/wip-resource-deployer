@@ -2,13 +2,14 @@ import path from "path";
 import fs from "fs";
 import * as XLSX from "xlsx";
 import iconvLite from "iconv-lite";
+import axios from "axios";
 import { Converter } from "csvtojson/v2/Converter";
 import { TLoadedResource, TResourceDirectoryName, TResource } from "../types";
 import {
   RESOURCE_PROPERTY_MAP,
   PDF_RESOURCE_CONFIG,
-  processPDFWithLLM,
-} from "../utils";
+  IPDFProcessorConfig,
+} from "./shared";
 
 type TTargetResources = Array<TResourceDirectoryName>;
 
@@ -128,7 +129,7 @@ export class ResourceLoader {
         if (!config) {
           throw new Error(`No PDF configuration for ${dirName}`);
         }
-        return await processPDFWithLLM(fileName, config);
+        return await this.processPDFWithLLM(fileName, config);
 
       default:
         throw new Error(`Invalid file extension ${fileExtension}`);
@@ -186,6 +187,100 @@ export class ResourceLoader {
     const fileContents = (await new Converter().fromString(csvString)) as any[];
 
     return fileContents;
+  }
+
+  /**
+   * PDF 파일을 읽고 LLM을 통해 구조화된 데이터로 변환
+   * @param filePath 파일 경로
+   * @param config 프로세서 설정
+   * @returns
+   */
+  private async processPDFWithLLM<T>(
+    filePath: string,
+    config: IPDFProcessorConfig<T>,
+  ): Promise<T[]> {
+    const text = await this.extractText(filePath);
+    const results: T[] = [];
+
+    if (config.sectionRegex) {
+      const matches = [...text.matchAll(config.sectionRegex)];
+
+      for (let i = 0; i < matches.length; i++) {
+        const category = matches[i][0];
+        const start = matches[i].index!;
+        const end = matches[i + 1]?.index ?? text.length;
+        const content = text.slice(start, end);
+
+        const prompt = config.promptGenerator(content, category);
+        const items = (await this.classifyWithLLM(prompt)) as any[];
+
+        if (config.postProcessor) {
+          results.push(...config.postProcessor(items, category));
+        } else {
+          results.push(...items);
+        }
+      }
+    } else {
+      const prompt = config.promptGenerator(text);
+      const items = (await this.classifyWithLLM(prompt)) as any[];
+
+      if (config.postProcessor) {
+        results.push(...config.postProcessor(items));
+      } else {
+        results.push(...items);
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * PDF 파일로 부터 텍스트 추출
+   * @param filePath 파일 경로
+   * @returns
+   */
+  private async extractText(filePath: string): Promise<string> {
+    const data = new Uint8Array(fs.readFileSync(filePath));
+
+    // TS가 require()로 변환하는 것을 방지하기 위해 eval 사용
+    const pdfjsLib = await eval('import("pdfjs-dist/legacy/build/pdf.mjs")');
+
+    const pdf = await pdfjsLib.getDocument({ data }).promise;
+
+    let fullText = "";
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+
+      const strings = content.items.map((item: any) => item.str);
+      fullText += strings.join(" ") + "\n";
+    }
+
+    return fullText;
+  }
+
+  /**
+   * OLLAMA를 통해 LLM을 실행하여 PDF 파일로 부터 내용 추출
+   * @param prompt 프롬프트
+   * @returns
+   */
+  private async classifyWithLLM(prompt: string) {
+    const res = await axios.post("http://localhost:11434/api/generate", {
+      model: "llama3:8b",
+      prompt,
+      stream: false,
+    });
+
+    const text = res.data.response;
+
+    console.log("LLM Response: ", text);
+
+    try {
+      return JSON.parse(text);
+    } catch {
+      return [];
+    }
   }
 
   /**
