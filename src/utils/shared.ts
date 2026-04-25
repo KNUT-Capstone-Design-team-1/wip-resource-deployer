@@ -64,10 +64,9 @@ Your task is to extract prohibited substances with BOTH English and Korean names
 CRITICAL RULES (VERY IMPORTANT):
 
 1. Extract ONLY substance names from list-like lines.
-   A valid list line must:
-   - Look like a list entry (bullet, short line, or repeated pattern)
-   - NOT be a full sentence (no verbs like "is", "are", "used")
-   - Contain substance-like terms (chemical or drug names)
+    A valid list line:
+    - Starts with bullet (•, -, *, etc.) OR
+    - Appears as a short standalone line in a repeated list structure
 
 2. Korean mapping (VERY IMPORTANT):
    - The document contains BOTH English and Korean sections.
@@ -99,13 +98,24 @@ CRITICAL RULES (VERY IMPORTANT):
    - categoryKr from Korean section
    - categoryEn from English section
 
-6. Always:
-   - inGameProhibited = true
-   - outGameProhibited = true
+6. Deduplicate.
 
-7. Deduplicate.
+7. Output STRICT JSON ONLY.
 
-8. Output STRICT JSON ONLY.
+8. Exhaustive extraction (VERY IMPORTANT):
+   - Extract ALL substances from the text.
+   - DO NOT stop after the first match.
+   - DO NOT return a partial list.
+   - EVERY valid list entry must be included.
+
+   VALIDATION RULE:
+   - If multiple list entries exist, output must contain multiple items.
+   - The number of output items should match the number of detected list entries.
+
+9. Output format (STRICT):
+   - Return a JSON ARRAY.
+   - Each element represents ONE substance.
+   - NEVER return a single object.
 
 Text:
 ${content}
