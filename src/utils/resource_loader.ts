@@ -10,6 +10,7 @@ import {
   PDF_RESOURCE_CONFIG,
   IPDFProcessorConfig,
 } from "./shared";
+import config from "../../config.json";
 
 type TTargetResources = Array<TResourceDirectoryName>;
 
@@ -249,6 +250,8 @@ export class ResourceLoader {
       fullText += strings.join(" ") + "\n";
     }
 
+    console.log("fullText", fullText);
+
     return fullText;
   }
 
@@ -284,11 +287,9 @@ export class ResourceLoader {
    * @returns
    */
   private async classifyWithLLM(prompt: string) {
-    const res = await axios.post("http://localhost:11434/api/generate", {
-      model: "llama3:8b",
-      prompt,
-      stream: false,
-    });
+    const { host, model, stream } = config.ollama;
+
+    const res = await axios.post(host, { model, prompt, stream });
 
     const text = res.data.response;
 
