@@ -1,6 +1,7 @@
 import cp from "child_process";
 import path from "path";
 import fs from "fs";
+import { createResourcesDirectory } from "./shared";
 
 /**
  * wrangler에 쿼리 실행
@@ -29,17 +30,6 @@ export function runQueryForSQLFile(resourceFileName: string) {
   const command = `wrangler d1 execute wip --remote --file=${filePath} --yes`;
 
   return cp.execSync(command, { encoding: "utf8", stdio: "inherit" });
-}
-
-/**
- * 원천 데이터를 저장할 디렉터리 생성
- */
-function createResourcesDirectory() {
-  const dirPath = path.resolve(__dirname, "../../resources");
-
-  if (!fs.existsSync(dirPath)) {
-    fs.mkdirSync(dirPath, { recursive: true });
-  }
 }
 
 /**

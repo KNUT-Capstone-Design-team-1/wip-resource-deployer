@@ -13,12 +13,12 @@ export async function createCannabisResource() {
 
     logger.info("[CANNABIS] Complete load resource");
 
-    logger.info("[CANNABIS] Start deploy cannabis data");
+    logger.info("[CANNABIS] Start create cannabis data");
 
     await createResourceFile("cannabis.json", cannabisData.cannabis, false);
 
-    logger.info("[CANNABIS] Complete deploy cannabis data");
+    logger.info("[CANNABIS] Complete create cannabis data");
   } catch (e) {
-    logger.error("[CANNABIS] Failed to deploy cannabis data. %s", e.stack || e);
+    logger.error("[CANNABIS] Failed to create cannabis data. %s", e.stack || e);
   }
 }

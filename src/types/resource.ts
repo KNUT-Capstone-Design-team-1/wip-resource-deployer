@@ -5,14 +5,11 @@ import {
   TFinishedMedicinePermissionDetailResource,
   INearbyPharmacies,
   TNearbyPharmaciesResource,
-  FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP,
-  DRUG_RECOGNITION_PROPERTY_MAP,
   TCannabisResource,
   TNarcoticsResource,
   TpsychotropicsResource,
-  CANNABIS_PROPERTY_MAP,
-  psychotropics_PROPERTY_MAP,
-  NARCOTICS_PROPERTY_MAP,
+  IProhibitedList,
+  TProhibitedListResource,
 } from "./";
 
 export type TResourceDirectoryName =
@@ -21,16 +18,19 @@ export type TResourceDirectoryName =
   | "nearby_pharmacies"
   | "cannabis"
   | "narcotics"
-  | "psychotropics";
+  | "psychotropics"
+  | "prohibited_list";
 
 export type TLoadedResource = TDrugRecognitionResource &
   TFinishedMedicinePermissionDetailResource &
   TNearbyPharmaciesResource &
   TCannabisResource &
   TNarcoticsResource &
-  TpsychotropicsResource;
+  TpsychotropicsResource &
+  TProhibitedListResource;
 
 export type TResource =
   | IDrugRecognition
   | IFinishedMedicinePermissionDetail
-  | INearbyPharmacies;
+  | INearbyPharmacies
+  | IProhibitedList;

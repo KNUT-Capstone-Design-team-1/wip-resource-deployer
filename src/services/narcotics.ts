@@ -13,12 +13,12 @@ export async function createNarcoticsResource() {
 
     logger.info("[NARCOTICS] Complete load resource");
 
-    logger.info("[NARCOTICS] Start deploy narcotics data");
+    logger.info("[NARCOTICS] Start create narcotics data");
 
     await createResourceFile("narcotics.json", narcoticsData.narcotics, false);
 
-    logger.info("[NARCOTICS] Complete deploy narcotics data");
+    logger.info("[NARCOTICS] Complete create narcotics data");
   } catch (e) {
-    logger.error("[NARCOTICS] Failed to deploy narcotics data. %s", e.stack || e);
+    logger.error("[NARCOTICS] Failed to create narcotics data. %s", e.stack || e);
   }
 }

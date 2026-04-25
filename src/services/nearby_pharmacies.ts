@@ -13,7 +13,7 @@ export async function createNearbyPharmaciesResource() {
 
     logger.info("[NEARBY-PHARMACIES] Complete load resource");
 
-    logger.info("[NEARBY-PHARMACIES] Start deploy nearby pharmacies data");
+    logger.info("[NEARBY-PHARMACIES] Start create nearby pharmacies data");
 
     await createResourceFile(
       "nearby_pharmacies.json",
@@ -21,10 +21,10 @@ export async function createNearbyPharmaciesResource() {
       false,
     );
 
-    logger.info("[NEARBY-PHARMACIES] Complete deploy nearby pharmacies data");
+    logger.info("[NEARBY-PHARMACIES] Complete create nearby pharmacies data");
   } catch (e) {
     logger.error(
-      "[NEARBY-PHARMACIES] Failed to deploy nearby pharmacies data. %s",
+      "[NEARBY-PHARMACIES] Failed to create nearby pharmacies data. %s",
       e.stack || e,
     );
   }

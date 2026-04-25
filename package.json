@@ -21,6 +21,7 @@
     "csvtojson": "^2.0.10",
     "fs": "^0.0.1-security",
     "iconv-lite": "^0.6.3",
+    "pdfjs-dist": "^5.6.205",
     "puppeteer": "^24.34.0",
     "typescript": "^5.6.3",
     "winston": "^3.17.0",

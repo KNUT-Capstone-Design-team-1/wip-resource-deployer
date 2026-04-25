@@ -9,9 +9,9 @@ import {
   normalizeText,
   createSQLFile,
   runQueryForSQLFile,
-  createResourcesDirectory,
 } from "../utils";
 import { IDrugRecognition, IFinishedMedicinePermissionDetail, IUnifiedSearchData } from "../types";
+import { createResourcesDirectory } from "../utils/shared";
 
 /**
  * 테이블 DROP
