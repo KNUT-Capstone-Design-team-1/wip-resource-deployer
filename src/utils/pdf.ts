@@ -9,7 +9,8 @@ import axios from "axios";
 export async function extractText(filePath: string): Promise<string> {
   const data = new Uint8Array(fs.readFileSync(filePath));
 
-  const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  // TS가 require()로 변환하는 것을 방지하기 위해 eval 사용
+  const pdfjsLib = await eval('import("pdfjs-dist/legacy/build/pdf.mjs")');
 
   const pdf = await pdfjsLib.getDocument({ data }).promise;
 
@@ -33,7 +34,7 @@ export async function extractText(filePath: string): Promise<string> {
  */
 export async function classifyWithLLM(prompt: string) {
   const res = await axios.post("http://localhost:11434/api/generate", {
-    model: "gemma:4b",
+    model: "gemma",
     prompt,
     stream: false,
   });
