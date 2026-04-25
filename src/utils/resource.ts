@@ -40,15 +40,33 @@ export const PDF_RESOURCE_CONFIG: Record<string, IPDFProcessorConfig<any>> = {
   prohibited_list: {
     sectionRegex: CATEGORY_REGEX,
     promptGenerator: (content: string) => `
-You are a medical data extractor.
+You are a strict medical substance extraction system specialized in anti-doping documents.
 
-Extract drug names from the text.
+Extract ONLY actual prohibited substances (drug or chemical names).
 
-Return JSON array:
+Rules:
+- Ignore section titles (e.g., S1, S2, S3, etc.)
+- Ignore descriptions and sentences
+- Extract only substance names from bullet lists or comma-separated lists
+- If a name contains parentheses, extract:
+  - genericEn: main English name (outside parentheses)
+  - genericKr: Korean name if explicitly present nearby, otherwise empty ""
+- If multiple aliases exist in parentheses, ignore them
+- Do NOT invent translations
+- Only extract from lines that look like lists (start with •, -, or bullet-like patterns)
+- Return ONLY valid JSON
+- Do not include markdown (no \`\`\`json)
+- Do not include explanations
+- Do not include any text before or after JSON
+- Remove duplicates
+- Return ONLY valid JSON
+- No explanation
+
+Output format:
 [
   {
-    "genericEn": "...",
-    "genericKr": "..."
+    "genericEn": "",
+    "genericKr": ""
   }
 ]
 
@@ -59,8 +77,8 @@ ${content}
       const categoryInfo = CATEGORY_MAP[category || ""] || {
         kr: "기타",
         en: "Others",
-        inGame: false,
-        outGame: false,
+        inGame: 0,
+        outGame: 0,
       };
 
       return items.map((item) => ({

@@ -34,14 +34,20 @@ export async function extractText(filePath: string): Promise<string> {
  */
 export async function classifyWithLLM(prompt: string) {
   const res = await axios.post("http://localhost:11434/api/generate", {
-    model: "gemma",
+    model: "llama3:8b",
     prompt,
     stream: false,
   });
 
   const text = res.data.response;
 
-  return JSON.parse(text);
+  console.log("LLM Response: ", text);
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return [];
+  }
 }
 
 export interface IPDFProcessorConfig<T> {

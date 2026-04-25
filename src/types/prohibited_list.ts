@@ -39,8 +39,8 @@ export interface IProhibitedList {
     | "Cannabinoids"
     | "Glucocorticoids"
     | "Beta-Blockers";
-  inGameProhibited: boolean;
-  outGameProhibited: boolean;
+  inGameProhibited: 0 | 1;
+  outGameProhibited: 0 | 1;
 }
 
 export type TProhibitedListResource = Record<
@@ -62,54 +62,54 @@ export const CATEGORY_REGEX = /(S[0-9]|P1|M[1-3])/g;
 
 export const CATEGORY_MAP: Record<
   string,
-  { kr: string; en: string; inGame: boolean; outGame: boolean }
+  { kr: string; en: string; inGame: 0 | 1; outGame: 0 | 1 }
 > = {
   S0: {
     kr: "비승인약물",
     en: "Non-approved substances",
-    inGame: true,
-    outGame: true,
+    inGame: 1,
+    outGame: 1,
   },
   S1: {
     kr: "동화작용제",
     en: "Anabolic Agents",
-    inGame: true,
-    outGame: true,
+    inGame: 1,
+    outGame: 1,
   },
   S2: {
     kr: "펩티드호르몬, 성장인자, 관련 약물 및 유사제",
     en: "Peptide Hormones, Growth Factors, Related Substances, And Mimetics",
-    inGame: true,
-    outGame: true,
+    inGame: 1,
+    outGame: 1,
   },
   S6: {
     kr: "흥분제",
     en: "Stimulants",
-    inGame: true,
-    outGame: false,
+    inGame: 1,
+    outGame: 0,
   },
   S7: {
     kr: "마약",
     en: "Narcotics",
-    inGame: true,
-    outGame: false,
+    inGame: 1,
+    outGame: 0,
   },
   S8: {
     kr: "카나비노이드",
     en: "Cannabinoids",
-    inGame: true,
-    outGame: false,
+    inGame: 1,
+    outGame: 0,
   },
   S9: {
     kr: "글로코코르티코이드",
     en: "Glucocorticoids",
-    inGame: true,
-    outGame: false,
+    inGame: 1,
+    outGame: 0,
   },
   P1: {
     kr: "베타차단제",
     en: "Beta-Blockers",
-    inGame: true,
-    outGame: false,
+    inGame: 1,
+    outGame: 0,
   },
 } as const;

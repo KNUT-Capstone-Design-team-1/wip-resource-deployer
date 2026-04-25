@@ -9,6 +9,15 @@
 
 # Requirement
 
+#### ollama
+
+- prohibited_list 리소스 생성에 필요
+- [ollama 설치](https://ollama.com/download/windows)
+
+```bash
+ollama run llama3:8b
+```
+
 #### wrangler.toml
 
 - cloudflare DB 구성 설정
