@@ -46,57 +46,49 @@ Your task is to extract prohibited substances with BOTH English and Korean names
 
 CRITICAL RULES (VERY IMPORTANT):
 
-1. Extract ONLY substance names from bullet lists or list-like lines.
-   - Lines must start with symbols like "•", "-", or be clearly comma-separated lists.
-   - Ignore paragraphs, explanations, and descriptions.
+1. Extract ONLY substance names from list-like lines.
+   A valid list line must:
+   - Look like a list entry (bullet, short line, or repeated pattern)
+   - NOT be a full sentence (no verbs like "is", "are", "used")
+   - Contain substance-like terms (chemical or drug names)
 
 2. Korean mapping (VERY IMPORTANT):
    - The document contains BOTH English and Korean sections.
-   - The Korean section is usually a DIRECT TRANSLATION of the English list.
-   - Match Korean names using:
-     a) The same line (if Korean exists together)
-     b) Nearby Korean lines with SAME ORDER
-   - If a Korean name exists ANYWHERE nearby, you MUST use it.
-   - DO NOT leave genericKr empty if Korean exists in the text.
+   - Korean sections are usually DIRECT translations.
+
+   Mapping priority:
+   a) Same line (best)
+   b) Nearby Korean text
+   c) SAME ORDER mapping (CRITICAL)
+
+   If English and Korean lists appear separately:
+   - Assume SAME ORDER
+   - Map by index position
+
+   STRICT RULE:
+   - Do NOT map Korean randomly
+   - Only map if clearly corresponding
+   - If uncertain → genericKr = ""
 
 3. Parentheses handling:
-   - If format: "English (something)"
-     → genericEn = English only
-     → Ignore aliases inside parentheses
-   - If Korean appears in parentheses → use it as genericKr
+   - Extract only main English name
+   - Ignore aliases
+   - If Korean appears → use it
 
 4. Do NOT invent translations.
-   - Only use Korean text that actually exists in the document.
 
 5. Category extraction:
    - category: S1, S2, S3, etc.
-   - categoryKr: extract from Korean section (e.g., "동화작용제")
-   - categoryEn: extract from English section (e.g., "Anabolic agents")
+   - categoryKr from Korean section
+   - categoryEn from English section
 
-6. Always assume:
+6. Always:
    - inGameProhibited = true
    - outGameProhibited = true
 
-7. Deduplicate substances.
+7. Deduplicate.
 
-8. Output STRICT JSON ONLY:
-   - No markdown
-   - No explanation
-   - No extra text
-   - Must be valid JSON
-
-Output format:
-[
-  {
-    "genericEn": "",
-    "genericKr": "",
-    "category": "",
-    "categoryKr": "",
-    "categoryEn": "",
-    "inGameProhibited": true,
-    "outGameProhibited": true
-  }
-]
+8. Output STRICT JSON ONLY.
 
 Text:
 ${content}
