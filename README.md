@@ -11,11 +11,11 @@
 
 #### ollama
 
-- prohibited_list 리소스 생성에 필요
+- prohibited_list 리소스 생성에 필요 (미리 실행)
 - [ollama 설치](https://ollama.com/download/windows)
 
 ```bash
-ollama run llama3:8b
+yarn run ollama
 ```
 
 #### wrangler.toml

@@ -4,7 +4,8 @@
   "description": "wip resource deploy module",
   "main": "app.ts",
   "scripts": {
-    "start": "ts-node ./src/app.ts"
+    "start": "ts-node ./src/app.ts",
+    "ollama": "ollama run llama3:8b"
   },
   "repository": {
     "type": "git",
