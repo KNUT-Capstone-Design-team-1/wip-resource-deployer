@@ -16,5 +16,10 @@
     "targetURL": "https://nedrug.mfds.go.kr/pbp/CCBSB12/markSearchPopup",
     "totalPages": 13,
     "limit": 50
+  },
+  "ollama": {
+    "host": "http://localhost:11434/api/generate",
+    "model": "llama3:8b",
+    "stream": false
   }
 }
