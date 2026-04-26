@@ -331,7 +331,7 @@ export class ResourceLoader {
 
     const text = res.data.response;
 
-    logger.info("LLM Response: ", text);
+    logger.info("LLM Response: %s", text);
 
     try {
       return JSON.parse(text);
