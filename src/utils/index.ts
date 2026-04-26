@@ -1,4 +1,6 @@
+import axios from "axios";
 import logger from "./logger";
+import config from "../../config.json";
 export { logger };
 
 export * from "./resource_loader";
@@ -78,4 +80,31 @@ export function normalizeText(input: string): string {
   text = text.replace(/\s+/g, " ").trim();
 
   return text;
+}
+
+/**
+ * LLM을 사용하여 텍스트 번역
+ * @param text 번역할 텍스트
+ * @returns 번역된 텍스트
+ */
+export async function translate(text: string): Promise<string> {
+  const prompt = `Translate the following medical/chemical substance name from English to Korean. Return ONLY the translated name in Korean, without any explanation or extra text.
+    
+Text: ${text}`;
+
+  const { host, model, stream } = config.ollama;
+
+  try {
+    const res = await axios.post(host, { model, prompt, stream });
+
+    return res.data.response.trim();
+  } catch (e) {
+    logger.error(
+      "[TRANSLATE] Translation failed for %s. %s",
+      text,
+      e.stack || e,
+    );
+
+    return "";
+  }
 }
