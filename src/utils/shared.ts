@@ -11,6 +11,7 @@ import {
   PROHIBITED_LIST_PROPERTY_MAP,
   CATEGORY_REGEX,
   IProhibitedList,
+  CATEGORY_MAP,
 } from "../types";
 
 /**
@@ -56,80 +57,50 @@ export interface IPDFProcessorConfig<T> {
 export const PDF_RESOURCE_CONFIG: Record<string, IPDFProcessorConfig<any>> = {
   prohibited_list: {
     sectionRegex: CATEGORY_REGEX,
-    promptGenerator: (content: string) => `
-You are a strict medical substance extraction system specialized in anti-doping documents.
+    promptGenerator: (content: string, category?: string) => `
+You are a medical substance extraction expert specialized in the WADA Prohibited List.
+Extract all prohibited substances from the provided text, which is from the 2026 Prohibited List International Standard.
 
-Your task is to extract prohibited substances with BOTH English and Korean names whenever possible.
+CRITICAL RULES:
+1. Extract the substance English names (genericEn).
+2. For EACH substance, identify its category code (e.g., S1, S2, S6, P1, M1). If a specific category code is mentioned in the text context (like "S1. ANABOLIC AGENTS"), use it.
+3. For EACH substance, determine if it is prohibited "In-Competition" and "Out-of-Competition".
+   - Look for headers like "PROHIBITED AT ALL TIMES (IN- AND OUT-OF-COMPETITION)" or "PROHIBITED IN-COMPETITION".
+   - inGameProhibited: 1 if prohibited In-Competition, 0 otherwise.
+   - outGameProhibited: 1 if prohibited Out-of-Competition, 0 otherwise.
+4. Extract ONLY English names.
+5. Deduplicate.
 
-CRITICAL RULES (VERY IMPORTANT):
-
-1. Extract ONLY substance names from list-like lines.
-    A valid list line:
-    - Starts with bullet (•, -, *, etc.) OR
-    - Appears as a short standalone line in a repeated list structure
-
-2. Korean mapping (VERY IMPORTANT):
-   - The document contains BOTH English and Korean sections.
-   - Korean sections are usually DIRECT translations.
-
-   Mapping priority:
-   a) Same line (best)
-   b) Nearby Korean text
-   c) SAME ORDER mapping (CRITICAL)
-
-   If English and Korean lists appear separately:
-   - Assume SAME ORDER
-   - Map by index position
-
-   STRICT RULE:
-   - Do NOT map Korean randomly
-   - Only map if clearly corresponding
-   - If uncertain → genericKr = ""
-
-3. Parentheses handling:
-   - Extract only main English name
-   - Ignore aliases
-   - If Korean appears → use it
-
-4. Do NOT invent translations.
-
-5. Category extraction:
-   - category: S1, S2, S3, etc.
-   - categoryKr from Korean section
-   - categoryEn from English section
-
-6. Deduplicate.
-
-7. Output STRICT JSON ONLY.
-
-8. Exhaustive extraction (VERY IMPORTANT):
-   - Extract ALL substances from the text.
-   - DO NOT stop after the first match.
-   - DO NOT return a partial list.
-   - EVERY valid list entry must be included.
-
-   VALIDATION RULE:
-   - If multiple list entries exist, output must contain multiple items.
-   - The number of output items should match the number of detected list entries.
-
-9. Output format (STRICT):
-   - Return a JSON ARRAY.
-   - Each element represents ONE substance.
-   - NEVER return a single object.
+Output STRICT JSON ARRAY of objects:
+[
+  { 
+    "genericEn": "Substance Name",
+    "category": "S1",
+    "inGameProhibited": 1,
+    "outGameProhibited": 1
+  },
+  ...
+]
 
 Text:
 ${content}
 `,
     postProcessor: (items: any[], category?: string): IProhibitedList[] => {
-      return items.map((item) => ({
-        genericKr: item.genericKr,
-        genericEn: item.genericEn,
-        category: category as any,
-        categoryKr: item.kr as any,
-        categoryEn: item.en as any,
-        inGameProhibited: item.inGame,
-        outGameProhibited: item.outGame,
-      }));
+      return items.map((item) => {
+        // LLM이 추출한 카테고리를 우선 사용하되, 없으면 섹션 카테고리 사용
+        const categoryCode = item.category || category;
+        const categoryInfo = categoryCode ? CATEGORY_MAP[categoryCode] : null;
+
+        return {
+          genericKr: "", // 번역 프로세스에서 채워질 예정
+          genericEn: item.genericEn,
+          category: categoryCode as any,
+          categoryKr: (categoryInfo?.kr || "") as any,
+          categoryEn: (categoryInfo?.en || "") as any,
+          inGameProhibited: (item.inGameProhibited ?? categoryInfo?.inGame ?? 0) as 0 | 1,
+          outGameProhibited: (item.outGameProhibited ?? categoryInfo?.outGame ?? 0) as 0 | 1,
+        };
+      });
     },
   },
 };
