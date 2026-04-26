@@ -11,6 +11,7 @@ import {
   IPDFProcessorConfig,
 } from "./shared";
 import config from "../../config.json";
+import logger from "./logger";
 
 type TTargetResources = Array<TResourceDirectoryName>;
 
@@ -202,37 +203,76 @@ export class ResourceLoader {
     filePath: string,
     config: IPDFProcessorConfig<T>,
   ): Promise<T[]> {
-    const text = await this.extractText(filePath);
+    const pages = await this.extractText(filePath);
     const results: T[] = [];
 
-    if (!config.sectionRegex) {
-      return await this.executeLLMClassify(config, text);
-    }
+    let currentCategory: string | undefined;
 
-    const matches = [...text.matchAll(config.sectionRegex)];
+    for (let i = 0; i < pages.length; i++) {
+      const pageText = pages[i];
 
-    for (let i = 0; i < matches.length; i++) {
-      const category = matches[i][0];
-
-      const start = matches[i].index!;
-      const end = matches[i + 1]?.index ?? text.length;
-
-      const content = text.slice(start, end);
-
-      results.push(
-        ...(await this.executeLLMClassify(config, content, category)),
+      logger.info(
+        `[PDF] Processing page ${i + 1}/${pages.length} (${pageText.length} chars)`,
       );
+
+      if (!config.sectionRegex) {
+        const pageResults = await this.executeLLMClassify(config, pageText);
+
+        results.push(...pageResults);
+
+        continue;
+      }
+
+      const matches = [...pageText.matchAll(config.sectionRegex)];
+
+      if (matches.length === 0) {
+        // 섹션 구분자가 없는 페이지는 현재 유지 중인 카테고리로 처리
+        const pageResults = await this.executeLLMClassify(
+          config,
+          pageText,
+          currentCategory,
+        );
+
+        results.push(...pageResults);
+
+        continue;
+      }
+
+      for (let j = 0; j < matches.length; j++) {
+        // 첫 번째 매치 이전의 텍스트가 있다면 이전 카테고리로 처리
+        if (j === 0 && matches[j].index! > 0) {
+          const beforeContent = pageText.slice(0, matches[j].index);
+
+          const beforeResults = await this.executeLLMClassify(
+            config,
+            beforeContent,
+            currentCategory,
+          );
+
+          results.push(...beforeResults);
+        }
+
+        currentCategory = matches[j][0];
+        const start = matches[j].index!;
+        const end = matches[j + 1]?.index ?? pageText.length;
+
+        const content = pageText.slice(start, end);
+
+        results.push(
+          ...(await this.executeLLMClassify(config, content, currentCategory)),
+        );
+      }
     }
 
     return results;
   }
 
   /**
-   * PDF 파일로 부터 텍스트 추출
+   * PDF 파일로 부터 텍스트 추출 (페이지별)
    * @param filePath 파일 경로
-   * @returns
+   * @returns 페이지별 텍스트 배열
    */
-  private async extractText(filePath: string): Promise<string> {
+  private async extractText(filePath: string): Promise<string[]> {
     const data = new Uint8Array(fs.readFileSync(filePath));
 
     // TS가 require()로 변환하는 것을 방지하기 위해 eval 사용
@@ -240,19 +280,17 @@ export class ResourceLoader {
 
     const pdf = await pdfjsLib.getDocument({ data }).promise;
 
-    let fullText = "";
+    const pagesText: string[] = [];
 
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const content = await page.getTextContent();
 
       const strings = content.items.map((item: any) => item.str);
-      fullText += strings.join(" ") + "\n";
+      pagesText.push(strings.join(" ") + "\n");
     }
 
-    console.log("fullText", fullText);
-
-    return fullText;
+    return pagesText;
   }
 
   /**
@@ -293,7 +331,7 @@ export class ResourceLoader {
 
     const text = res.data.response;
 
-    console.log("LLM Response: ", text);
+    logger.info("LLM Response: ", text);
 
     try {
       return JSON.parse(text);
