@@ -306,14 +306,20 @@ export class ResourceLoader {
     category?: string,
   ): Promise<T[]> {
     const prompt = config.promptGenerator(text, category);
-    const items = (await this.classifyWithLLM(prompt)) as any[];
+    const items = (await this.classifyWithLLM(prompt)) as any;
 
     const results: T[] = [];
 
     if (config.postProcessor) {
       results.push(...config.postProcessor(items, category));
-    } else {
+    } else if (Array.isArray(items)) {
       results.push(...items);
+    } else if (items) {
+      // 배열이 아니지만 데이터가 있는 경우 (예: 객체 형태)
+      const actualItems = items.items || items.substances || [];
+      if (Array.isArray(actualItems)) {
+        results.push(...actualItems);
+      }
     }
 
     return results;

@@ -48,7 +48,7 @@ export const RESOURCE_PROPERTY_MAP: Record<
 export interface IPDFProcessorConfig<T> {
   sectionRegex?: RegExp;
   promptGenerator: (content: string, category?: string) => string;
-  postProcessor?: (items: any[], category?: string) => T[];
+  postProcessor?: (items: any, category?: string) => T[];
 }
 
 /**
@@ -85,8 +85,16 @@ Output STRICT JSON ARRAY of objects:
 Text:
 ${content}
 `,
-    postProcessor: (items: any[], category?: string): IProhibitedList[] => {
-      return items.map((item) => {
+    postProcessor: (items: any, category?: string): IProhibitedList[] => {
+      const actualItems = Array.isArray(items)
+        ? items
+        : items?.items || items?.substances || [];
+
+      if (!Array.isArray(actualItems)) {
+        return [];
+      }
+
+      return actualItems.map((item: any) => {
         // LLM이 추출한 카테고리를 우선 사용하되, 없으면 섹션 카테고리 사용
         const categoryCode = item.category || category;
         const categoryInfo = categoryCode ? CATEGORY_MAP[categoryCode] : null;
@@ -97,8 +105,12 @@ ${content}
           category: categoryCode as any,
           categoryKr: (categoryInfo?.kr || "") as any,
           categoryEn: (categoryInfo?.en || "") as any,
-          inGameProhibited: (item.inGameProhibited ?? categoryInfo?.inGame ?? 0) as 0 | 1,
-          outGameProhibited: (item.outGameProhibited ?? categoryInfo?.outGame ?? 0) as 0 | 1,
+          inGameProhibited: (item.inGameProhibited ??
+            categoryInfo?.inGame ??
+            0) as 0 | 1,
+          outGameProhibited: (item.outGameProhibited ??
+            categoryInfo?.outGame ??
+            0) as 0 | 1,
         };
       });
     },
