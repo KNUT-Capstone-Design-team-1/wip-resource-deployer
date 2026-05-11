@@ -1,4 +1,4 @@
-import axios from "axios";
+import ollama from "ollama";
 import logger from "./logger";
 import config from "../../config.json";
 export { logger };
@@ -92,12 +92,16 @@ export async function translate(text: string): Promise<string> {
     
 Text: ${text}`;
 
-  const { host, model, stream } = config.ollama;
+  const { model } = config.ollama;
 
   try {
-    const res = await axios.post(host, { model, prompt, stream });
+    const response = await ollama.generate({
+      model,
+      prompt,
+      stream: false,
+    });
 
-    return res.data.response.trim();
+    return response.response.trim();
   } catch (e) {
     logger.error(
       "[TRANSLATE] Translation failed for %s. %s",

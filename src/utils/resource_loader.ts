@@ -1,8 +1,8 @@
 import path from "path";
 import fs from "fs";
+import ollama from "ollama";
 import * as XLSX from "xlsx";
 import iconvLite from "iconv-lite";
-import axios from "axios";
 import { Converter } from "csvtojson/v2/Converter";
 import { TLoadedResource, TResourceDirectoryName, TResource } from "../types";
 import {
@@ -325,17 +325,23 @@ export class ResourceLoader {
    * @returns
    */
   private async classifyWithLLM(prompt: string) {
-    const { host, model, stream } = config.ollama;
-
-    const res = await axios.post(host, { model, prompt, stream });
-
-    const text = res.data.response;
-
-    logger.info("LLM Response: %s", text);
+    const { model } = config.ollama;
 
     try {
+      const response = await ollama.generate({
+        model,
+        prompt,
+        format: "json",
+        stream: false,
+      });
+
+      const text = response.response.trim();
+
+      logger.info("LLM Response: %s", text);
+
       return JSON.parse(text);
-    } catch {
+    } catch (error) {
+      logger.error("Ollama execution failed: %s", error);
       return [];
     }
   }

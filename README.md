@@ -4,7 +4,7 @@
 
 # function
 
-- 리소스 파일을 데이터베이스 파일로 변환
+- 리소스 파일을 원천 데이터로 변환
 - 리소스 파일을 리소스 저장소에 업로드를 수행 (일부 리소스 미지원)
 
 # Requirement
@@ -15,6 +15,10 @@
 - [ollama 설치](https://ollama.com/download/windows)
 
 ```bash
+# config.json ollama > model에 있는 모델로 pull
+ollama pull llama3:8b
+
+# ollama 서버 실행
 yarn run ollama
 ```
 
