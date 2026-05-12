@@ -7,7 +7,7 @@ import { Converter } from "csvtojson/v2/Converter";
 import { TLoadedResource, TResourceDirectoryName, TResource } from "../types";
 import {
   RESOURCE_PROPERTY_MAP,
-  PDF_RESOURCE_CONFIG,
+  getPDFResourceConfig,
   IPDFProcessorConfig,
 } from "./shared";
 import config from "../../config.json";
@@ -127,13 +127,16 @@ export class ResourceLoader {
         );
 
       case "pdf":
-        const config = PDF_RESOURCE_CONFIG[dirName];
+        const pdfConfig = getPDFResourceConfig()[dirName];
 
-        if (!config) {
+        if (!pdfConfig) {
           throw new Error(`No PDF configuration for ${dirName}`);
         }
 
-        return await this.processPDFWithLLM(fileName, config);
+        return (await this.processPDFWithLLM(
+          fileName,
+          pdfConfig,
+        )) as TResource[];
 
       default:
         throw new Error(`Invalid file extension ${fileExtension}`);
@@ -154,7 +157,11 @@ export class ResourceLoader {
       const worksheet = workbook.Sheets[sheetName];
 
       // !ref가 실제 데이터보다 작게 잡혀있는 경우를 대비해 범위 재계산
-      const range = { s: { c: 0, r: 0 }, e: { c: 0, r: 0 } };
+      const range = {
+        s: { c: 0, r: 0 },
+        e: { c: 0, r: 0 },
+      };
+
       Object.keys(worksheet).forEach((cell) => {
         if (cell[0] === "!") {
           return;
@@ -205,66 +212,106 @@ export class ResourceLoader {
   ): Promise<T[]> {
     const pages = await this.extractText(filePath);
     const results: T[] = [];
-
     let currentCategory: string | undefined;
 
     for (let i = 0; i < pages.length; i++) {
-      const pageText = pages[i];
-
-      logger.info(
-        `[PDF] Processing page ${i + 1}/${pages.length} (${pageText.length} chars)`,
+      const pageResults = await this.processPage(
+        pages[i],
+        i + 1,
+        pages.length,
+        currentCategory,
+        config,
       );
 
-      if (!config.sectionRegex) {
-        const pageResults = await this.executeLLMClassify(config, pageText);
-
-        results.push(...pageResults);
-
-        continue;
-      }
-
-      const matches = [...pageText.matchAll(config.sectionRegex)];
-
-      if (matches.length === 0) {
-        // 섹션 구분자가 없는 페이지는 현재 유지 중인 카테고리로 처리
-        const pageResults = await this.executeLLMClassify(
-          config,
-          pageText,
-          currentCategory,
-        );
-
-        results.push(...pageResults);
-
-        continue;
-      }
-
-      for (let j = 0; j < matches.length; j++) {
-        // 첫 번째 매치 이전의 텍스트가 있다면 이전 카테고리로 처리
-        if (j === 0 && matches[j].index! > 0) {
-          const beforeContent = pageText.slice(0, matches[j].index);
-
-          const beforeResults = await this.executeLLMClassify(
-            config,
-            beforeContent,
-            currentCategory,
-          );
-
-          results.push(...beforeResults);
-        }
-
-        currentCategory = matches[j][0];
-        const start = matches[j].index!;
-        const end = matches[j + 1]?.index ?? pageText.length;
-
-        const content = pageText.slice(start, end);
-
-        results.push(
-          ...(await this.executeLLMClassify(config, content, currentCategory)),
-        );
-      }
+      results.push(...pageResults.items);
+      currentCategory = pageResults.category;
     }
 
     return results;
+  }
+
+  /**
+   * 각 페이지를 처리하여 데이터를 추출
+   * @param pageText 페이지 텍스트 내용
+   * @param pageNum 현재 페이지 번호
+   * @param totalNum 전체 페이지 수
+   * @param currentCategory 현재 유지 중인 카테고리
+   * @param config PDF 프로세서 설정
+   * @returns 추출된 항목 배열과 업데이트된 카테고리
+   */
+  private async processPage<T>(
+    pageText: string,
+    pageNum: number,
+    totalNum: number,
+    currentCategory: string | undefined,
+    config: IPDFProcessorConfig<T>,
+  ): Promise<{ items: T[]; category: string | undefined }> {
+    logger.info(
+      `[PDF] Processing page ${pageNum}/${totalNum} (${pageText.length} chars)`,
+    );
+
+    const matches = config.sectionRegex
+      ? [...pageText.matchAll(config.sectionRegex)]
+      : [];
+
+    // 섹션 구분이 없거나 매칭되는 섹션이 없는 경우 페이지 전체를 현재 카테고리로 처리
+    if (matches.length === 0) {
+      const items = await this.executeLLMClassify(
+        config,
+        pageText,
+        currentCategory,
+      );
+      return { items, category: currentCategory };
+    }
+
+    return this.processSections(pageText, matches, currentCategory, config);
+  }
+
+  /**
+   * 페이지 내의 섹션들을 분할하여 처리
+   * @param pageText 페이지 텍스트 내용
+   * @param matches 섹션 구분 정규식 매칭 결과
+   * @param initialCategory 시작 카테고리 (이전 페이지나 섹션에서 넘어온 값)
+   * @param config PDF 프로세서 설정
+   * @returns 추출된 항목 배열과 마지막으로 확인된 카테고리
+   */
+  private async processSections<T>(
+    pageText: string,
+    matches: RegExpMatchArray[],
+    initialCategory: string | undefined,
+    config: IPDFProcessorConfig<T>,
+  ): Promise<{ items: T[]; category: string | undefined }> {
+    const items: T[] = [];
+    let currentCategory = initialCategory;
+
+    // 첫 번째 섹션 시작 전의 텍스트 처리 (이전 카테고리에 속함)
+    const firstMatchIndex = matches[0].index ?? 0;
+
+    if (firstMatchIndex > 0) {
+      const beforeContent = pageText.slice(0, firstMatchIndex);
+
+      items.push(
+        ...(await this.executeLLMClassify(
+          config,
+          beforeContent,
+          currentCategory,
+        )),
+      );
+    }
+
+    // 각 섹션 처리
+    for (let i = 0; i < matches.length; i++) {
+      currentCategory = matches[i][0];
+      const start = matches[i].index ?? 0;
+      const end = matches[i + 1]?.index ?? pageText.length;
+      const content = pageText.slice(start, end);
+
+      items.push(
+        ...(await this.executeLLMClassify(config, content, currentCategory)),
+      );
+    }
+
+    return { items, category: currentCategory };
   }
 
   /**
@@ -308,21 +355,22 @@ export class ResourceLoader {
     const prompt = config.promptGenerator(text, category);
     const items = (await this.classifyWithLLM(prompt)) as any;
 
-    const results: T[] = [];
-
     if (config.postProcessor) {
-      results.push(...config.postProcessor(items, category));
-    } else if (Array.isArray(items)) {
-      results.push(...items);
-    } else if (items) {
-      // 배열이 아니지만 데이터가 있는 경우 (예: 객체 형태)
-      const actualItems = items.items || items.substances || [];
-      if (Array.isArray(actualItems)) {
-        results.push(...actualItems);
-      }
+      return config.postProcessor(items, category);
     }
 
-    return results;
+    if (Array.isArray(items)) {
+      return items;
+    }
+
+    // 배열이 아니지만 데이터가 있는 경우 (예: { items: [...] } 또는 { substances: [...] })
+    const actualItems = items?.items || items?.substances;
+
+    if (Array.isArray(actualItems)) {
+      return actualItems;
+    }
+
+    return [];
   }
 
   /**
@@ -366,6 +414,7 @@ export class ResourceLoader {
 
     // propertyMap의 key에서 공백 및 줄바꿈 제거한 정규화된 맵 생성
     const normalizedPropertyMap: Record<string, string> = {};
+
     Object.entries(propertyMap).forEach(([from, to]) => {
       normalizedPropertyMap[from.replace(/\s/g, "")] = to;
     });
@@ -376,6 +425,7 @@ export class ResourceLoader {
       // 각 행 데이터의 key에서도 공백 및 줄바꿈을 제거하여 매핑
       Object.entries(resourceData).forEach(([key, value]) => {
         const normalizedKey = key.replace(/\s/g, "");
+
         const targetProperty = normalizedPropertyMap[normalizedKey];
 
         if (targetProperty) {

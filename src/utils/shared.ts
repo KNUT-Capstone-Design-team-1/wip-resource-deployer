@@ -13,6 +13,7 @@ import {
   IProhibitedList,
   CATEGORY_MAP,
 } from "../types";
+import { PROMPTS } from "./prompts";
 
 /**
  * 원천 데이터를 저장할 디렉터리 생성
@@ -48,71 +49,62 @@ export const RESOURCE_PROPERTY_MAP: Record<
 export interface IPDFProcessorConfig<T> {
   sectionRegex?: RegExp;
   promptGenerator: (content: string, category?: string) => string;
-  postProcessor?: (items: any, category?: string) => T[];
+  postProcessor?: (items: unknown, category?: string) => T[];
 }
 
 /**
- * PDF 리소스용 설정
+ * 도핑 금지 약물 리소스 설정 생성
  */
-export const PDF_RESOURCE_CONFIG: Record<string, IPDFProcessorConfig<any>> = {
-  prohibited_list: {
-    sectionRegex: CATEGORY_REGEX,
-    promptGenerator: (content: string, category?: string) => `
-You are a medical substance extraction expert specialized in the WADA Prohibited List.
-Extract all prohibited substances from the provided text, which is from the 2026 Prohibited List International Standard.
+function getProhibitedListConfig(): IPDFProcessorConfig<IProhibitedList> {
+  const sectionRegex = CATEGORY_REGEX;
 
-CRITICAL RULES:
-1. Extract the substance English names (genericEn).
-2. For EACH substance, identify its category code (e.g., S1, S2, S6, P1, M1). If a specific category code is mentioned in the text context (like "S1. ANABOLIC AGENTS"), use it.
-3. For EACH substance, determine if it is prohibited "In-Competition" and "Out-of-Competition".
-   - Look for headers like "PROHIBITED AT ALL TIMES (IN- AND OUT-OF-COMPETITION)" or "PROHIBITED IN-COMPETITION".
-   - inGameProhibited: 1 if prohibited In-Competition, 0 otherwise.
-   - outGameProhibited: 1 if prohibited Out-of-Competition, 0 otherwise.
-4. Extract ONLY English names.
-5. Deduplicate.
+  const promptGenerator = (content: string) => {
+    return PROMPTS.prohibited_list.replace("{{content}}", content);
+  };
 
-Output STRICT JSON ARRAY of objects:
-[
-  { 
-    "genericEn": "Substance Name",
-    "category": "S1",
-    "inGameProhibited": 1,
-    "outGameProhibited": 1
-  },
-  ...
-]
-
-Text:
-${content}
-`,
-    postProcessor: (items: any, category?: string): IProhibitedList[] => {
-      const actualItems = Array.isArray(items)
-        ? items
-        : items?.items || items?.substances || [];
-
-      if (!Array.isArray(actualItems)) {
-        return [];
+  const postProcessor = (
+    items: unknown,
+    category?: string,
+  ): IProhibitedList[] => {
+    const extractItems = (data: any): any[] => {
+      if (Array.isArray(data)) {
+        return data;
       }
 
-      return actualItems.map((item: any) => {
-        // LLM이 추출한 카테고리를 우선 사용하되, 없으면 섹션 카테고리 사용
-        const categoryCode = item.category || category;
-        const categoryInfo = categoryCode ? CATEGORY_MAP[categoryCode] : null;
+      if (data && typeof data === "object") {
+        return data.items || data.substances || [];
+      }
 
-        return {
-          genericKr: "", // 번역 프로세스에서 채워질 예정
-          genericEn: item.genericEn,
-          category: categoryCode as any,
-          categoryKr: (categoryInfo?.kr || "") as any,
-          categoryEn: (categoryInfo?.en || "") as any,
-          inGameProhibited: (item.inGameProhibited ??
-            categoryInfo?.inGame ??
-            0) as 0 | 1,
-          outGameProhibited: (item.outGameProhibited ??
-            categoryInfo?.outGame ??
-            0) as 0 | 1,
-        };
-      });
-    },
-  },
-};
+      return [];
+    };
+
+    return extractItems(items).map((item: any) => {
+      const categoryCode =
+        item.category || (category as IProhibitedList["category"]);
+      const categoryInfo = categoryCode ? CATEGORY_MAP[categoryCode] : null;
+
+      return {
+        genericKr: "",
+        genericEn: item.genericEn || "",
+        category: categoryCode,
+        categoryKr: categoryInfo?.kr || "",
+        categoryEn: categoryInfo?.en || "",
+        inGameProhibited: item.inGameProhibited ?? (categoryInfo?.inGame || 0),
+        outGameProhibited:
+          item.outGameProhibited ?? (categoryInfo?.outGame || 0),
+      } as IProhibitedList;
+    });
+  };
+
+  return { sectionRegex, promptGenerator, postProcessor };
+}
+
+/**
+ * PDF 리소스용 설정 정보를 반환하는 함수
+ */
+export function getPDFResourceConfig(): Record<
+  string,
+  IPDFProcessorConfig<any>
+> {
+  return { prohibited_list: getProhibitedListConfig() };
+}
