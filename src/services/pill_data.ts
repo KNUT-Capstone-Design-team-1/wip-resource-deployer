@@ -72,28 +72,7 @@ async function createPillData(
       continue;
     }
 
-    const {
-      CHART,
-      BAR_CODE,
-      MATERIAL_NAME,
-      VALID_TERM,
-      STORAGE_METHOD,
-      PACK_UNIT,
-      MAIN_ITEM_INGR,
-      INGR_NAME,
-    } = finished;
-
-    pillData.push({
-      ...drug,
-      CHART,
-      BAR_CODE,
-      MATERIAL_NAME,
-      VALID_TERM,
-      STORAGE_METHOD,
-      PACK_UNIT,
-      MAIN_ITEM_INGR,
-      INGR_NAME,
-    });
+    pillData.push({ ...finished, ...drug });
   }
 
   return pillData;
