@@ -14,6 +14,8 @@ import {
 async function main() {
   const { targetResource } = config.common;
 
+  const isProductionMode = process.env.NODE_ENV === "production";
+
   if (targetResource.includes("pill_data")) {
     await PillDataService.createPillDataResourceFile();
   }
@@ -26,11 +28,11 @@ async function main() {
     await MarkImageService.createMarkImageResource();
   }
 
-  if (targetResource.includes("unified_search")) {
+  if (isProductionMode && targetResource.includes("unified_search")) {
     await UnifiedSearchService.updateUnifiedSearchDB();
   }
 
-  if (targetResource.includes("unified_search_insert_failed")) {
+  if (isProductionMode && targetResource.includes("unified_search_insert_failed")) {
     await UnifiedSearchInsertFailedService.insertFailedRetryAll();
   }
 
