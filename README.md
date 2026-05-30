@@ -9,19 +9,6 @@
 
 # Requirement
 
-#### ollama
-
-- prohibited_list 리소스 생성에 필요 (미리 실행)
-- [ollama 설치](https://ollama.com/download/windows)
-
-```bash
-# config.json ollama > model에 있는 모델로 pull
-ollama pull llama3:8b
-
-# ollama 서버 실행
-yarn run ollama
-```
-
 #### wrangler.toml
 
 - cloudflare DB 구성 설정
