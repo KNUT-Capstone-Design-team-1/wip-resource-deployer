@@ -233,6 +233,7 @@ export async function updateUnifiedSearchDB() {
 
     dropTable();
     createTable();
+
     await insertAll(pillDataIDs);
 
     logger.info("[UNIFIED-SEARCH] Complete create pill data resource file");

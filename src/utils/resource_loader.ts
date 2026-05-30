@@ -34,10 +34,12 @@ export class ResourceLoader {
   public async loadResource<T extends TLoadedResource>(): Promise<T> {
     const resource = {} as T;
 
-    // 초기값 세팅
-    for (const dirName of Object.keys(
+    const dirNames = Object.keys(
       RESOURCE_PROPERTY_MAP,
-    ) as TResourceDirectoryName[]) {
+    ) as TResourceDirectoryName[];
+
+    // 초기값 세팅
+    for (const dirName of dirNames) {
       const key = this.snakeToCamel(dirName) as keyof T;
       resource[key] = [] as any;
     }
@@ -52,9 +54,11 @@ export class ResourceLoader {
       }
 
       const resourceData = await this.getResources(resourcePath, fileList);
+
       const dirName = resourcePath
         .split(/\\|\//)
         .pop() as TResourceDirectoryName;
+
       const key = this.snakeToCamel(dirName) as keyof T;
 
       resource[key] = resourceData as any;
@@ -195,6 +199,7 @@ export class ResourceLoader {
    */
   private async readCSVContents(fileName: string) {
     const csvString = iconvLite.decode(fs.readFileSync(fileName), "euc-kr");
+
     const fileContents = (await new Converter().fromString(csvString)) as any[];
 
     return fileContents;
@@ -211,7 +216,11 @@ export class ResourceLoader {
     config: IPDFProcessorConfig<T>,
   ): Promise<T[]> {
     const pages = await this.extractText(filePath);
+
+    console.log(pages);
+
     const results: T[] = [];
+
     let currentCategory: string | undefined;
 
     for (let i = 0; i < pages.length; i++) {
@@ -224,6 +233,7 @@ export class ResourceLoader {
       );
 
       results.push(...pageResults.items);
+
       currentCategory = pageResults.category;
     }
 
@@ -261,6 +271,7 @@ export class ResourceLoader {
         pageText,
         currentCategory,
       );
+
       return { items, category: currentCategory };
     }
 
@@ -282,6 +293,7 @@ export class ResourceLoader {
     config: IPDFProcessorConfig<T>,
   ): Promise<{ items: T[]; category: string | undefined }> {
     const items: T[] = [];
+
     let currentCategory = initialCategory;
 
     // 첫 번째 섹션 시작 전의 텍스트 처리 (이전 카테고리에 속함)
@@ -302,8 +314,11 @@ export class ResourceLoader {
     // 각 섹션 처리
     for (let i = 0; i < matches.length; i++) {
       currentCategory = matches[i][0];
+
       const start = matches[i].index ?? 0;
+
       const end = matches[i + 1]?.index ?? pageText.length;
+
       const content = pageText.slice(start, end);
 
       items.push(
@@ -353,6 +368,7 @@ export class ResourceLoader {
     category?: string,
   ): Promise<T[]> {
     const prompt = config.promptGenerator(text, category);
+
     const items = (await this.classifyWithLLM(prompt)) as any;
 
     if (config.postProcessor) {
