@@ -12,9 +12,9 @@ import {
 } from "./services";
 
 async function main() {
-  const { targetResource } = config.common;
+  const { targetResource, mode } = config.common;
 
-  const isProductionMode = process.env.NODE_ENV === "production";
+  const isProductionMode = mode === "production";
 
   if (targetResource.includes("pill_data")) {
     await PillDataService.createPillDataResourceFile();

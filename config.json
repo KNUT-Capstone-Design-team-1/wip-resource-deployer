@@ -10,7 +10,8 @@
       "_narcotics",
       "_psychotropics",
       "_prohibited_list"
-    ]
+    ],
+    "mode": "development"
   },
   "markImage": {
     "targetURL": "https://nedrug.mfds.go.kr/pbp/CCBSB12/markSearchPopup",
