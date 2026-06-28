@@ -10,75 +10,115 @@ import {
   createSQLFile,
   runQueryForSQLFile,
 } from "../utils";
-import { IDrugRecognition, IFinishedMedicinePermissionDetail, IUnifiedSearchData } from "../types";
+import {
+  IDrugRecognition,
+  IFinishedMedicinePermissionDetail,
+  IUnifiedSearchData,
+  IPillData,
+  PILL_DATA_COLUMNS,
+} from "../types";
 import { createResourcesDirectory } from "../utils/shared";
 
 /**
  * 테이블 및 인덱스 / FTS5 생성
  */
-function createTable() {
+function createTables() {
+  const columnDefs = PILL_DATA_COLUMNS.map((col) => `${col} TEXT`).join(
+    ",\n      ",
+  );
+
   const createTableQuery = `
     CREATE TABLE IF NOT EXISTS unified_search (
       rowid INTEGER PRIMARY KEY AUTOINCREMENT,
       ITEM_SEQ TEXT UNIQUE,
-      EE_DOC_DATA TEXT,
-      UD_DOC_DATA TEXT,
-      NB_DOC_DATA TEXT,
+      ${columnDefs},
       createDate DATETIME DEFAULT CURRENT_TIMESTAMP,
       updateDate DATETIME DEFAULT CURRENT_TIMESTAMP
     )`;
   runQuery(createTableQuery);
 
-  try {
-    runQuery(`ALTER TABLE unified_search ADD COLUMN IF NOT EXISTS createDate DATETIME DEFAULT CURRENT_TIMESTAMP`);
-  } catch (e) {
-    // Column might already exist or IF NOT EXISTS syntax error
-  }
-  
-  try {
-    runQuery(`ALTER TABLE unified_search ADD COLUMN IF NOT EXISTS updateDate DATETIME DEFAULT CURRENT_TIMESTAMP`);
-  } catch (e) {
-    // Column might already exist or IF NOT EXISTS syntax error
-  }
+  const ftsColumns = PILL_DATA_COLUMNS.join(",\n      ");
 
   const createFTS5Query = `
     CREATE VIRTUAL TABLE IF NOT EXISTS unified_search_fts
     USING fts5 (
-      EE_DOC_DATA,
-      UD_DOC_DATA,
-      NB_DOC_DATA,
+      ${ftsColumns},
       content='unified_search',
       content_rowid='rowid',
       tokenize='unicode61 remove_diacritics 0'
     )`;
   runQuery(createFTS5Query);
 
+  runQuery(`DROP TRIGGER IF EXISTS unified_search_ai`);
+
+  const triggerInsertColumns = ["rowid", ...PILL_DATA_COLUMNS].join(", ");
+
+  const triggerValues = [
+    "NEW.rowid",
+    ...PILL_DATA_COLUMNS.map((col) => `NEW.${col}`),
+  ].join(", ");
+
   const createTriggerQuery = `
-    CREATE TRIGGER IF NOT EXISTS unified_search_ai
+    CREATE TRIGGER unified_search_ai
     AFTER INSERT ON unified_search
     BEGIN
-      INSERT INTO unified_search_fts(rowid, EE_DOC_DATA, UD_DOC_DATA, NB_DOC_DATA)
-      VALUES (NEW.rowid, NEW.EE_DOC_DATA, NEW.UD_DOC_DATA, NEW.NB_DOC_DATA);
+      INSERT INTO unified_search_fts(${triggerInsertColumns})
+      VALUES (${triggerValues});
     END`;
   runQuery(createTriggerQuery);
 }
 
 /**
- * 알약 데이터 ID 목록만 반환
+ * 테이블 컬럼 추가 (ALTER TABLE)
+ */
+function alterTables() {
+  try {
+    runQuery(
+      `ALTER TABLE unified_search ADD COLUMN IF NOT EXISTS createDate DATETIME DEFAULT CURRENT_TIMESTAMP`,
+    );
+  } catch (e) {
+    // Column might already exist or IF NOT EXISTS syntax error
+  }
+
+  try {
+    runQuery(
+      `ALTER TABLE unified_search ADD COLUMN IF NOT EXISTS updateDate DATETIME DEFAULT CURRENT_TIMESTAMP`,
+    );
+  } catch (e) {
+    // Column might already exist or IF NOT EXISTS syntax error
+  }
+
+  for (const col of PILL_DATA_COLUMNS) {
+    try {
+      runQuery(
+        `ALTER TABLE unified_search ADD COLUMN IF NOT EXISTS ${col} TEXT`,
+      );
+    } catch (e) {}
+
+    try {
+      runQuery(
+        `ALTER TABLE unified_search_fts ADD COLUMN IF NOT EXISTS ${col} TEXT`,
+      );
+    } catch (e) {}
+  }
+}
+
+/**
+ * 알약 데이터 목록 반환
  * @param drugRecognition 의약품 낱알식별정보 데이터
  * @param finishedMedicinePermission 완제 의약품 허가 상세 데이터
  * @returns
  */
-function getPillDataIDs(
+function getPillData(
   drugRecognition: Array<IDrugRecognition>,
   finishedMedicinePermission: Array<IFinishedMedicinePermissionDetail>,
-) {
+): IPillData[] {
   const mergedDrugRecognition = mergeDuplicateObjectArray(
     "ITEM_SEQ",
     drugRecognition,
   );
 
-  const pillDataIDs: string[] = [];
+  const pillDataList: IPillData[] = [];
 
   for (let i = 0; i < mergedDrugRecognition.length; i += 1) {
     const drug = mergedDrugRecognition[i];
@@ -91,10 +131,10 @@ function getPillDataIDs(
       continue;
     }
 
-    pillDataIDs.push(drug.ITEM_SEQ);
+    pillDataList.push({ ...drug, ...finished });
   }
 
-  return pillDataIDs;
+  return pillDataList;
 }
 
 /**
@@ -133,26 +173,48 @@ async function getDocData(itemSeq: string) {
  * @returns
  */
 export async function upsert(unifiedSearchData: IUnifiedSearchData) {
-  const { ITEM_SEQ, EE_DOC_DATA, UD_DOC_DATA, NB_DOC_DATA } = unifiedSearchData;
+  const getSafeValue = (val: any) => {
+    if (val === undefined || val === null) {
+      return "NULL";
+    }
 
-  const safeItemSeq = typeof ITEM_SEQ === "string" ? `'${ITEM_SEQ.replace(/'/g, "''")}'` : ITEM_SEQ;
-  const safeEE = typeof EE_DOC_DATA === "string" ? `'${EE_DOC_DATA.replace(/'/g, "''")}'` : EE_DOC_DATA;
-  const safeUD = typeof UD_DOC_DATA === "string" ? `'${UD_DOC_DATA.replace(/'/g, "''")}'` : UD_DOC_DATA;
-  const safeNB = typeof NB_DOC_DATA === "string" ? `'${NB_DOC_DATA.replace(/'/g, "''")}'` : NB_DOC_DATA;
+    if (typeof val === "string") {
+      return `'${val.replace(/'/g, "''")}'`;
+    }
+
+    return val;
+  };
+
+  const safeItemSeq = getSafeValue(unifiedSearchData.ITEM_SEQ);
+
+  const columnNames = [
+    "ITEM_SEQ",
+    ...PILL_DATA_COLUMNS,
+    "createDate",
+    "updateDate",
+  ];
+
+  const values = [
+    safeItemSeq,
+    ...PILL_DATA_COLUMNS.map((col) =>
+      getSafeValue((unifiedSearchData as any)[col]),
+    ),
+    "CURRENT_TIMESTAMP",
+    "CURRENT_TIMESTAMP",
+  ];
+
+  const setClauses = PILL_DATA_COLUMNS.map(
+    (col) => `${col} = excluded.${col}`,
+  ).join(",\n    ");
 
   let insertQuery = `
   INSERT INTO unified_search (
-    ITEM_SEQ, 
-    EE_DOC_DATA, 
-    UD_DOC_DATA, 
-    NB_DOC_DATA,
-    createDate,
-    updateDate
-  ) VALUES (${safeItemSeq}, ${safeEE}, ${safeUD}, ${safeNB}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ${columnNames.join(",\n    ")}
+  ) VALUES (
+    ${values.join(",\n    ")}
+  )
   ON CONFLICT(ITEM_SEQ) DO UPDATE SET
-    EE_DOC_DATA = excluded.EE_DOC_DATA,
-    UD_DOC_DATA = excluded.UD_DOC_DATA,
-    NB_DOC_DATA = excluded.NB_DOC_DATA,
+    ${setClauses},
     updateDate = CURRENT_TIMESTAMP;
   `;
 
@@ -195,17 +257,17 @@ async function writeFailedData(unifiedSearchData: IUnifiedSearchData) {
 
 /**
  * 통합 검색 DB 업데이트
- * @param resource 리소스 데이터
+ * @param pillDataList 알약 데이터 목록
  */
-async function upsertAll(pillDataIDs: string[]) {
-  for await (const itemSeq of pillDataIDs) {
-    const docData = await getDocData(itemSeq);
+async function upsertAll(pillDataList: IPillData[]) {
+  for await (const pill of pillDataList) {
+    const docData = await getDocData(pill.ITEM_SEQ);
 
-    const upsertData = { ITEM_SEQ: itemSeq, ...docData };
+    const upsertData: IUnifiedSearchData = { ...pill, ...docData };
 
     try {
       await upsert(upsertData);
-    } catch (e) {
+    } catch (e: any) {
       logger.error(
         "[UNIFIED-SEARCH] Failed to upsert data. error: %s",
         e.stack || e,
@@ -218,21 +280,25 @@ async function upsertAll(pillDataIDs: string[]) {
 
 /**
  * DB에서 삭제된 아이템 제거
- * @param pillDataIDs 활성 알약 데이터 ID 목록
+ * @param pillDataList 활성 알약 데이터 목록
  */
-async function deleteRemovedItems(pillDataIDs: string[]) {
-  if (!pillDataIDs || pillDataIDs.length === 0) return;
+async function deleteRemovedItems(pillDataList: IPillData[]) {
+  if (!pillDataList || pillDataList.length === 0) return;
 
-  const idList = pillDataIDs.map(id => `'${id}'`).join(',');
+  const idList = pillDataList.map((p) => `'${p.ITEM_SEQ}'`).join(",");
   const query = `DELETE FROM unified_search WHERE ITEM_SEQ NOT IN (${idList});`;
-  
+
   createSQLFile("unified_search_delete.sql", query);
-  
+
   try {
     runQueryForSQLFile("unified_search_delete.sql");
+
     logger.info("[UNIFIED-SEARCH] Successfully deleted removed items");
   } catch (e: any) {
-    logger.error("[UNIFIED-SEARCH] Failed to delete removed items. %s", e.stack || e);
+    logger.error(
+      "[UNIFIED-SEARCH] Failed to delete removed items. %s",
+      e.stack || e,
+    );
   }
 }
 
@@ -252,23 +318,24 @@ export async function updateUnifiedSearchDB() {
 
     logger.info("[UNIFIED-SEARCH] Complete load resource");
 
-    logger.info("[UNIFIED-SEARCH] Start create pill data ID array");
+    logger.info("[UNIFIED-SEARCH] Start create pill data array");
 
-    const pillDataIDs = getPillDataIDs(
+    const pillDataList = getPillData(
       resource.drugRecognition,
       resource.finishedMedicinePermissionDetail,
     );
 
-    logger.info("[UNIFIED-SEARCH] Complete create pill data ID array");
+    logger.info("[UNIFIED-SEARCH] Complete create pill data array");
 
     logger.info("[UNIFIED-SEARCH] Start update search data");
 
-    createTable();
+    createTables();
+    alterTables();
 
-    await upsertAll(pillDataIDs);
+    await upsertAll(pillDataList);
 
     logger.info("[UNIFIED-SEARCH] Start delete removed items");
-    await deleteRemovedItems(pillDataIDs);
+    await deleteRemovedItems(pillDataList);
 
     logger.info("[UNIFIED-SEARCH] Complete create pill data resource file");
   } catch (e: any) {
