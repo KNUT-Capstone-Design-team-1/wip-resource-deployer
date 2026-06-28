@@ -79,3 +79,20 @@ export function normalizeText(input: string): string {
 
   return text;
 }
+
+/**
+ * 중복 단어를 제거한 통합 검색 내용 문자열 생성
+ * @param rawDataArr 원본 데이터 배열
+ * @returns 중복 단어가 제거된 단일 문자열
+ */
+export function generateUniqueContents(
+  rawDataArr: (string | undefined | null)[],
+) {
+  const rawString = rawDataArr.filter((v) => v).join(" ");
+
+  const words = rawString.split(/\s+/).filter((word) => word.length > 0);
+
+  const uniqueWords = Array.from(new Set(words));
+
+  return uniqueWords.join(" ");
+}

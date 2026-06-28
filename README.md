@@ -14,12 +14,9 @@
 - cloudflare DB 구성 설정
 
 ```toml
-name = "" # 프로젝트 이름
-compatibility_date = "2025-07-06" # 프로젝트 호환성 날짜
-
 [[d1_databases]]
-binding = "" # 데이터베이스 바인딩 이름
-database_name = "" # 데이터베이스 이름
+binding = "" # 코드에서 사용할 이름
+database_name = "" # D1 콘솔에서 만든 데이터베이스 이름
 database_id = ""  # D1 대시보드에서 확인
 ```
 

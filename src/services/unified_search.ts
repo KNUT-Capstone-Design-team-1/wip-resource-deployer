@@ -9,6 +9,8 @@ import {
   normalizeText,
   createSQLFile,
   runQueryForSQLFile,
+  getSafeValue,
+  generateUniqueContents,
 } from "../utils";
 import {
   IDrugRecognition,
@@ -16,123 +18,8 @@ import {
   IUnifiedSearchData,
   IPillData,
   PILL_DATA_COLUMNS,
-  SEARCH_COLUMNS,
 } from "../types";
 import { createResourcesDirectory } from "../utils/shared";
-
-/**
- * 테이블 및 인덱스 / FTS5 생성
- */
-function createTables() {
-  // 메인 통합 검색 테이블 생성
-  const createUnifiedSearchTable = () => {
-    const columnDefs = SEARCH_COLUMNS.map((col) => `${col} TEXT`).join(
-      ",\n      ",
-    );
-
-    const createTableQuery = `
-      CREATE TABLE IF NOT EXISTS unified_search (
-        rowid INTEGER PRIMARY KEY AUTOINCREMENT,
-        ITEM_SEQ TEXT UNIQUE,
-        ${columnDefs},
-        createDate DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updateDate DATETIME DEFAULT CURRENT_TIMESTAMP
-      )`;
-    runQuery(createTableQuery);
-  };
-
-  // FTS5 가상 테이블 생성
-  const createUnifiedSearchFTSTable = () => {
-    const ftsColumns = SEARCH_COLUMNS.join(",\n      ");
-
-    const createFTS5Query = `
-      CREATE VIRTUAL TABLE IF NOT EXISTS unified_search_fts
-      USING fts5 (
-        ${ftsColumns},
-        content='unified_search',
-        content_rowid='rowid',
-        tokenize='unicode61 remove_diacritics 0'
-      )`;
-    runQuery(createFTS5Query);
-  };
-
-  // 메인 테이블 INSERT 발생 시 FTS 테이블에도 INSERT를 수행하는 트리거 생성
-  const createUnifiedSearchFTSInsertTrigger = () => {
-    runQuery(`DROP TRIGGER IF EXISTS unified_search_ai`);
-
-    const triggerInsertColumns = ["rowid", ...SEARCH_COLUMNS].join(", ");
-
-    const triggerValues = [
-      "NEW.rowid",
-      ...SEARCH_COLUMNS.map((col) => `NEW.${col}`),
-    ].join(", ");
-
-    const createTriggerQuery = `
-      CREATE TRIGGER unified_search_ai
-      AFTER INSERT ON unified_search
-      BEGIN
-        INSERT INTO unified_search_fts(${triggerInsertColumns})
-        VALUES (${triggerValues});
-      END`;
-    runQuery(createTriggerQuery);
-  };
-
-  // ---- entry point ----
-  createUnifiedSearchTable();
-  createUnifiedSearchFTSTable();
-  createUnifiedSearchFTSInsertTrigger();
-}
-
-/**
- * 테이블 컬럼 추가 (ALTER TABLE)
- */
-function alterTables() {
-  // 메인 테이블의 시간 관련 생성/업데이트 컬럼 추가
-  const alterUnifiedSearchTableDateColumns = () => {
-    try {
-      runQuery(
-        `ALTER TABLE unified_search ADD COLUMN IF NOT EXISTS createDate DATETIME DEFAULT CURRENT_TIMESTAMP`,
-      );
-    } catch (e) {
-      // Column might already exist or IF NOT EXISTS syntax error
-    }
-
-    try {
-      runQuery(
-        `ALTER TABLE unified_search ADD COLUMN IF NOT EXISTS updateDate DATETIME DEFAULT CURRENT_TIMESTAMP`,
-      );
-    } catch (e) {
-      // Column might already exist or IF NOT EXISTS syntax error
-    }
-  };
-
-  // 메인 테이블의 데이터 컬럼 추가
-  const alterUnifiedSearchTableColumns = () => {
-    for (const col of SEARCH_COLUMNS) {
-      try {
-        runQuery(
-          `ALTER TABLE unified_search ADD COLUMN IF NOT EXISTS ${col} TEXT`,
-        );
-      } catch (e) {}
-    }
-  };
-
-  // FTS5 가상 테이블의 데이터 컬럼 추가
-  const alterUnifiedSearchFTSTableColumns = () => {
-    for (const col of SEARCH_COLUMNS) {
-      try {
-        runQuery(
-          `ALTER TABLE unified_search_fts ADD COLUMN IF NOT EXISTS ${col} TEXT`,
-        );
-      } catch (e) {}
-    }
-  };
-
-  // ---- entry point ----
-  alterUnifiedSearchTableDateColumns();
-  alterUnifiedSearchTableColumns();
-  alterUnifiedSearchFTSTableColumns();
-}
 
 /**
  * 알약 데이터 목록 반환
@@ -166,6 +53,56 @@ function getPillData(
   }
 
   return pillDataList;
+}
+
+/**
+ * 테이블 및 인덱스 / FTS5 생성
+ */
+function createTables() {
+  // 메인 통합 검색 테이블 생성
+  const createUnifiedSearchTable = () => {
+    const createTableQuery = `
+      CREATE TABLE IF NOT EXISTS unified_search (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ITEM_SEQ TEXT UNIQUE,
+        CONTENTS TEXT,
+        createDate DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updateDate DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`;
+    runQuery(createTableQuery);
+  };
+
+  // FTS5 가상 테이블 생성
+  const createUnifiedSearchFTSTable = () => {
+    const createFTS5Query = `
+      CREATE VIRTUAL TABLE IF NOT EXISTS unified_search_fts
+      USING fts5 (
+        CONTENTS,
+        content='unified_search',
+        content_rowid='id',
+        tokenize='unicode61 remove_diacritics 0'
+      )`;
+    runQuery(createFTS5Query);
+  };
+
+  // 메인 테이블 INSERT 발생 시 FTS 테이블에도 INSERT를 수행하는 트리거 생성
+  const createUnifiedSearchFTSInsertTrigger = () => {
+    const createTriggerQuery = `
+      CREATE TRIGGER IF NOT EXISTS unified_search_ai
+      AFTER INSERT ON unified_search
+      BEGIN
+        INSERT INTO unified_search_fts(rowid, CONTENTS)
+        VALUES (NEW.id, NEW.CONTENTS);
+      END`;
+    runQuery(createTriggerQuery);
+  };
+
+  /**
+   * entry point
+   */
+  createUnifiedSearchTable();
+  createUnifiedSearchFTSTable();
+  createUnifiedSearchFTSInsertTrigger();
 }
 
 /**
@@ -204,39 +141,18 @@ async function getDocData(itemSeq: string) {
  * @returns
  */
 export async function upsert(unifiedSearchData: IUnifiedSearchData) {
-  const getSafeValue = (val: any) => {
-    if (val === undefined || val === null) {
-      return "NULL";
-    }
-
-    if (typeof val === "string") {
-      return `'${val.replace(/'/g, "''")}'`;
-    }
-
-    return val;
-  };
-
   const safeItemSeq = getSafeValue(unifiedSearchData.ITEM_SEQ);
 
-  const columnNames = [
-    "ITEM_SEQ",
-    ...SEARCH_COLUMNS,
-    "createDate",
-    "updateDate",
-  ];
+  const columnNames = ["ITEM_SEQ", "CONTENTS", "createDate", "updateDate"];
 
   const values = [
     safeItemSeq,
-    ...SEARCH_COLUMNS.map((col) =>
-      getSafeValue((unifiedSearchData as any)[col]),
-    ),
+    getSafeValue(unifiedSearchData.CONTENTS),
     "CURRENT_TIMESTAMP",
     "CURRENT_TIMESTAMP",
   ];
 
-  const setClauses = SEARCH_COLUMNS.map(
-    (col) => `${col} = excluded.${col}`,
-  ).join(",\n    ");
+  const setClauses = `CONTENTS = excluded.CONTENTS`;
 
   let insertQuery = `
   INSERT INTO unified_search (
@@ -291,20 +207,8 @@ async function writeFailedData(unifiedSearchData: IUnifiedSearchData) {
  * @param pillDataList 알약 데이터 목록
  */
 async function upsertAll(pillDataList: IPillData[]) {
-  for await (const pill of pillDataList) {
-    const docData = await getDocData(pill.ITEM_SEQ);
-
-    const upsertData = {
-      ...PILL_DATA_COLUMNS.reduce((acc, col) => {
-        acc[col] = (pill as any)[col];
-        return acc;
-      }, {} as any),
-      ITEM_SEQ: pill.ITEM_SEQ,
-      EE_DOC_DATA: docData.EE_DOC_DATA,
-      UD_DOC_DATA: docData.UD_DOC_DATA,
-      NB_DOC_DATA: docData.NB_DOC_DATA,
-    } as IUnifiedSearchData;
-
+  // UPSERT 시도
+  const tryUpsert = async (upsertData: IUnifiedSearchData) => {
     try {
       await upsert(upsertData);
     } catch (e: any) {
@@ -315,6 +219,27 @@ async function upsertAll(pillDataList: IPillData[]) {
 
       await writeFailedData(upsertData);
     }
+  };
+
+  /**
+   * entry point
+   */
+  for await (const pill of pillDataList) {
+    const docData = await getDocData(pill.ITEM_SEQ);
+
+    const rawDataArr = [
+      ...PILL_DATA_COLUMNS.map((col) => (pill as any)[col]),
+      docData.EE_DOC_DATA,
+      docData.UD_DOC_DATA,
+      docData.NB_DOC_DATA,
+    ];
+
+    const upsertData: IUnifiedSearchData = {
+      ITEM_SEQ: pill.ITEM_SEQ,
+      CONTENTS: generateUniqueContents(rawDataArr),
+    };
+
+    await tryUpsert(upsertData);
   }
 }
 
@@ -323,7 +248,9 @@ async function upsertAll(pillDataList: IPillData[]) {
  * @param pillDataList 활성 알약 데이터 목록
  */
 async function deleteRemovedItems(pillDataList: IPillData[]) {
-  if (!pillDataList || pillDataList.length === 0) return;
+  if (!pillDataList?.length) {
+    return;
+  }
 
   const idList = pillDataList.map((p) => `'${p.ITEM_SEQ}'`).join(",");
   const query = `DELETE FROM unified_search WHERE ITEM_SEQ NOT IN (${idList});`;
@@ -344,8 +271,9 @@ async function deleteRemovedItems(pillDataList: IPillData[]) {
 
 /**
  * 통합 검색 DB 업데이트
+ * @param dbInitialize DB 테이블 재생성(초기화) 여부
  */
-export async function updateUnifiedSearchDB() {
+export async function updateUnifiedSearchDB(dbInitialize: boolean = false) {
   try {
     logger.info("[UNIFIED-SEARCH] Start load resource");
 
@@ -369,8 +297,9 @@ export async function updateUnifiedSearchDB() {
 
     logger.info("[UNIFIED-SEARCH] Start update search data");
 
-    createTables();
-    alterTables();
+    if (dbInitialize) {
+      createTables();
+    }
 
     await upsertAll(pillDataList);
 

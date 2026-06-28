@@ -51,3 +51,20 @@ export function createSQLFile(resourceFileName: string, query: string) {
 
   fs.writeFileSync(filePath, query);
 }
+
+/**
+ * SQL 쿼리에 안전하게 삽입할 수 있도록 값을 변환
+ * @param val 변환할 값
+ * @returns 
+ */
+export function getSafeValue(val: any) {
+  if (val === undefined || val === null) {
+    return "NULL";
+  }
+
+  if (typeof val === "string") {
+    return `'${val.replace(/'/g, "''")}'`;
+  }
+
+  return val;
+}

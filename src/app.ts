@@ -12,9 +12,7 @@ import {
 } from "./services";
 
 async function main() {
-  const { targetResource, mode } = config.common;
-
-  const isProductionMode = mode === "production";
+  const { targetResource } = config.common;
 
   if (targetResource.includes("pill_data")) {
     await PillDataService.createPillDataResourceFile();
@@ -28,11 +26,11 @@ async function main() {
     await MarkImageService.createMarkImageResource();
   }
 
-  if (isProductionMode && targetResource.includes("unified_search")) {
-    await UnifiedSearchService.updateUnifiedSearchDB();
+  if (targetResource.includes("unified_search")) {
+    await UnifiedSearchService.updateUnifiedSearchDB(config.common.dbInitialize);
   }
 
-  if (isProductionMode && targetResource.includes("unified_search_insert_failed")) {
+  if (targetResource.includes("unified_search_insert_failed")) {
     await UnifiedSearchInsertFailedService.upsertFailedRetryAll();
   }
 
