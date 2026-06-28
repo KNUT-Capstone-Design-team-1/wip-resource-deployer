@@ -1,6 +1,7 @@
 import axios from "axios";
 import fs from "fs";
 import path from "path";
+import config from "../../config.json";
 import {
   logger,
   ResourceLoader,
@@ -11,16 +12,11 @@ import {
   getSafeValue,
   generateUniqueContents,
 } from "../utils";
-import {
-  IUnifiedSearchData,
-  IPillData,
-  PILL_DATA_COLUMNS,
-} from "../types";
+import { IUnifiedSearchData, IPillData, PILL_DATA_COLUMNS } from "../types";
 import { createResourcesDirectory } from "../utils/shared";
 import { createPillData } from "./pill_data";
 
 const TARGET_DB = "wip_unified_search";
-
 
 /**
  * 테이블 및 인덱스 / FTS5 생성
@@ -104,29 +100,27 @@ async function getDocData(itemSeq: string) {
 
 /**
  * D1 DB에 UPSERT 수행
- * @param unifiedSearchData 통합 검색 데이터
+ * @param unifiedSearchDataList 통합 검색 데이터 배열
  * @returns
  */
-export async function upsert(unifiedSearchData: IUnifiedSearchData) {
-  const safeItemSeq = getSafeValue(unifiedSearchData.ITEM_SEQ);
+export async function upsert(unifiedSearchDataList: IUnifiedSearchData[]) {
+  if (unifiedSearchDataList.length === 0) {
+    return;
+  }
 
   const columnNames = ["ITEM_SEQ", "CONTENTS", "createDate", "updateDate"];
-
-  const values = [
-    safeItemSeq,
-    getSafeValue(unifiedSearchData.CONTENTS),
-    "CURRENT_TIMESTAMP",
-    "CURRENT_TIMESTAMP",
-  ];
-
   const setClauses = `CONTENTS = excluded.CONTENTS`;
+
+  const valuesClauses = unifiedSearchDataList.map(
+    (data) =>
+      `(${getSafeValue(data.ITEM_SEQ)}, ${getSafeValue(data.CONTENTS)}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+  );
 
   let insertQuery = `
   INSERT INTO unified_search (
     ${columnNames.join(",\n    ")}
-  ) VALUES (
-    ${values.join(",\n    ")}
-  )
+  ) VALUES 
+    ${valuesClauses.join(",\n    ")}
   ON CONFLICT(ITEM_SEQ) DO UPDATE SET
     ${setClauses},
     updateDate = CURRENT_TIMESTAMP;
@@ -175,38 +169,61 @@ async function writeFailedData(unifiedSearchData: IUnifiedSearchData) {
  */
 async function upsertAll(pillDataList: IPillData[]) {
   // UPSERT 시도
-  const tryUpsert = async (upsertData: IUnifiedSearchData) => {
+  const tryUpsertBatch = async (upsertDataList: IUnifiedSearchData[]) => {
     try {
-      await upsert(upsertData);
+      await upsert(upsertDataList);
     } catch (e: any) {
       logger.error(
-        "[UNIFIED-SEARCH] Failed to upsert data. error: %s",
+        "[UNIFIED-SEARCH] Failed to upsert batch data. error: %s",
         e.stack || e,
       );
 
-      await writeFailedData(upsertData);
+      for (const upsertData of upsertDataList) {
+        await writeFailedData(upsertData);
+      }
     }
+  };
+
+  // 일정 개수씩 실행
+  const processBatch = async (pillBatch: IPillData[]) => {
+    const upsertDataList: IUnifiedSearchData[] = [];
+
+    for (const pill of pillBatch) {
+      const docData = await getDocData(pill.ITEM_SEQ);
+
+      const rawDataArr = [
+        ...PILL_DATA_COLUMNS.map((col) => (pill as any)[col]),
+        docData.EE_DOC_DATA,
+        docData.UD_DOC_DATA,
+        docData.NB_DOC_DATA,
+      ];
+
+      upsertDataList.push({
+        ITEM_SEQ: pill.ITEM_SEQ,
+        CONTENTS: generateUniqueContents(rawDataArr),
+      });
+    }
+
+    await tryUpsertBatch(upsertDataList);
   };
 
   /**
    * entry point
    */
-  for await (const pill of pillDataList) {
-    const docData = await getDocData(pill.ITEM_SEQ);
+  let batch: IPillData[] = [];
 
-    const rawDataArr = [
-      ...PILL_DATA_COLUMNS.map((col) => (pill as any)[col]),
-      docData.EE_DOC_DATA,
-      docData.UD_DOC_DATA,
-      docData.NB_DOC_DATA,
-    ];
+  for (const pill of pillDataList) {
+    batch.push(pill);
 
-    const upsertData: IUnifiedSearchData = {
-      ITEM_SEQ: pill.ITEM_SEQ,
-      CONTENTS: generateUniqueContents(rawDataArr),
-    };
+    const batchSize = config.unifiedSearch?.batchSize || 10;
+    if (batch.length >= batchSize) {
+      await processBatch(batch);
+      batch = [];
+    }
+  }
 
-    await tryUpsert(upsertData);
+  if (batch.length > 0) {
+    await processBatch(batch);
   }
 }
 

@@ -10,12 +10,15 @@
       "_narcotics",
       "_psychotropics",
       "_prohibited_list"
-    ],
-    "dbInitialize": false
+    ]
   },
   "markImage": {
     "targetURL": "https://nedrug.mfds.go.kr/pbp/CCBSB12/markSearchPopup",
     "totalPages": 13,
     "limit": 50
+  },
+  "unifiedSearch": {
+    "batchSize": 10,
+    "dbInitialize": false
   }
 }

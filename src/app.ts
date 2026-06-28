@@ -27,7 +27,7 @@ async function main() {
   }
 
   if (targetResource.includes("unified_search")) {
-    await UnifiedSearchService.updateUnifiedSearchDB(config.common.dbInitialize);
+    await UnifiedSearchService.updateUnifiedSearchDB(config.unifiedSearch?.dbInitialize);
   }
 
   if (targetResource.includes("unified_search_insert_failed")) {

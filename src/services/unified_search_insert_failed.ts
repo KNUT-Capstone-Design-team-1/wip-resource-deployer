@@ -12,7 +12,7 @@ async function upsertFailedRetry(filePath: string) {
     const fileContent = fs.readFileSync(filePath, "utf-8");
     const parsed = JSON.parse(fileContent);
 
-    await UnifiedSearchService.upsert(parsed);
+    await UnifiedSearchService.upsert([parsed]);
 
     logger.info(
       "[UNIFIED-SEARCH-UPSERT-FAILED] Success upsert data. data %s",
