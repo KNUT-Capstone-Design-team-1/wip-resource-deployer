@@ -33,7 +33,7 @@ async function main() {
   }
 
   if (isProductionMode && targetResource.includes("unified_search_insert_failed")) {
-    await UnifiedSearchInsertFailedService.insertFailedRetryAll();
+    await UnifiedSearchInsertFailedService.upsertFailedRetryAll();
   }
 
   if (targetResource.includes("cannabis")) {

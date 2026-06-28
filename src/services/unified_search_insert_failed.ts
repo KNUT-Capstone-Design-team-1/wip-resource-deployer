@@ -4,25 +4,25 @@ import * as UnifiedSearchService from "./unified_search";
 import { logger } from "../utils";
 
 /**
- * 통합 검색 DB에 INSERT 하는데 실패한 데이터를 INSERT
- * @param filePath 통합 검색 DB에 INSERT 하는데 실패한 데이터 json 파일 위치
+ * 통합 검색 DB에 UPSERT 하는데 실패한 데이터를 UPSERT
+ * @param filePath 통합 검색 DB에 UPSERT 하는데 실패한 데이터 json 파일 위치
  */
-async function insertFailedRetry(filePath: string) {
+async function upsertFailedRetry(filePath: string) {
   try {
     const fileContent = fs.readFileSync(filePath, "utf-8");
     const parsed = JSON.parse(fileContent);
 
-    await UnifiedSearchService.insert(parsed);
+    await UnifiedSearchService.upsert(parsed);
 
     logger.info(
-      "[UNIFIED-SEARCH-INSERT-FAILED] Success insert data. data %s",
+      "[UNIFIED-SEARCH-UPSERT-FAILED] Success upsert data. data %s",
       fileContent,
     );
 
     fs.unlinkSync(filePath);
-  } catch (e) {
+  } catch (e: any) {
     logger.error(
-      `[UNIFIED-SEARCH-INSERT-FAILED] Failed to read file %s. error: %s`,
+      `[UNIFIED-SEARCH-UPSERT-FAILED] Failed to read file %s. error: %s`,
       filePath,
       e.stack || e,
     );
@@ -30,9 +30,9 @@ async function insertFailedRetry(filePath: string) {
 }
 
 /**
- * 통합 검색 DB에 저장하지 못한 데이터들 INSERT 시도
+ * 통합 검색 DB에 저장하지 못한 데이터들 UPSERT 시도
  */
-export async function insertFailedRetryAll() {
+export async function upsertFailedRetryAll() {
   const resourceDirectoryName = "unified_search_insert_failed";
 
   const dirPath = path.resolve(
@@ -48,11 +48,11 @@ export async function insertFailedRetryAll() {
     const jsonFiles = files.filter((file) => file.endsWith(".json"));
 
     for (const file of jsonFiles) {
-      await insertFailedRetry(path.resolve(dirPath, file));
+      await upsertFailedRetry(path.resolve(dirPath, file));
     }
-  } catch (e) {
+  } catch (e: any) {
     logger.error(
-      "[UNIFIED-SEARCH-INSERT-FAILED] Failed to access diretory. error: %s",
+      "[UNIFIED-SEARCH-UPSERT-FAILED] Failed to access diretory. error: %s",
       e.stack || e,
     );
   }
