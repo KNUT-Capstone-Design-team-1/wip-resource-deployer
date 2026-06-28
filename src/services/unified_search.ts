@@ -14,17 +14,6 @@ import { IDrugRecognition, IFinishedMedicinePermissionDetail, IUnifiedSearchData
 import { createResourcesDirectory } from "../utils/shared";
 
 /**
- * 테이블 DROP
- */
-function dropTable() {
-  const dropTableQuery = `DROP TABLE IF EXISTS unified_search`;
-  runQuery(dropTableQuery);
-
-  const dropFTS5Query = `DROP TABLE IF EXISTS unified_search_fts`;
-  runQuery(dropFTS5Query);
-}
-
-/**
  * 테이블 및 인덱스 / FTS5 생성
  */
 function createTable() {
@@ -34,9 +23,23 @@ function createTable() {
       ITEM_SEQ TEXT UNIQUE,
       EE_DOC_DATA TEXT,
       UD_DOC_DATA TEXT,
-      NB_DOC_DATA TEXT
+      NB_DOC_DATA TEXT,
+      createDate DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updateDate DATETIME DEFAULT CURRENT_TIMESTAMP
     )`;
   runQuery(createTableQuery);
+
+  try {
+    runQuery(`ALTER TABLE unified_search ADD COLUMN IF NOT EXISTS createDate DATETIME DEFAULT CURRENT_TIMESTAMP`);
+  } catch (e) {
+    // Column might already exist or IF NOT EXISTS syntax error
+  }
+  
+  try {
+    runQuery(`ALTER TABLE unified_search ADD COLUMN IF NOT EXISTS updateDate DATETIME DEFAULT CURRENT_TIMESTAMP`);
+  } catch (e) {
+    // Column might already exist or IF NOT EXISTS syntax error
+  }
 
   const createFTS5Query = `
     CREATE VIRTUAL TABLE IF NOT EXISTS unified_search_fts
@@ -51,7 +54,7 @@ function createTable() {
   runQuery(createFTS5Query);
 
   const createTriggerQuery = `
-    CREATE TRIGGER unified_search_ai
+    CREATE TRIGGER IF NOT EXISTS unified_search_ai
     AFTER INSERT ON unified_search
     BEGIN
       INSERT INTO unified_search_fts(rowid, EE_DOC_DATA, UD_DOC_DATA, NB_DOC_DATA)
@@ -125,32 +128,41 @@ async function getDocData(itemSeq: string) {
 }
 
 /**
- * D1 DB에 insert 수행
+ * D1 DB에 UPSERT 수행
  * @param unifiedSearchData 통합 검색 데이터
  * @returns
  */
-export async function insert(unifiedSearchData: IUnifiedSearchData) {
+export async function upsert(unifiedSearchData: IUnifiedSearchData) {
+  const { ITEM_SEQ, EE_DOC_DATA, UD_DOC_DATA, NB_DOC_DATA } = unifiedSearchData;
+
+  const safeItemSeq = typeof ITEM_SEQ === "string" ? `'${ITEM_SEQ.replace(/'/g, "''")}'` : ITEM_SEQ;
+  const safeEE = typeof EE_DOC_DATA === "string" ? `'${EE_DOC_DATA.replace(/'/g, "''")}'` : EE_DOC_DATA;
+  const safeUD = typeof UD_DOC_DATA === "string" ? `'${UD_DOC_DATA.replace(/'/g, "''")}'` : UD_DOC_DATA;
+  const safeNB = typeof NB_DOC_DATA === "string" ? `'${NB_DOC_DATA.replace(/'/g, "''")}'` : NB_DOC_DATA;
+
   let insertQuery = `
-  INSERT OR IGNORE INTO unified_search (
+  INSERT INTO unified_search (
     ITEM_SEQ, 
     EE_DOC_DATA, 
     UD_DOC_DATA, 
-    NB_DOC_DATA
-  ) VALUES `;
-
-  const queryValues = Object.values(unifiedSearchData)
-    .map((v) => (typeof v === "string" ? `'${v?.replace(/'/g, "''")}'` : v))
-    .join(",");
-
-  insertQuery += `(${queryValues});`;
+    NB_DOC_DATA,
+    createDate,
+    updateDate
+  ) VALUES (${safeItemSeq}, ${safeEE}, ${safeUD}, ${safeNB}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  ON CONFLICT(ITEM_SEQ) DO UPDATE SET
+    EE_DOC_DATA = excluded.EE_DOC_DATA,
+    UD_DOC_DATA = excluded.UD_DOC_DATA,
+    NB_DOC_DATA = excluded.NB_DOC_DATA,
+    updateDate = CURRENT_TIMESTAMP;
+  `;
 
   createSQLFile("unified_search.sql", insertQuery);
   runQueryForSQLFile("unified_search.sql");
 }
 
 /**
- * INSERT에 실패한 데이터를 JSON 파일로 생성
- * @param unifiedSearchData INSERT에 실패한 데이터
+ * UPSERT에 실패한 데이터를 JSON 파일로 생성
+ * @param unifiedSearchData UPSERT에 실패한 데이터
  */
 async function writeFailedData(unifiedSearchData: IUnifiedSearchData) {
   try {
@@ -185,22 +197,42 @@ async function writeFailedData(unifiedSearchData: IUnifiedSearchData) {
  * 통합 검색 DB 업데이트
  * @param resource 리소스 데이터
  */
-async function insertAll(pillDataIDs: string[]) {
+async function upsertAll(pillDataIDs: string[]) {
   for await (const itemSeq of pillDataIDs) {
     const docData = await getDocData(itemSeq);
 
-    const insertData = { ITEM_SEQ: itemSeq, ...docData };
+    const upsertData = { ITEM_SEQ: itemSeq, ...docData };
 
     try {
-      await insert(insertData);
+      await upsert(upsertData);
     } catch (e) {
       logger.error(
-        "[UNIFIED-SEARCH] Failed to insert data. error: %s",
+        "[UNIFIED-SEARCH] Failed to upsert data. error: %s",
         e.stack || e,
       );
 
-      await writeFailedData(insertData);
+      await writeFailedData(upsertData);
     }
+  }
+}
+
+/**
+ * DB에서 삭제된 아이템 제거
+ * @param pillDataIDs 활성 알약 데이터 ID 목록
+ */
+async function deleteRemovedItems(pillDataIDs: string[]) {
+  if (!pillDataIDs || pillDataIDs.length === 0) return;
+
+  const idList = pillDataIDs.map(id => `'${id}'`).join(',');
+  const query = `DELETE FROM unified_search WHERE ITEM_SEQ NOT IN (${idList});`;
+  
+  createSQLFile("unified_search_delete.sql", query);
+  
+  try {
+    runQueryForSQLFile("unified_search_delete.sql");
+    logger.info("[UNIFIED-SEARCH] Successfully deleted removed items");
+  } catch (e: any) {
+    logger.error("[UNIFIED-SEARCH] Failed to delete removed items. %s", e.stack || e);
   }
 }
 
@@ -231,13 +263,15 @@ export async function updateUnifiedSearchDB() {
 
     logger.info("[UNIFIED-SEARCH] Start update search data");
 
-    dropTable();
     createTable();
 
-    await insertAll(pillDataIDs);
+    await upsertAll(pillDataIDs);
+
+    logger.info("[UNIFIED-SEARCH] Start delete removed items");
+    await deleteRemovedItems(pillDataIDs);
 
     logger.info("[UNIFIED-SEARCH] Complete create pill data resource file");
-  } catch (e) {
+  } catch (e: any) {
     logger.error(
       "[UNIFIED-SEARCH] Failed to create pill data resource file. %s",
       e.stack || e,
