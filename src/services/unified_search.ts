@@ -94,7 +94,7 @@ function createTables() {
       AFTER INSERT ON unified_search
       BEGIN
         INSERT INTO unified_search_fts(rowid, CONTENTS)
-        VALUES (NEW.id, NEW.CONTENTS);
+        VALUES (NEW.rowid, NEW.CONTENTS);
       END`;
     runQuery(createTriggerQuery, TARGET_DB);
   };
