@@ -46,7 +46,7 @@ function preprocessingDrugRecognition(
  * @param finishedMedicinePermission 완제 의약품 허가 상세 데이터
  * @returns
  */
-async function createPillData(
+export function createPillData(
   drugRecognition: Array<IDrugRecognition>,
   finishedMedicinePermission: Array<IFinishedMedicinePermissionDetail>,
 ) {
@@ -72,7 +72,27 @@ async function createPillData(
       continue;
     }
 
-    pillData.push({ ...finished, ...drug });
+    const {
+      APPROVAL_TYPE,
+      CANCEL_STATUS,
+      CANCEL_DATE,
+      ENTP_PERMIT_NO,
+      BAR_CODE,
+      EE_DOC_DATA,
+      UD_DOC_DATA,
+      NB_DOC_DATA,
+      ATT_DOC_DATA,
+      REEXAM_TARGET_YN,
+      REEXAM_CONT,
+      ATC_CODE,
+      ENTP_BIZ_NO,
+      ENTP_SEQ,
+      IMG_REGIST_TS,
+      BUSINESS_LICENCE_NUMBER,
+      ...rest
+    } = { ...finished, ...drug } as any;
+
+    pillData.push(rest);
   }
 
   return pillData;
@@ -96,7 +116,7 @@ export async function createPillDataResourceFile() {
 
     logger.info("[PILL-DATA] Start create pill data");
 
-    const pillData = await createPillData(
+    const pillData = createPillData(
       resource.drugRecognition,
       resource.finishedMedicinePermissionDetail,
     );

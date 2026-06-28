@@ -3,7 +3,6 @@ import fs from "fs";
 import path from "path";
 import {
   logger,
-  mergeDuplicateObjectArray,
   ResourceLoader,
   runQuery,
   normalizeText,
@@ -13,49 +12,15 @@ import {
   generateUniqueContents,
 } from "../utils";
 import {
-  IDrugRecognition,
-  IFinishedMedicinePermissionDetail,
   IUnifiedSearchData,
   IPillData,
   PILL_DATA_COLUMNS,
 } from "../types";
 import { createResourcesDirectory } from "../utils/shared";
+import { createPillData } from "./pill_data";
 
 const TARGET_DB = "wip_unified_search";
 
-/**
- * 알약 데이터 목록 반환
- * @param drugRecognition 의약품 낱알식별정보 데이터
- * @param finishedMedicinePermission 완제 의약품 허가 상세 데이터
- * @returns
- */
-function getPillData(
-  drugRecognition: Array<IDrugRecognition>,
-  finishedMedicinePermission: Array<IFinishedMedicinePermissionDetail>,
-): IPillData[] {
-  const mergedDrugRecognition = mergeDuplicateObjectArray(
-    "ITEM_SEQ",
-    drugRecognition,
-  );
-
-  const pillDataList: IPillData[] = [];
-
-  for (let i = 0; i < mergedDrugRecognition.length; i += 1) {
-    const drug = mergedDrugRecognition[i];
-
-    const finished = finishedMedicinePermission.find(
-      ({ ITEM_SEQ }) => drug.ITEM_SEQ === ITEM_SEQ,
-    );
-
-    if (!finished) {
-      continue;
-    }
-
-    pillDataList.push({ ...drug, ...finished });
-  }
-
-  return pillDataList;
-}
 
 /**
  * 테이블 및 인덱스 / FTS5 생성
@@ -290,7 +255,7 @@ export async function updateUnifiedSearchDB(dbInitialize: boolean = false) {
 
     logger.info("[UNIFIED-SEARCH] Start create pill data array");
 
-    const pillDataList = getPillData(
+    const pillDataList = createPillData(
       resource.drugRecognition,
       resource.finishedMedicinePermissionDetail,
     );
