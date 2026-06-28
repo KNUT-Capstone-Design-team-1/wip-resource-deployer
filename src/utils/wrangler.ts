@@ -2,16 +2,16 @@ import cp from "child_process";
 import path from "path";
 import fs from "fs";
 import { createResourcesDirectory } from "./shared";
-
 /**
  * wrangler에 쿼리 실행
  * @param query 실행할 쿼리
+ * @param dbName 대상 DB 이름
  * @returns
  */
-export function runQuery(query: string) {
+export function runQuery(query: string, dbName: string) {
   const safeQuery = query.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
 
-  const command = `wrangler d1 execute wip --remote --command "${safeQuery}"`;
+  const command = `wrangler d1 execute ${dbName} --remote --command "${safeQuery}"`;
 
   return cp.execSync(command, { encoding: "utf8", stdio: "inherit" });
 }
@@ -19,15 +19,16 @@ export function runQuery(query: string) {
 /**
  * wrangler에 SQL 파일 쿼리 실행
  * @param resourceFileName 파일명
+ * @param dbName 대상 DB 이름
  * @returns
  */
-export function runQueryForSQLFile(resourceFileName: string) {
+export function runQueryForSQLFile(resourceFileName: string, dbName: string) {
   const filePath = path.resolve(
     __dirname,
     `../../resources/${resourceFileName}`,
   );
 
-  const command = `wrangler d1 execute wip --remote --file=${filePath} --yes`;
+  const command = `wrangler d1 execute ${dbName} --remote --file=${filePath} --yes`;
 
   return cp.execSync(command, { encoding: "utf8", stdio: "inherit" });
 }

@@ -9,17 +9,6 @@
 
 # Requirement
 
-#### wrangler.toml
-
-- cloudflare DB 구성 설정
-
-```toml
-[[d1_databases]]
-binding = "" # 코드에서 사용할 이름
-database_name = "" # D1 콘솔에서 만든 데이터베이스 이름
-database_id = ""  # D1 대시보드에서 확인
-```
-
 #### 데이터베이스
 
 - [의약품 낱알식별](https://nedrug.mfds.go.kr/pbp/CCBGA01/getItem?totalPages=8&limit=10&page=2&&openDataInfoSeq=11)
@@ -56,7 +45,7 @@ yarn start
 
 # Trouble Shooting
 
-#### D1 주변약국 데이터베이스 업데이트 안되는 경우
+#### D1 데이터베이스 업데이트 안되는 경우
 
 1. 브라우저에서 cloudflare 로그인
 

@@ -21,6 +21,8 @@ import {
 } from "../types";
 import { createResourcesDirectory } from "../utils/shared";
 
+const TARGET_DB = "wip_unified_search";
+
 /**
  * 알약 데이터 목록 반환
  * @param drugRecognition 의약품 낱알식별정보 데이터
@@ -63,13 +65,13 @@ function createTables() {
   const createUnifiedSearchTable = () => {
     const createTableQuery = `
       CREATE TABLE IF NOT EXISTS unified_search (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        rowid INTEGER PRIMARY KEY AUTOINCREMENT,
         ITEM_SEQ TEXT UNIQUE,
         CONTENTS TEXT,
         createDate DATETIME DEFAULT CURRENT_TIMESTAMP,
         updateDate DATETIME DEFAULT CURRENT_TIMESTAMP
       )`;
-    runQuery(createTableQuery);
+    runQuery(createTableQuery, TARGET_DB);
   };
 
   // FTS5 가상 테이블 생성
@@ -79,10 +81,10 @@ function createTables() {
       USING fts5 (
         CONTENTS,
         content='unified_search',
-        content_rowid='id',
+        content_rowid='rowid',
         tokenize='unicode61 remove_diacritics 0'
       )`;
-    runQuery(createFTS5Query);
+    runQuery(createFTS5Query, TARGET_DB);
   };
 
   // 메인 테이블 INSERT 발생 시 FTS 테이블에도 INSERT를 수행하는 트리거 생성
@@ -94,7 +96,7 @@ function createTables() {
         INSERT INTO unified_search_fts(rowid, CONTENTS)
         VALUES (NEW.id, NEW.CONTENTS);
       END`;
-    runQuery(createTriggerQuery);
+    runQuery(createTriggerQuery, TARGET_DB);
   };
 
   /**
@@ -166,7 +168,7 @@ export async function upsert(unifiedSearchData: IUnifiedSearchData) {
   `;
 
   createSQLFile("unified_search.sql", insertQuery);
-  runQueryForSQLFile("unified_search.sql");
+  runQueryForSQLFile("unified_search.sql", TARGET_DB);
 }
 
 /**
@@ -258,7 +260,7 @@ async function deleteRemovedItems(pillDataList: IPillData[]) {
   createSQLFile("unified_search_delete.sql", query);
 
   try {
-    runQueryForSQLFile("unified_search_delete.sql");
+    runQueryForSQLFile("unified_search_delete.sql", TARGET_DB);
 
     logger.info("[UNIFIED-SEARCH] Successfully deleted removed items");
   } catch (e: any) {
