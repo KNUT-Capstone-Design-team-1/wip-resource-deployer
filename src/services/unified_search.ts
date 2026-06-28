@@ -28,9 +28,7 @@ function createTables() {
       CREATE TABLE IF NOT EXISTS unified_search (
         rowid INTEGER PRIMARY KEY AUTOINCREMENT,
         ITEM_SEQ TEXT UNIQUE,
-        CONTENTS TEXT,
-        createDate DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updateDate DATETIME DEFAULT CURRENT_TIMESTAMP
+        CONTENTS TEXT
       )`;
     runQuery(createTableQuery, TARGET_DB);
   };
@@ -108,12 +106,12 @@ export async function upsert(unifiedSearchDataList: IUnifiedSearchData[]) {
     return;
   }
 
-  const columnNames = ["ITEM_SEQ", "CONTENTS", "createDate", "updateDate"];
+  const columnNames = ["ITEM_SEQ", "CONTENTS"];
   const setClauses = `CONTENTS = excluded.CONTENTS`;
 
   const valuesClauses = unifiedSearchDataList.map(
     (data) =>
-      `(${getSafeValue(data.ITEM_SEQ)}, ${getSafeValue(data.CONTENTS)}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+      `(${getSafeValue(data.ITEM_SEQ)}, ${getSafeValue(data.CONTENTS)})`,
   );
 
   let insertQuery = `
@@ -122,8 +120,7 @@ export async function upsert(unifiedSearchDataList: IUnifiedSearchData[]) {
   ) VALUES 
     ${valuesClauses.join(",\n    ")}
   ON CONFLICT(ITEM_SEQ) DO UPDATE SET
-    ${setClauses},
-    updateDate = CURRENT_TIMESTAMP;
+    ${setClauses};
   `;
 
   createSQLFile("unified_search.sql", insertQuery);
@@ -215,8 +212,8 @@ async function upsertAll(pillDataList: IPillData[]) {
   for (const pill of pillDataList) {
     batch.push(pill);
 
-    const batchSize = config.unifiedSearch?.batchSize || 10;
-    if (batch.length >= batchSize) {
+    // 5개씩 묶어서 처리하는 것이 안전함
+    if (batch.length >= 5) {
       await processBatch(batch);
       batch = [];
     }
