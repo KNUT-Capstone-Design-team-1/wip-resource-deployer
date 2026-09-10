@@ -15,56 +15,9 @@ import {
 import { IUnifiedSearchData, IPillData, PILL_DATA_COLUMNS } from "../types";
 import { createResourcesDirectory } from "../utils/shared";
 import { createPillData } from "./pill_data";
+import { createTables } from "./unified_search_create_tables";
 
 const TARGET_DB = "wip_unified_search";
-
-/**
- * 테이블 및 인덱스 / FTS5 생성
- */
-function createTables() {
-  // 메인 통합 검색 테이블 생성
-  const createUnifiedSearchTable = () => {
-    const createTableQuery = `
-      CREATE TABLE IF NOT EXISTS unified_search (
-        rowid INTEGER PRIMARY KEY AUTOINCREMENT,
-        ITEM_SEQ TEXT UNIQUE,
-        CONTENTS TEXT
-      )`;
-    runQuery(createTableQuery, TARGET_DB);
-  };
-
-  // FTS5 가상 테이블 생성
-  const createUnifiedSearchFTSTable = () => {
-    const createFTS5Query = `
-      CREATE VIRTUAL TABLE IF NOT EXISTS unified_search_fts
-      USING fts5 (
-        CONTENTS,
-        content='unified_search',
-        content_rowid='rowid',
-        tokenize='unicode61 remove_diacritics 0'
-      )`;
-    runQuery(createFTS5Query, TARGET_DB);
-  };
-
-  // 메인 테이블 INSERT 발생 시 FTS 테이블에도 INSERT를 수행하는 트리거 생성
-  const createUnifiedSearchFTSInsertTrigger = () => {
-    const createTriggerQuery = `
-      CREATE TRIGGER IF NOT EXISTS unified_search_ai
-      AFTER INSERT ON unified_search
-      BEGIN
-        INSERT INTO unified_search_fts(rowid, CONTENTS)
-        VALUES (NEW.rowid, NEW.CONTENTS);
-      END`;
-    runQuery(createTriggerQuery, TARGET_DB);
-  };
-
-  /**
-   * entry point
-   */
-  createUnifiedSearchTable();
-  createUnifiedSearchFTSTable();
-  createUnifiedSearchFTSInsertTrigger();
-}
 
 /**
  * 통합 검색 문서 데이터 반환

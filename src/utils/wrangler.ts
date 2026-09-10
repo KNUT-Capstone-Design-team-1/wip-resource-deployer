@@ -3,7 +3,7 @@ import path from "path";
 import fs from "fs";
 import { createResourcesDirectory } from "./shared";
 /**
- * wrangler에 쿼리 실행
+ * wrangler에 쿼리 실행 (콘솔에 출력)
  * @param query 실행할 쿼리
  * @param dbName 대상 DB 이름
  * @returns
@@ -14,6 +14,20 @@ export function runQuery(query: string, dbName: string) {
   const command = `wrangler d1 execute ${dbName} --remote --command "${safeQuery}"`;
 
   return cp.execSync(command, { encoding: "utf8", stdio: "inherit" });
+}
+
+/**
+ * wrangler에 쿼리 실행하고 stdout 문자열 반환
+ * @param query 실행할 쿼리
+ * @param dbName 대상 DB 이름
+ * @returns
+ */
+export function runQueryWithOutput(query: string, dbName: string): string {
+  const safeQuery = query.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
+
+  const command = `wrangler d1 execute ${dbName} --remote --command "${safeQuery}"`;
+
+  return cp.execSync(command, { encoding: "utf8", stdio: "pipe" });
 }
 
 /**

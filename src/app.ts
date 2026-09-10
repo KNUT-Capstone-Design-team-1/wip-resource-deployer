@@ -4,6 +4,8 @@ import {
   PillDataService,
   MarkImageService,
   UnifiedSearchService,
+  UnifiedSearchCreateTablesService,
+  UnifiedSearchFTSRebuildService,
   UnifiedSearchInsertFailedService,
   CannabisService,
   NarcoticsService,
@@ -28,6 +30,14 @@ async function main() {
 
   if (targetResource.includes("unified_search")) {
     await UnifiedSearchService.updateUnifiedSearchDB(config.unifiedSearch?.dbInitialize);
+  }
+
+  if (targetResource.includes("unified_search_create_tables")) {
+    await UnifiedSearchCreateTablesService.createTables();
+  }
+
+  if (targetResource.includes("unified_search_fts_rebuild")) {
+    await UnifiedSearchFTSRebuildService.rebuildFTS5();
   }
 
   if (targetResource.includes("unified_search_insert_failed")) {
