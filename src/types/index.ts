@@ -9,3 +9,4 @@ export * from "./cannabis";
 export * from "./narcotics";
 export * from "./psychotropics";
 export * from "./prohibited_list";
+export * from "./functional_food_nutrients";

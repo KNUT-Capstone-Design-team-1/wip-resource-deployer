@@ -11,6 +11,7 @@ import {
   NarcoticsService,
   PsychotropicsService,
   ProhibitedListService,
+  FunctionalFoodNutrientsService,
 } from "./services";
 
 async function main() {
@@ -58,6 +59,10 @@ async function main() {
 
   if (targetResource.includes("prohibited_list")) {
     await ProhibitedListService.createProhibitedListResource();
+  }
+
+  if (targetResource.includes("functional_food_nutrients")) {
+    await FunctionalFoodNutrientsService.createFunctionalFoodNutrientsResource();
   }
 
   process.exit(0);

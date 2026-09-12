@@ -185,11 +185,33 @@ export class ResourceLoader {
    * @returns
    */
   private async readCSVContents(fileName: string) {
-    const csvString = iconvLite.decode(fs.readFileSync(fileName), "euc-kr");
+    const buffer = fs.readFileSync(fileName);
+    const csvString = this.decodeCSVBuffer(buffer);
 
     const fileContents = (await new Converter().fromString(csvString)) as any[];
 
     return fileContents;
+  }
+
+  /**
+   * CSV 버퍼 인코딩 디코딩 (UTF-8 BOM, UTF-8, EUC-KR)
+   * @param buffer 대상 버퍼
+   * @returns 디코딩된 문자열
+   */
+  private decodeCSVBuffer(buffer: Buffer): string {
+    const isUtf8Bom =
+      buffer[0] === 0xef && buffer[1] === 0xbb && buffer[2] === 0xbf;
+
+    if (isUtf8Bom) {
+      return buffer.toString("utf8").slice(1);
+    }
+
+    const utf8String = iconvLite.decode(buffer, "utf-8");
+    if (!utf8String.includes("\uFFFD")) {
+      return utf8String;
+    }
+
+    return iconvLite.decode(buffer, "euc-kr");
   }
 
   /**

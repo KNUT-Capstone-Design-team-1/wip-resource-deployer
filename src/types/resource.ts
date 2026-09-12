@@ -10,6 +10,8 @@ import {
   TpsychotropicsResource,
   IProhibitedList,
   TProhibitedListResource,
+  IFunctionalFoodNutrients,
+  TFunctionalFoodNutrientsResource,
 } from "./";
 
 export type TResourceDirectoryName =
@@ -19,7 +21,8 @@ export type TResourceDirectoryName =
   | "cannabis"
   | "narcotics"
   | "psychotropics"
-  | "prohibited_list";
+  | "prohibited_list"
+  | "functional_food_nutrients";
 
 export type TLoadedResource = TDrugRecognitionResource &
   TFinishedMedicinePermissionDetailResource &
@@ -27,10 +30,12 @@ export type TLoadedResource = TDrugRecognitionResource &
   TCannabisResource &
   TNarcoticsResource &
   TpsychotropicsResource &
-  TProhibitedListResource;
+  TProhibitedListResource &
+  TFunctionalFoodNutrientsResource;
 
 export type TResource =
   | IDrugRecognition
   | IFinishedMedicinePermissionDetail
   | INearbyPharmacies
-  | IProhibitedList;
+  | IProhibitedList
+  | IFunctionalFoodNutrients;

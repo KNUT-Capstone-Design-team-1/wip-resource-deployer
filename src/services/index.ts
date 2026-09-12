@@ -9,3 +9,4 @@ export * as CannabisService from "./cannabis";
 export * as NarcoticsService from "./narcotics";
 export * as PsychotropicsService from "./psychotropics";
 export * as ProhibitedListService from "./prohibited_list";
+export * as FunctionalFoodNutrientsService from "./functional_food_nutrients";

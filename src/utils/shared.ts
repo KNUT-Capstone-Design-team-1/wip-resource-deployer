@@ -9,6 +9,7 @@ import {
   NARCOTICS_PROPERTY_MAP,
   psychotropics_PROPERTY_MAP,
   PROHIBITED_LIST_PROPERTY_MAP,
+  FUNCTIONAL_FOOD_NUTRIENTS_PROPERTY_MAP,
 } from "../types";
 
 /**
@@ -37,4 +38,5 @@ export const RESOURCE_PROPERTY_MAP: Record<
   narcotics: NARCOTICS_PROPERTY_MAP,
   psychotropics: psychotropics_PROPERTY_MAP,
   prohibited_list: PROHIBITED_LIST_PROPERTY_MAP,
+  functional_food_nutrients: FUNCTIONAL_FOOD_NUTRIENTS_PROPERTY_MAP,
 } as const;
