@@ -1,62 +1,46 @@
-import puppeteer from "puppeteer";
-import { IMarkImageData } from "../types";
-import { createResourceFile, logger } from "../utils";
-import config from "../../config.json";
+import { IDrugRecognition, IMarkImageData } from "../types";
+import { createResourceFile, logger, ResourceLoader } from "../utils";
 
 /**
- * 마크 이미지 크롤러
- */
-export class MarkImageCrawler {
-  public static async crawling(
-    targetURL: string,
-  ): Promise<Array<IMarkImageData>> {
-    const browser = await puppeteer.launch({
-      headless: true, // 브라우저 표시 안함
-    });
-
-    const page = await browser.newPage();
-    await page.goto(targetURL, { waitUntil: "load" });
-
-    const imageDatas = await page.evaluate(() => {
-      const rows = Array.from(
-        document.querySelectorAll("input[name='markType']"),
-      );
-
-      return rows.map((inputElement) => {
-        const base64Match = inputElement
-          .getAttribute("onclick")
-          ?.match(/data:image\/[a-z]+;base64,[A-Za-z0-9+/=]+/);
-
-        return {
-          title: (inputElement as HTMLInputElement).title,
-          code: (inputElement as HTMLInputElement).value,
-          base64: base64Match?.[0] as string,
-        };
-      });
-    });
-
-    browser.close();
-
-    return imageDatas;
-  }
-}
-
-/**
- * 마크 이미지 크롤링 요청
+ * 마크 이미지 데이터 생성
+ * @param drugRecognition 의약품 낱알식별정보 데이터
  * @returns
  */
-async function getImageDatas() {
-  const { targetURL, totalPages, limit } = config.markImage;
+export function createMarkImageData(
+  drugRecognition: Array<IDrugRecognition>,
+): Array<IMarkImageData> {
+  const markImageData: Array<IMarkImageData> = [];
 
-  const imageDatas: Array<IMarkImageData> = [];
+  for (const item of drugRecognition) {
+    const hasFrontMark = Boolean(
+      item.DRUG_SHAPE_FRONT ||
+        item.MARK_IMAGE_FRONT ||
+        item.MARK_CODE_FRONT,
+    );
+    const hasBackMark = Boolean(
+      item.DRUG_SHAPE_BACK ||
+        item.MARK_IMAGE_BACK ||
+        item.MARK_CODE_BACK,
+    );
 
-  for (let page = 1; page <= totalPages; page += 1) {
-    const url = `${targetURL}?totalPages=${totalPages}&page=${page}&limit=${limit}&sort=&sortOrder=&search=`;
+    if (hasFrontMark) {
+      markImageData.push({
+        title: item.DRUG_SHAPE_FRONT,
+        code: item.MARK_CODE_FRONT,
+        base64: item.MARK_IMAGE_FRONT,
+      });
+    }
 
-    imageDatas.push(...(await MarkImageCrawler.crawling(url)));
+    if (hasBackMark) {
+      markImageData.push({
+        title: item.DRUG_SHAPE_BACK,
+        code: item.MARK_CODE_BACK,
+        base64: item.MARK_IMAGE_BACK,
+      });
+    }
   }
 
-  return imageDatas;
+  return markImageData;
 }
 
 /**
@@ -64,11 +48,19 @@ async function getImageDatas() {
  */
 export async function createMarkImageResource() {
   try {
-    logger.info("[MARK-IMAGE] Start crawling mark image data");
+    logger.info("[MARK-IMAGE] Start load resource");
 
-    const markImageData = await getImageDatas();
+    const resourceLoader = new ResourceLoader(["drug_recognition"]);
 
-    logger.info("[MARK-IMAGE] Complete crawling mark image data");
+    const resource = await resourceLoader.loadResource();
+
+    logger.info("[MARK-IMAGE] Complete load resource");
+
+    logger.info("[MARK-IMAGE] Start create mark image data");
+
+    const markImageData = createMarkImageData(resource.drugRecognition);
+
+    logger.info("[MARK-IMAGE] Complete create mark image data");
 
     logger.info("[MARK-IMAGE] Start create mark image resource file");
 

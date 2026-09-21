@@ -15,11 +15,6 @@
       "_functional_food_nutrients"
     ]
   },
-  "markImage": {
-    "targetURL": "https://nedrug.mfds.go.kr/pbp/CCBSB12/markSearchPopup",
-    "totalPages": 13,
-    "limit": 50
-  },
   "unifiedSearch": {
     "dbInitialize": false
   }
