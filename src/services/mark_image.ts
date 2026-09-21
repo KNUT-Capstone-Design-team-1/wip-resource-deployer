@@ -1,15 +1,85 @@
+import axios from "axios";
 import { IDrugRecognition, IMarkImageData } from "../types";
 import { createResourceFile, logger, ResourceLoader } from "../utils";
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * 최신 Chrome 브라우저의 User-Agent 생성
+ * - 하위/구버전 User-Agent로 인식되지 않도록 연도 기준 최신 Major 버전을 동적으로 계산
+ */
+function getLatestUserAgent(): string {
+  const baseYear = 2024;
+  const baseVersion = 120;
+  const currentYear = new Date().getFullYear();
+  const estimatedVersion = baseVersion + (currentYear - baseYear) * 12;
+
+  return `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${estimatedVersion}.0.0.0 Safari/537.36`;
+}
+
+/**
+ * 원격 이미지 URL을 요청하여 Base64 Data URL 문자열로 변환
+ *
+ * - 식품의약품안전처(nedrug) 서버의 요청 차단 및 429 (Too Many Requests) 방지를 위해 재시도 및 지수 백오프(Exponential Backoff) 적용
+ * - 최신 브라우저 User-Agent, Referer 및 Accept 헤더 포함
+ *
+ * @param url 다운로드할 원격 이미지 URL
+ * @param retries 실패 시 최대 재시도 횟수 (기본값: 5)
+ * @returns `data:${mimeType};base64,...` 형식의 Base64 Data URL 문자열
+ */
+async function fetchImageBase64(url: string, retries = 5): Promise<string> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const response = await axios.get(url, {
+        responseType: "arraybuffer",
+        timeout: 15000,
+        headers: {
+          "User-Agent": getLatestUserAgent(),
+          Referer: "https://nedrug.mfds.go.kr/",
+          Accept:
+            "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+        },
+      });
+
+      const contentTypeHeader = response.headers["content-type"] || "image/gif";
+      const mimeType = contentTypeHeader.split(";")[0].trim();
+      const base64Data = Buffer.from(response.data).toString("base64");
+
+      return `data:${mimeType};base64,${base64Data}`;
+    } catch (e: any) {
+      const status = e.response ? e.response.status : null;
+
+      if (attempt === retries) {
+        throw new Error(
+          `Failed after ${retries} attempts (${status || e.message}): ${url}`,
+        );
+      }
+
+      const waitTime = status === 429 ? 2000 * attempt : 1000 * attempt;
+
+      logger.warn(
+        `[MARK-IMAGE] (${status || e.message}) Retrying in ${waitTime}ms for ${url}`,
+      );
+
+      await sleep(waitTime);
+    }
+  }
+
+  return "";
+}
 
 /**
  * 마크 이미지 데이터 생성
  * @param drugRecognition 의약품 낱알식별정보 데이터
- * @returns
+ * @returns 마크 이미지 데이터 목록
  */
-export function createMarkImageData(
+export async function createMarkImageData(
   drugRecognition: Array<IDrugRecognition>,
-): Array<IMarkImageData> {
-  const markImageMap = new Map<string, IMarkImageData>();
+): Promise<Array<IMarkImageData>> {
+  const markImageMap = new Map<
+    string,
+    { title: string; code: string; url: string }
+  >();
 
   for (const item of drugRecognition) {
     const hasFrontMark = Boolean(
@@ -23,24 +93,64 @@ export function createMarkImageData(
         item.MARK_CODE_BACK,
     );
 
-    if (hasFrontMark && !markImageMap.has(item.MARK_CODE_FRONT)) {
+    if (
+      hasFrontMark &&
+      item.MARK_CODE_FRONT &&
+      !markImageMap.has(item.MARK_CODE_FRONT)
+    ) {
       markImageMap.set(item.MARK_CODE_FRONT, {
         title: item.DRUG_SHAPE_FRONT,
         code: item.MARK_CODE_FRONT,
-        base64: item.MARK_IMAGE_FRONT,
+        url: item.MARK_IMAGE_FRONT,
       });
     }
 
-    if (hasBackMark && !markImageMap.has(item.MARK_CODE_BACK)) {
+    if (
+      hasBackMark &&
+      item.MARK_CODE_BACK &&
+      !markImageMap.has(item.MARK_CODE_BACK)
+    ) {
       markImageMap.set(item.MARK_CODE_BACK, {
         title: item.DRUG_SHAPE_BACK,
         code: item.MARK_CODE_BACK,
-        base64: item.MARK_IMAGE_BACK,
+        url: item.MARK_IMAGE_BACK,
       });
     }
   }
 
-  return Array.from(markImageMap.values());
+  const markEntries = Array.from(markImageMap.values());
+  const markImageData: Array<IMarkImageData> = [];
+
+  for (let i = 0; i < markEntries.length; i++) {
+    const item = markEntries[i];
+    let base64 = item.url;
+
+    if (item.url && item.url.startsWith("http")) {
+      try {
+        base64 = await fetchImageBase64(item.url);
+
+        await sleep(150);
+      } catch (e: any) {
+        logger.error(
+          `[MARK-IMAGE] Failed to download image for ${item.code} (${item.url}): ${e.message}`,
+        );
+      }
+    }
+
+    markImageData.push({
+      title: item.title,
+      code: item.code,
+      base64,
+    });
+
+    if ((i + 1) % 50 === 0 || i === markEntries.length - 1) {
+      logger.info(
+        `[MARK-IMAGE] Progress: ${i + 1}/${markEntries.length} (${(((i + 1) / markEntries.length) * 100).toFixed(1)}%)`,
+      );
+    }
+  }
+
+  return markImageData;
 }
 
 /**
@@ -58,7 +168,7 @@ export async function createMarkImageResource() {
 
     logger.info("[MARK-IMAGE] Start create mark image data");
 
-    const markImageData = createMarkImageData(resource.drugRecognition);
+    const markImageData = await createMarkImageData(resource.drugRecognition);
 
     logger.info("[MARK-IMAGE] Complete create mark image data");
 
@@ -67,10 +177,11 @@ export async function createMarkImageResource() {
     await createResourceFile("mark_images.json", markImageData, false);
 
     logger.info("[MARK-IMAGE] Complete create mark image resource file");
-  } catch (e) {
+  } catch (e: any) {
     logger.error(
       "[MARK-IMAGE] Failed to create mark image resource file. %s",
       e.stack || e,
     );
   }
 }
+
