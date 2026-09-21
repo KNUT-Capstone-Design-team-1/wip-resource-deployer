@@ -3,8 +3,6 @@ import {
   TDrugRecognitionResource,
   IFinishedMedicinePermissionDetail,
   TFinishedMedicinePermissionDetailResource,
-  INearbyPharmacies,
-  TNearbyPharmaciesResource,
   TCannabisResource,
   TNarcoticsResource,
   TpsychotropicsResource,
@@ -17,7 +15,6 @@ import {
 export type TResourceDirectoryName =
   | "drug_recognition"
   | "finished_medicine_permission_detail"
-  | "nearby_pharmacies"
   | "cannabis"
   | "narcotics"
   | "psychotropics"
@@ -26,7 +23,6 @@ export type TResourceDirectoryName =
 
 export type TLoadedResource = TDrugRecognitionResource &
   TFinishedMedicinePermissionDetailResource &
-  TNearbyPharmaciesResource &
   TCannabisResource &
   TNarcoticsResource &
   TpsychotropicsResource &
@@ -36,6 +32,5 @@ export type TLoadedResource = TDrugRecognitionResource &
 export type TResource =
   | IDrugRecognition
   | IFinishedMedicinePermissionDetail
-  | INearbyPharmacies
   | IProhibitedList
   | IFunctionalFoodNutrients;

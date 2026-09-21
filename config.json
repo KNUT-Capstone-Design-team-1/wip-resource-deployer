@@ -17,5 +17,8 @@
   },
   "unifiedSearch": {
     "dbInitialize": false
+  },
+  "nearbyPharmacies": {
+    "apiUrl": "http://safemap.go.kr/openapi2/IF_0048"
   }
 }
