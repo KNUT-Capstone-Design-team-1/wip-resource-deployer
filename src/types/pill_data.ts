@@ -19,7 +19,13 @@ export type OmitPillDataProps =
   | "ENTP_BIZ_NO"
   | "ENTP_SEQ"
   | "IMG_REGIST_TS"
-  | "BUSINESS_LICENCE_NUMBER";
+  | "BUSINESS_LICENCE_NUMBER"
+  | "DRUG_SHAPE_FRONT"
+  | "DRUG_SHAPE_BACK"
+  | "MARK_IMAGE_FRONT"
+  | "MARK_IMAGE_BACK"
+  | "FINISH_MATERIAL_YN"
+  | "INDUTY_CODE";
 
 /**
  * 알약 데이터
@@ -27,3 +33,4 @@ export type OmitPillDataProps =
 export interface IPillData
   extends Omit<IDrugRecognition, OmitPillDataProps>,
     Omit<IFinishedMedicinePermissionDetail, OmitPillDataProps> {}
+
