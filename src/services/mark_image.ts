@@ -9,7 +9,7 @@ import { createResourceFile, logger, ResourceLoader } from "../utils";
 export function createMarkImageData(
   drugRecognition: Array<IDrugRecognition>,
 ): Array<IMarkImageData> {
-  const markImageData: Array<IMarkImageData> = [];
+  const markImageMap = new Map<string, IMarkImageData>();
 
   for (const item of drugRecognition) {
     const hasFrontMark = Boolean(
@@ -23,16 +23,16 @@ export function createMarkImageData(
         item.MARK_CODE_BACK,
     );
 
-    if (hasFrontMark) {
-      markImageData.push({
+    if (hasFrontMark && !markImageMap.has(item.MARK_CODE_FRONT)) {
+      markImageMap.set(item.MARK_CODE_FRONT, {
         title: item.DRUG_SHAPE_FRONT,
         code: item.MARK_CODE_FRONT,
         base64: item.MARK_IMAGE_FRONT,
       });
     }
 
-    if (hasBackMark) {
-      markImageData.push({
+    if (hasBackMark && !markImageMap.has(item.MARK_CODE_BACK)) {
+      markImageMap.set(item.MARK_CODE_BACK, {
         title: item.DRUG_SHAPE_BACK,
         code: item.MARK_CODE_BACK,
         base64: item.MARK_IMAGE_BACK,
@@ -40,7 +40,7 @@ export function createMarkImageData(
     }
   }
 
-  return markImageData;
+  return Array.from(markImageMap.values());
 }
 
 /**
