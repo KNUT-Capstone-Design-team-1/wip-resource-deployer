@@ -18,6 +18,31 @@ function getLatestUserAgent(): string {
 }
 
 /**
+ * Base64 인코딩 문자열 유효성 검증
+ * - 문자열 길이 4의 배수 여부
+ * - Base64 표준 문자셋 및 패딩(=) 규칙 준수 여부
+ * - Buffer 디코딩 가능 여부
+ */
+function isValidBase64(base64Payload: string): boolean {
+  if (!base64Payload || base64Payload.length % 4 !== 0) {
+    return false;
+  }
+
+  // Base64 유효 문자 및 패딩 검사
+  const base64Regex = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$/;
+  if (!base64Regex.test(base64Payload)) {
+    return false;
+  }
+
+  try {
+    const buffer = Buffer.from(base64Payload, "base64");
+    return buffer.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * 원격 이미지 URL을 요청하여 Base64 Data URL 문자열로 변환
  *
  * - 식품의약품안전처(nedrug) 서버의 요청 차단 및 429 (Too Many Requests) 방지를 위해 재시도 및 지수 백오프(Exponential Backoff) 적용
@@ -137,11 +162,21 @@ export async function createMarkImageData(
       }
     }
 
-    markImageData.push({
-      title: item.title,
-      code: item.code,
-      base64,
-    });
+    const base64Parts = base64 ? base64.split(";base64,") : [];
+    const isDataUrl = base64.startsWith("data:image/") && base64Parts.length === 2;
+    const base64Payload = isDataUrl ? base64Parts[1] : base64;
+
+    if (isValidBase64(base64Payload)) {
+      markImageData.push({
+        title: item.title,
+        code: item.code,
+        base64,
+      });
+    } else {
+      logger.warn(
+        `[MARK-IMAGE] Excluded invalid base64 data for ${item.code} (${item.title}): length=${base64Payload?.length}, data=${base64?.slice(0, 50)}...`,
+      );
+    }
 
     if ((i + 1) % 50 === 0 || i === markEntries.length - 1) {
       logger.info(
