@@ -31,5 +31,7 @@ export type OmitPillDataProps =
  */
 export interface IPillData
   extends Omit<IDrugRecognition, OmitPillDataProps>,
-    Omit<IFinishedMedicinePermissionDetail, OmitPillDataProps> {}
+    Omit<IFinishedMedicinePermissionDetail, OmitPillDataProps> {
+  EFFECT_SUMMARY?: string | null;
+}
 

@@ -8,6 +8,7 @@ import {
   logger,
   mergeDuplicateObjectArray,
   ResourceLoader,
+  fetchEffectSummaryMap,
 } from "../utils";
 
 /**
@@ -127,6 +128,17 @@ export async function createPillDataResourceFile() {
     );
 
     logger.info("[PILL-DATA] Complete create pill data");
+
+    logger.info("[PILL-DATA] Start fetch effect summaries");
+
+    const itemSeqList = pillData.map(({ ITEM_SEQ }) => ITEM_SEQ);
+    const effectSummaryMap = await fetchEffectSummaryMap(itemSeqList);
+
+    pillData.forEach((pill) => {
+      pill.EFFECT_SUMMARY = effectSummaryMap.get(pill.ITEM_SEQ) ?? null;
+    });
+
+    logger.info("[PILL-DATA] Complete fetch effect summaries");
 
     logger.info("[PILL-DATA] Start create pill data resource file");
 
