@@ -1,11 +1,9 @@
 import axios from "axios";
 import fs from "fs";
 import path from "path";
-import config from "../../config.json";
 import {
   logger,
   ResourceLoader,
-  runQuery,
   normalizeText,
   createSQLFile,
   runQueryForSQLFile,
