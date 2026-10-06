@@ -15,7 +15,6 @@ export type OmitPillDataProps =
   | "ATT_DOC_DATA"
   | "REEXAM_TARGET_YN"
   | "REEXAM_CONT"
-  | "ATC_CODE"
   | "ENTP_BIZ_NO"
   | "ENTP_SEQ"
   | "IMG_REGIST_TS"
