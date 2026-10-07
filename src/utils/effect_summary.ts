@@ -2,141 +2,12 @@ import axios from "axios";
 import logger from "./logger";
 
 const FALLBACK_EFFECT_SUMMARY = "효능·효과 정보를 확인할 수 없습니다.";
-
-/**
- * Nedrug 연속 요청 사이에 적용할 최소 대기 시간(ms).
- *
- * 동시에 여러 요청을 보내는 것보다 안정적으로 요청량을 분산하기 위한 값이다.
- */
 const REQUEST_DELAY_MS = 200;
-
-const EFFECT_VERB_PATTERN =
-  /치료|개선|완화|억제|예방|경감|감소|제거|보조|사용한다|사용할 수 있다|적응/;
-
-/**
- * 여러 ITEM_SEQ를 배치 단위로 처리해 효능·효과 요약 Map을 생성한다.
- *
- * @param itemSeqList 품목일련번호 목록
- * @param batchSize 한 번에 묶어 처리할 ITEM_SEQ 개수
- * @returns ITEM_SEQ를 키로 하는 EFFECT_SUMMARY Map
- */
-export async function fetchEffectSummaryMap(
-  itemSeqList: Array<string>,
-  batchSize = 5,
-): Promise<Map<string, string>> {
-  const summaryMap = new Map<string, string>();
-  const rateLimitedItemSeqs = new Set<string>();
-  const uniqueItemSeqList = removeDuplicateValues(itemSeqList.filter(Boolean));
-
-  const hasItems = uniqueItemSeqList.length > 0;
-
-  if (!hasItems) {
-    return summaryMap;
-  }
-
-  for (let start = 0; start < uniqueItemSeqList.length; start += batchSize) {
-    const batch = uniqueItemSeqList.slice(start, start + batchSize);
-
-    await processEffectSummaryBatch(batch, summaryMap, rateLimitedItemSeqs);
-
-    const completed = Math.min(start + batchSize, uniqueItemSeqList.length);
-    const isProgressCheckpoint =
-      completed % 100 === 0 || completed === uniqueItemSeqList.length;
-
-    if (isProgressCheckpoint) {
-      logger.info(`[EE-SUMMARY] ${completed} / ${uniqueItemSeqList.length}`);
-    }
-  }
-
-  await retryRateLimitedItemSeqs(rateLimitedItemSeqs, summaryMap);
-
-  return summaryMap;
-}
+const RETRY_DELAY_MS = 1000;
+const DEFAULT_MAX_LENGTH = 80;
 
 /**
- * 하나의 배치에 포함된 ITEM_SEQ를 순차적으로 처리한다.
- *
- * 참고 데이터 수집 로직과 동일하게 배치 내부에서는 동시에 요청하지 않는다.
- * 요청 사이에 짧은 대기 시간을 두어 Nedrug 요청량을 분산한다.
- * 429가 발생한 ITEM_SEQ는 즉시 재시도하지 않고 별도로 모은다.
- *
- * @param batchItemSeqs 현재 배치의 ITEM_SEQ 목록
- * @param summaryMap 결과를 저장할 Map
- * @param rateLimitedItemSeqs 429 발생 ITEM_SEQ를 저장할 Set
- */
-async function processEffectSummaryBatch(
-  batchItemSeqs: string[],
-  summaryMap: Map<string, string>,
-  rateLimitedItemSeqs: Set<string>,
-): Promise<void> {
-  for (let index = 0; index < batchItemSeqs.length; index += 1) {
-    const itemSeq = batchItemSeqs[index];
-    const hasPreviousRequest = index > 0;
-
-    if (hasPreviousRequest) {
-      await sleep(REQUEST_DELAY_MS);
-    }
-
-    const result = await fetchEffectSummarySafely(itemSeq, false);
-
-    summaryMap.set(itemSeq, result.summary);
-
-    if (result.isRateLimited) {
-      rateLimitedItemSeqs.add(itemSeq);
-    }
-  }
-}
-
-/**
- * 하나의 ITEM_SEQ 처리 결과를 안전한 결과 객체로 변환한다.
- *
- * HTTP 429는 즉시 재시도하지 않고 호출자에게 전달한다.
- *
- * @param itemSeq 품목일련번호
- * @param isRetry 전체 1차 처리가 끝난 뒤 수행하는 재시도인지 여부
- * @returns 요약 결과와 429 발생 여부
- */
-async function fetchEffectSummarySafely(
-  itemSeq: string,
-  isRetry: boolean,
-): Promise<{
-  summary: string;
-  isRateLimited: boolean;
-}> {
-  try {
-    const summary = await fetchEffectSummary(itemSeq);
-
-    return {
-      summary,
-      isRateLimited: false,
-    };
-  } catch (error: any) {
-    const isRateLimited = error instanceof RateLimitError;
-
-    if (isRateLimited && !isRetry) {
-      logger.warn(`[EE-SUMMARY] HTTP 429 ITEM_SEQ=${itemSeq}. Deferred retry.`);
-
-      return {
-        summary: FALLBACK_EFFECT_SUMMARY,
-        isRateLimited: true,
-      };
-    }
-
-    logger.error(
-      "[EE-SUMMARY] Failed ITEM_SEQ=%s. error: %s",
-      itemSeq,
-      error?.message || error,
-    );
-
-    return {
-      summary: FALLBACK_EFFECT_SUMMARY,
-      isRateLimited: false,
-    };
-  }
-}
-
-/**
- * HTTP 429 응답을 일반 오류와 구분하기 위한 전용 오류 클래스다.
+ * 에러 정의: HTTP 429 Too Many Requests 대응 예외 클래스
  */
 class RateLimitError extends Error {
   constructor(message = "HTTP 429 Too Many Requests") {
@@ -146,201 +17,104 @@ class RateLimitError extends Error {
 }
 
 /**
- * 지정된 시간만큼 대기한다.
- *
- * @param ms 대기 시간(ms)
- * @returns 대기 Promise
+ * 지정된 시간(ms) 동안 대기(sleep)한다.
  */
 function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
- * 1차 전체 처리가 끝난 후 429 대상만 모아서 재시도한다.
- *
- * @param rateLimitedItemSeqs 1차 처리에서 429가 발생한 ITEM_SEQ 목록
- * @param summaryMap 결과를 저장할 Map
+ * 문자열 배열 내 중복 요소를 제거하여 고유값 배열을 반환한다.
  */
-async function retryRateLimitedItemSeqs(
-  rateLimitedItemSeqs: Set<string>,
-  summaryMap: Map<string, string>,
-): Promise<void> {
-  const retryItemSeqs = [...rateLimitedItemSeqs];
-  const hasRetryItems = retryItemSeqs.length > 0;
-
-  if (!hasRetryItems) {
-    return;
-  }
-
-  logger.info(
-    `[EE-SUMMARY] Deferred retry start: ${retryItemSeqs.length} ITEM_SEQ`,
-  );
-
-  await sleep(1000);
-
-  for (let index = 0; index < retryItemSeqs.length; index += 1) {
-    const itemSeq = retryItemSeqs[index];
-    const hasPreviousRequest = index > 0;
-
-    if (hasPreviousRequest) {
-      await sleep(REQUEST_DELAY_MS);
-    }
-
-    const result = await fetchEffectSummarySafely(itemSeq, true);
-
-    summaryMap.set(itemSeq, result.summary);
-  }
-
-  logger.info(
-    `[EE-SUMMARY] Deferred retry complete: ${retryItemSeqs.length} ITEM_SEQ`,
-  );
+function removeDuplicateValues(values: string[]): string[] {
+  return [...new Set(values)];
 }
 
 /**
- * 하나의 ITEM_SEQ에 대한 효능·효과 요약을 생성한다.
- *
- * @param itemSeq 품목일련번호
- * @returns 항상 문자열인 효능·효과 요약
+ * 연속된 공백 및 줄바꿈 문자를 단일 공백으로 치환하고 앞뒤 여백을 제거한다.
  */
-async function fetchEffectSummary(itemSeq: string): Promise<string> {
-  const eeDocData = await fetchEeDocData(itemSeq);
-  const hasEeDocData = Boolean(eeDocData);
-
-  if (!hasEeDocData) {
-    logger.warn(`[EE-SUMMARY] Empty EE_DOC_DATA: ${itemSeq}`);
-
-    return FALLBACK_EFFECT_SUMMARY;
-  }
-
-  return createEffectSummary(eeDocData);
+function normalizeWhitespace(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
 }
 
 /**
- * Nedrug에서 하나의 ITEM_SEQ에 대한 EE_DOC_DATA를 가져온다.
- *
- * HTTP 429 발생 시 즉시 재요청하지 않고 RateLimitError를 발생시킨다.
- * 실제 재시도는 전체 1차 처리가 끝난 뒤 수행한다.
- *
- * @param itemSeq 품목일련번호
- * @param timeoutMs 요청 타임아웃(ms)
- * @returns EE_DOC_DATA 문자열
+ * 문자가 여는 괄호 계열인지 확인한다.
  */
-async function fetchEeDocData(
-  itemSeq: string,
-  timeoutMs = 5000,
-): Promise<string> {
-  const url = `https://nedrug.mfds.go.kr/pbp/cmn/xml/drb/${itemSeq}/EE`;
-
-  try {
-    const response = await axios.get<string>(url, {
-      timeout: timeoutMs,
-    });
-
-    return response.data;
-  } catch (error: any) {
-    const status = error?.response?.status;
-    const isRateLimit = status === 429;
-
-    if (isRateLimit) {
-      throw new RateLimitError(`HTTP 429: ${itemSeq}`);
-    }
-
-    logger.error(
-      `[EE-SUMMARY] Failed ITEM_SEQ=${itemSeq}. error: ${
-        error?.message || error
-      }`,
-    );
-
-    return "";
-  }
+function isOpeningBracket(char: string): boolean {
+  return "([{〈《「『【".includes(char);
 }
 
 /**
- * EE_DOC_DATA 원문을 최종 한 줄 효능·효과 요약으로 변환한다.
- *
- * @param eeDocData MFDS EE_DOC_DATA 원문
- * @param maxLength 권장 최대 길이
- * @returns 항상 문자열을 반환하는 효능·효과 요약
+ * 문자가 닫는 괄호 계열인지 확인한다.
  */
-function createEffectSummary(
-  eeDocData: string | null | undefined,
-  maxLength = 80,
-): string {
-  const hasEeDocData = Boolean(eeDocData?.trim());
-
-  if (!hasEeDocData) {
-    return FALLBACK_EFFECT_SUMMARY;
-  }
-
-  const cleaned = cleanHtml(eeDocData);
-  const hasCleanedText = Boolean(cleaned);
-
-  if (!hasCleanedText) {
-    return FALLBACK_EFFECT_SUMMARY;
-  }
-
-  const effectOnly = removeNonEffectLines(cleaned);
-  const withoutBoilerplate = removeBoilerplate(effectOnly);
-
-  const sentences = splitSentences(withoutBoilerplate);
-
-  const normalizedSentences = sentences
-    .map(normalizeConnectors)
-    .filter(Boolean);
-
-  const uniqueSentences = removeDuplicateExpressions(normalizedSentences);
-
-  const hasUniqueSentences = uniqueSentences.length > 0;
-
-  if (!hasUniqueSentences) {
-    return createFallbackSummary(cleaned, maxLength);
-  }
-
-  return (
-    compressEffect(uniqueSentences, maxLength) ||
-    createFallbackSummary(cleaned, maxLength)
-  );
+function isClosingBracket(char: string): boolean {
+  return ")]}>〉》」』】".includes(char);
 }
 
 /**
- * HTML/XML 형태의 원본 효능·효과 데이터를 일반 텍스트로 정리한다.
- *
- * @param raw 원본 효능·효과 데이터
- * @returns HTML 태그와 불필요한 문자가 제거된 텍스트
+ * 특정 인덱스의 마침표가 소수점(숫자 사이의 점)인지 여부를 판별한다.
  */
-function cleanHtml(raw: string | null | undefined): string {
-  const hasRawText = Boolean(raw?.trim());
+function isDecimalPoint(text: string, index: number): boolean {
+  const previous = text[index - 1];
+  const next = text[index + 1];
+  return Boolean(previous && next && /\d/.test(previous) && /\d/.test(next));
+}
 
-  if (!hasRawText || typeof raw !== "string") {
-    return "";
-  }
+/**
+ * 후보 문자열의 공백을 제거한 뒤 유효한 경우 결과 배열에 추가한다.
+ */
+function pushCandidate(result: string[], value: string): void {
+  const normalized = value.trim();
+  if (normalized) result.push(normalized);
+}
 
-  let text = raw;
-
-  text = text.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, "$1");
-
-  text = text.replace(
-    /<(?:br|\/p|\/div|\/li|\/section|\/article)[^>]*>/gi,
-    "\n",
-  );
-
-  text = text.replace(/<[^>]+>/g, " ");
-
-  text = text
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)));
-
-  text = text.replace(/[·•※○●◎◇◆□■▶▷]+/g, " ");
+/**
+ * HTML/XML 엔티티(명명 엔티티, 16진수/10진수 유니코드)를 일반 문자로 디코딩한다.
+ */
+function decodeHtmlEntities(text: string): string {
+  const namedEntities: Record<string, string> = {
+    nbsp: " ",
+    amp: "&",
+    lt: "<",
+    gt: ">",
+    quot: '"',
+    apos: "'",
+  };
 
   return text
-    .split(/\r?\n/)
+    .replace(/&([a-z][a-z0-9]+);/gi, (match, name: string) => {
+      return namedEntities[name.toLowerCase()] ?? match;
+    })
+    .replace(/&#x([0-9a-f]+);/gi, (match, hex: string) => {
+      const codePoint = Number.parseInt(hex, 16);
+      return Number.isNaN(codePoint) ? match : String.fromCodePoint(codePoint);
+    })
+    .replace(/&#(\d+);/g, (match, decimal: string) => {
+      const codePoint = Number.parseInt(decimal, 10);
+      return Number.isNaN(codePoint) ? match : String.fromCodePoint(codePoint);
+    });
+}
+
+/**
+ * HTML/XML 태그, CDATA, HTML entity 및 글머리 기호(bullet)를 일반 텍스트로 정규화한다.
+ */
+function cleanHtml(raw: string | null | undefined): string {
+  if (typeof raw !== "string" || !raw.trim()) {
+    return "";
+  }
+
+  let text = raw
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, "$1")
+    .replace(/<(?:br|\/p|\/div|\/li|\/section|\/article)[^>]*>/gi, "\n")
+    .replace(/<[^>]+>/g, " ");
+
+  text = decodeHtmlEntities(text)
+    // PDF/웹 변환 과정에서 들어오는 특수 bullet을 줄바꿈으로 취급한다.
+    .replace(/[•◦▪▫●○◎◇◆□■▶▷]/g, "\n")
+    .replace(/\r\n?/g, "\n");
+
+  return text
+    .split("\n")
     .map(normalizeWhitespace)
     .filter(Boolean)
     .join("\n")
@@ -348,20 +122,38 @@ function cleanHtml(raw: string | null | undefined): string {
 }
 
 /**
- * 효능·효과가 아닌 행을 제거한다.
- *
- * @param text 정제할 텍스트
- * @returns 효능·효과 관련 행만 남은 텍스트
+ * 텍스트 라인이 효능·효과가 아닌 섹션(용법/용량, 주의사항 등)인지 확인한다.
  */
-function removeNonEffectLines(text: string): string {
-  const hasText = Boolean(text);
-
-  if (!hasText) {
-    return "";
+function isNonEffectLine(line: string): boolean {
+  if (!line) {
+    return true;
   }
 
+  const sectionHeadingPatterns = [
+    /^용법(?:\s*·?\s*용량)?/, /^용량/, /^투여방법/, /^복용방법/, /^사용방법/, /^사용법/,
+    /^주의사항/, /^주의/, /^금기/, /^경고/, /^신중투여/, /^이상반응/, /^부작용/,
+    /^상호작용/, /^임상시험/, /^보관방법/, /^저장방법/, /^취급상주의/, /^첨가제/,
+    /^성상/, /^포장단위/, /^보험/,
+  ];
+
+  if (sectionHeadingPatterns.some((pattern) => pattern.test(line))) {
+    return true;
+  }
+
+  return [
+    "환자에게만 투여",
+    "환자에게 투여",
+    "의사 또는 약사의 지시에 따라",
+    "전문의의 처방",
+  ].some((keyword) => line.includes(keyword));
+}
+
+/**
+ * 효능·효과와 명백히 무관한 섹션 라인을 제거한다.
+ */
+function removeNonEffectLines(text: string): string {
   return text
-    .split(/\r?\n/)
+    .split("\n")
     .map(normalizeWhitespace)
     .filter(Boolean)
     .filter((line) => !isNonEffectLine(line))
@@ -369,419 +161,482 @@ function removeNonEffectLines(text: string): string {
 }
 
 /**
- * 효능·효과가 아닌 행인지 판별한다.
- *
- * @param line 판별할 텍스트
- * @returns 효능·효과와 무관한 행이면 true
+ * 번호 매기기나 '효능·효과' 같은 제목성 머리말을 제거한다.
  */
-function isNonEffectLine(line: string): boolean {
-  const hasLine = Boolean(line);
-
-  if (!hasLine) {
-    return true;
-  }
-
-  const nonEffectPatterns = [
-    /^용법/,
-    /^용량/,
-    /^투여/,
-    /^복용/,
-    /^사용방법/,
-    /^사용법/,
-    /^주의/,
-    /^금기/,
-    /^경고/,
-    /^신중히/,
-    /^이상반응/,
-    /^부작용/,
-    /^상호작용/,
-    /^임상시험/,
-    /^임상/,
-    /^보관/,
-    /^저장/,
-    /^취급/,
-    /^첨가제/,
-    /^성상/,
-    /^포장/,
-    /^보험/,
-  ];
-
-  const hasNonEffectHeading = nonEffectPatterns.some((pattern) =>
-    pattern.test(line),
-  );
-
-  if (hasNonEffectHeading) {
-    return true;
-  }
-
-  const nonEffectKeywords = [
-    "환자에게만 투여",
-    "환자에게 투여",
-    "의사 또는 약사의 지시에 따라",
-    "전문의의 처방",
-  ];
-
-  const hasNonEffectKeyword = nonEffectKeywords.some((keyword) =>
-    line.includes(keyword),
-  );
-
-  return hasNonEffectKeyword;
-}
-
-/**
- * 효능·효과 데이터에 포함된 상투적인 표현과 섹션 제목을 제거한다.
- *
- * @param text 정제할 텍스트
- * @returns 상투 표현이 제거된 텍스트
- */
-function removeBoilerplate(text: string): string {
-  const hasText = Boolean(text);
-
-  if (!hasText) {
-    return "";
-  }
-
-  let result = text;
-
-  result = result.replace(
-    /(?:^|\n)\s*(?:효능[·ㆍ]?효과|효능 및 효과|효과)\s*:?\s*/gi,
-    "\n",
-  );
-
-  result = result.replace(
-    /(?:^|\n)\s*\d+\.\s*(?:효능[·ㆍ]?효과|효과)\s*:?\s*/gi,
-    "\n",
-  );
-
-  result = result.replace(
-    /다음\s+(?:질환|질병)\s+및\s+증상의?\s+(?:치료|개선|완화)\s*[:：]?\s*\n?/gi,
-    "__EFFECT_ATTACH__:",
-  );
-
-  result = result.replace(
-    /다음\s+(?:질환|질병)\s+및\s+증상의?\s+(?:치료|개선|완화)(?:에)?\s*(?:사용한다|사용할 수 있다)?/gi,
-    "",
-  );
-
-  result = result.replace(/(?:에|의)\s*사용할\s*수\s*있다/gi, "");
-
-  result = result.replace(/(?:에|의)\s*사용한다/gi, "");
-
-  return result
-    .split(/\r?\n/)
-    .map(normalizeWhitespace)
-    .filter(Boolean)
-    .join("\n")
+function removeEffectHeading(text: string): string {
+  return text
+    .replace(/^\d+[.)]\s*/, "")
+    .replace(/^[①②③④⑤⑥⑦⑧⑨⑩]\s*/, "")
+    .replace(/^(?:효능[·ㆍ]?효과|효능 및 효과|효과)\s*[:：]?\s*/i, "")
+    .replace(/^유효균종\s*[:：]?\s*/i, "")
     .trim();
 }
 
 /**
- * 효능·효과 텍스트를 의미 단위의 문장으로 분리한다.
- *
- * @param text 분리할 텍스트
- * @returns 문장 배열
+ * 최상위 괄호 바깥의 문장 종결 부호(;, 。, .)를 기준으로 문장을 분리한다.
  */
-function splitSentences(text: string): string[] {
-  const hasText = Boolean(text);
+function splitTopLevelSentences(text: string): string[] {
+  const result: string[] = [];
+  let start = 0;
+  let depth = 0;
 
-  if (!hasText) {
-    return [];
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    if (isOpeningBracket(char)) depth += 1;
+    if (isClosingBracket(char)) depth = Math.max(0, depth - 1);
+
+    const isBoundary =
+      depth === 0 &&
+      (char === ";" || char === "。" || (char === "." && !isDecimalPoint(text, index)));
+
+    if (isBoundary) {
+      pushCandidate(result, text.slice(start, index));
+      start = index + 1;
+    }
   }
 
-  const lines = text.split(/\r?\n/).map(normalizeWhitespace).filter(Boolean);
+  pushCandidate(result, text.slice(start));
+  return result;
+}
 
+/**
+ * 최상위 괄호 바깥의 쉼표(,)를 기준으로 절을 분리한다.
+ */
+function splitTopLevelCommaClauses(text: string): string[] {
   const result: string[] = [];
-  let pendingEffect = "";
+  let start = 0;
+  let depth = 0;
 
-  for (const line of lines) {
-    const parsed = parseEffectLine(line, pendingEffect);
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    if (isOpeningBracket(char)) depth += 1;
+    if (isClosingBracket(char)) depth = Math.max(0, depth - 1);
 
-    result.push(...parsed.sentences);
-    pendingEffect = parsed.pendingEffect;
+    if (char === "," && depth === 0) {
+      const clause = text.slice(start, index).trim();
+      if (clause) result.push(clause);
+      start = index + 1;
+    }
+  }
+
+  const last = text.slice(start).trim();
+  if (last) result.push(last);
+  return result;
+}
+
+/**
+ * 줄/문장 단위는 유지하되 쉼표는 최상위 괄호 깊이를 고려하여 후보 구문을 추출한다.
+ */
+function extractEffectCandidates(text: string): string[] {
+  const candidates: string[] = [];
+
+  for (const line of text.split("\n")) {
+    const normalizedLine = normalizeWhitespace(line);
+    if (!normalizedLine) {
+      continue;
+    }
+
+    const withoutHeading = removeEffectHeading(normalizedLine);
+    if (!withoutHeading) {
+      continue;
+    }
+
+    const sentences = splitTopLevelSentences(withoutHeading);
+    for (const sentence of sentences) {
+      const parts = splitTopLevelCommaClauses(sentence);
+      candidates.push(...(parts.length > 1 ? parts : [sentence]));
+    }
+  }
+
+  return candidates;
+}
+
+/**
+ * 특수문자, 조사 및 불필요한 안내성 상투 표현을 정리한다.
+ */
+function normalizeEffectExpression(expression: string): string {
+  let result = normalizeWhitespace(expression)
+    .replace(/^(?:[-–—ㆍ•◦▪▫]+)\s*/, "")
+    .replace(/^[,;:]+\s*/, "")
+    .replace(/\s*,\s*/g, ", ")
+    .replace(/\s*:\s*/g, ": ")
+    .trim();
+
+  // "다음 질환의 보조치료"처럼 데이터 원문의 안내 문구를 자연스럽게 제거한다.
+  result = result
+    .replace(/^다음\s+(?:질환|질병)(?:\s*,\s*증상)?의\s+/, "")
+    .replace(/^다음\s+(?:질환|질병),\s*(?:증상\s*)?/, "")
+    .replace(/^다음\s+경우(?:의)?\s+/, "")
+    .replace(/^이 약은\s+/, "")
+    .replace(/^이 약의\s+/, "");
+
+  return normalizeWhitespace(result);
+}
+
+/**
+ * 식약처 원문의 문어체/투여 지시형 표현을 사용자 친화적 효능 표현으로 재구성한다.
+ */
+function rewriteEffectExpression(expression: string): string {
+  let result = normalizeWhitespace(expression);
+
+  // "다음 질환의 보조치료: A, B" -> "A, B의 보조치료"
+  result = result.replace(
+    /^다음\s+(?:질환|질병)(?:\s+및\s+증상)?의\s+보조치료\s*[:：]\s*(.+)$/,
+    "$1의 보조치료",
+  );
+
+  // "다음 질환의 치료: A, B" -> "A, B의 치료"
+  result = result.replace(
+    /^다음\s+(?:질환|질병)(?:\s+및\s+증상)?의\s+(치료|개선|완화)\s*[:：]\s*(.+)$/,
+    "$2의 $1",
+  );
+
+  // "... 혈당조절을 향상시키기 위해 ... 보조제로 투여한다"
+  // 같은 규격 문구는 핵심 효과를 앞세워 읽기 쉽게 만든다.
+  result = result.replace(
+    /^(.+?)의\s+혈당조절을\s+향상시키기\s+위해\s+식사요법,\s*운동요법의\s+보조제로\s+투여한다$/,
+    "$1의 혈당조절 개선을 위한 식사요법·운동요법 보조치료",
+  );
+
+  // "... 증상 완화를 위해 투여한다" -> "... 증상 완화"
+  result = result.replace(
+    /^(.+?)의\s+증상\s+(완화|개선)을\s+위해\s+투여한다$/,
+    "$1의 증상 $2",
+  );
+
+  // 규제 문서의 "~하기 위해 투여한다"를 효능 중심 표현으로 정리한다.
+  result = result.replace(
+    /^(.+?)을\s+(?:위해|목적으로)\s+투여한다$/,
+    "$1",
+  );
+  result = result.replace(
+    /^(.+?)를\s+(?:위해|목적으로)\s+투여한다$/,
+    "$1",
+  );
+
+  // 단독/병용요법 자체가 효능이 아니라 치료 방식임을 드러내되,
+  // 원문의 의미는 유지한다.
+  result = result.replace(/단독요법으로\s+투여한다/g, "단독 치료");
+  result = result.replace(/병용요법으로\s+투여한다/g, "병용 치료");
+  result = result.replace(/단독요법/g, "단독 치료");
+  result = result.replace(/병용요법/g, "병용 치료");
+
+  // "~의 보조제로 투여한다"는 사용자에게는 "~의 보조치료"가 더 자연스럽다.
+  result = result.replace(/(.+?)의\s+보조제로\s+투여한다$/, "$1의 보조치료");
+
+  // 의미 없는 종결형만 제거한다.
+  result = result
+    .replace(/\s+투여한다$/, "")
+    .replace(/\s+사용한다$/, "")
+    .replace(/\s+사용할\s+수\s+있다$/, "")
+    .trim();
+
+  return normalizeWhitespace(result);
+}
+
+/**
+ * 문장 끝에 붙은 각주 번호나 불필요한 메타 정보 문구를 제거한다.
+ */
+function removeTrailingBoilerplate(expression: string): string {
+  return expression
+    .replace(/\s*\*\s*\d+[,.]?\s*$/g, "")
+    .replace(/\s*[☆★]\s*국내임상시험결과\s*추가제출[^,;]*$/g, "")
+    .replace(/\s*국내임상시험결과\s*추가제출[^,;]*$/g, "")
+    .replace(/\s*\(?(?:의약품\s*)?재평가\s*진행\s*중\)?\s*$/g, "")
+    .replace(/\s*[,;:]+\s*$/g, "")
+    .trim();
+}
+
+/**
+ * 유의미한 효능·효과 표현인지 여부를 판별한다(제목, 무의미한 문구 배제).
+ */
+function isUsefulEffectExpression(expression: string): boolean {
+  if (!expression) return false;
+
+  const compact = expression.replace(/\s+/g, "");
+  const rejectedExact = new Set([
+    "유효균종",
+    "효능·효과",
+    "효능효과",
+    "다음질환의증상완화",
+    "다음질환의보조치료",
+  ]);
+
+  if (rejectedExact.has(compact)) return false;
+
+  // 임상시험 결과/유효성 근거 자체는 환자가 알고 싶은 효능이 아니다.
+  if (/^(?:이 약의)?유효성은|^임상적 증거는|^국내임상시험결과/.test(expression)) {
+    return false;
+  }
+
+  // 안내 문구만 남은 경우 제거한다.
+  if (/^(?:이 약은|이 약의|투여한다|사용한다|사용할 수 있다)\s*$/.test(expression)) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * 정규화된 키를 기반으로 중복되는 효능 표현을 제거한다.
+ */
+function removeDuplicateExpressions(expressions: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const expression of expressions) {
+    const key = expression
+      .replace(/[\s·ㆍ\-–—]/g, "")
+      .toLowerCase();
+
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    result.push(expression);
   }
 
   return result;
 }
 
 /**
- * 하나의 효능·효과 줄을 문장 배열에 추가한다.
- *
- * @param line 원본 줄
- * @param pendingEffect 앞선 줄에서 추출한 효과 표현
- * @returns 문장과 다음 pending effect
+ * 각 효능 표현의 중요도를 점수화하여 반환한다.
  */
-function parseEffectLine(
-  line: string,
-  pendingEffect: string,
-): {
-  sentences: string[];
-  pendingEffect: string;
-} {
-  const isEffectAttachment = line.startsWith("__EFFECT_ATTACH__:");
+function scoreEffectExpression(expression: string): number {
+  let score = 0;
 
-  if (isEffectAttachment) {
-    return {
-      sentences: [],
-      pendingEffect: line.replace("__EFFECT_ATTACH__:", "").trim(),
-    };
-  }
+  if (/치료|개선|완화|억제|예방|감소|제거|보조치료|조절|보급/.test(expression)) score += 4;
+  if (/질환|질병|증상|장애|염|통|고혈압|당뇨|비염|두통|기침|빈혈/.test(expression)) score += 2;
+  if (/^\(?정제\)?$|^유효균종$/.test(expression)) score -= 10;
+  if (/예:|예\)|임상적|유효성|재평가|추가제출/.test(expression)) score -= 5;
+  if (/투여한다|사용한다|복용한다|처방한다/.test(expression)) score -= 2;
+  if (/환자의|환자에서/.test(expression)) score += 1;
+  if (expression.length < 4) score -= 3;
 
-  const sentences = splitLineIntoSentences(line);
-  const hasPendingEffect = Boolean(pendingEffect);
+  return score;
+}
 
-  if (!hasPendingEffect) {
-    return {
-      sentences,
-      pendingEffect,
-    };
-  }
+/**
+ * 효능 표현 목록을 중요도 점수 기준 내림차순으로 정렬한다.
+ */
+function rankEffectExpressions(expressions: string[]): string[] {
+  return [...expressions].sort((a, b) => scoreEffectExpression(b) - scoreEffectExpression(a));
+}
 
-  const result = sentences.map((sentence) => {
-    const shouldAttachEffect = !hasEffectVerb(sentence);
-
-    return shouldAttachEffect
-      ? `${pendingEffect} ${sentence}`.trim()
-      : sentence;
+/**
+ * 단일 표현이 최대 길이를 초과할 때 최상위 쉼표 단위로 가능한 범위까지만 압축한다.
+ */
+function compressLongExpression(expression: string, maxLength: number): string {
+  // 쉼표가 아니라 top-level 쉼표 기준으로 이미 분리했기 때문에
+  // 여기서는 괄호/조건을 보존한 상태에서 의미 단위까지만 취한다.
+  const clauses = splitTopLevelCommaClauses(expression);
+  const fitting = clauses.filter((_, index) => {
+    const candidate = clauses.slice(0, index + 1).join(", ");
+    return candidate.length <= maxLength;
   });
 
-  return {
-    sentences: result,
-    pendingEffect: "",
-  };
-}
-
-/**
- * 문장을 여러 개의 의미 단위로 분리한다.
- *
- * @param line 분리할 한 줄
- * @returns 분리된 문장 배열
- */
-function splitLineIntoSentences(line: string): string[] {
-  const normalizedLine = normalizeWhitespace(line);
-  const hasLine = Boolean(normalizedLine);
-
-  if (!hasLine) {
-    return [];
+  if (fitting.length > 0) {
+    return fitting.join(", ");
   }
 
-  const parts = normalizedLine
-    .split(/;|。|(?<!\d)\.(?!\d)|(?=\(\d+\))|(?=\d+\))/)
-    .map(normalizeSentence)
-    .filter(Boolean);
-
-  return parts;
+  // 하나의 원자적 의미 단위 자체가 길면 원문을 그대로 반환한다.
+  // 데이터 손상보다 길이 초과가 낫다.
+  return expression;
 }
 
 /**
- * 한 문장을 효능·효과 문장으로 정리한다.
- *
- * @param sentence 정리할 문장
- * @returns 정규화된 문장
+ * 여러 효능 후보를 최대 길이에 맞추어 하나의 문자열로 압축·결합한다.
  */
-function normalizeSentence(sentence: string): string {
-  const hasSentence = Boolean(sentence);
-
-  if (!hasSentence) {
+function compressEffect(expressions: string[], maxLength: number): string {
+  if (expressions.length === 0) {
     return "";
   }
 
-  return sentence.replace(/^(?:\d+[\.)]|[①②③④⑤⑥⑦⑧⑨⑩])\s*/, "").trim();
-}
+  const summary: string[] = [];
+  for (const expression of rankEffectExpressions(expressions)) {
+    const candidate = summary.length
+      ? `${summary.join(", ")}, ${expression}`
+      : expression;
 
-/**
- * 효능·효과 문장에 연결되어야 하는 효과 표현인지 판별한다.
- *
- * @param sentence 판별할 문장
- * @returns 효능·효과 동사를 포함하면 true
- */
-function hasEffectVerb(sentence: string): boolean {
-  return EFFECT_VERB_PATTERN.test(sentence);
-}
-
-/**
- * 조사와 접속 표현을 검색 결과 표시용 형태로 정규화한다.
- *
- * @param sentence 정규화할 문장
- * @returns 정규화된 문장
- */
-function normalizeConnectors(sentence: string): string {
-  const hasSentence = Boolean(sentence);
-
-  if (!hasSentence) {
-    return "";
-  }
-
-  let result = sentence;
-
-  result = result
-    .replace(/^(?:에서|에|의)\s+/g, "")
-    .replace(/\s+(?:및|또는|혹은)\s+/g, ", ")
-    .replace(/\s+(?:과|와)\s+/g, ", ");
-
-  result = result
-    .replace(/의\s+(증상\s+)?(?:완화|개선|치료)/g, "의 증상 완화")
-    .replace(/의\s+(?:완화|치료|개선|억제|예방)/g, "의 증상 완화");
-
-  return result
-    .replace(/\s+/g, " ")
-    .replace(/\s*,\s*/g, ", ")
-    .replace(/,\s*,+/g, ",")
-    .replace(/[,:;]\s*$/g, "")
-    .trim();
-}
-
-/**
- * 문장 배열에서 중복된 효능·효과 표현을 제거한다.
- *
- * @param sentences 문장 배열
- * @returns 중복이 제거된 문장 배열
- */
-function removeDuplicateExpressions(sentences: string[]): string[] {
-  const hasSentences = sentences.length > 0;
-
-  if (!hasSentences) {
-    return [];
-  }
-
-  const normalizedSentences = sentences.map(normalizeWhitespace);
-
-  return removeDuplicateValues(normalizedSentences.filter(Boolean));
-}
-
-/**
- * 여러 효능·효과 문장을 한 줄 요약으로 압축한다.
- *
- * @param sentences 문장 배열
- * @param maxLength 권장 최대 길이
- * @returns 압축된 한 줄 요약
- */
-function compressEffect(sentences: string[], maxLength = 80): string {
-  const validSentences = filterEmptyStrings(sentences);
-  const hasSentences = validSentences.length > 0;
-
-  if (!hasSentences) {
-    return "";
-  }
-
-  let summary = "";
-
-  for (const sentence of validSentences) {
-    const candidate = summary ? `${summary}, ${sentence}` : sentence;
-
-    const exceedsMaxLength = candidate.length > maxLength;
-
-    if (!exceedsMaxLength) {
-      summary = candidate;
+    if (candidate.length <= maxLength) {
+      summary.push(expression);
       continue;
     }
 
-    const hasSummary = Boolean(summary);
-
-    if (hasSummary) {
+    if (summary.length > 0) {
       break;
     }
 
-    return compressLongSentence(sentence, maxLength);
+    // 첫 후보가 길더라도 단순 substring으로 자르지 않는다.
+    return compressLongExpression(expression, maxLength);
   }
 
-  return summary || validSentences[0];
+  return summary.join(", ") || expressions[0];
 }
 
 /**
- * 문자열 배열에서 빈 문자열을 제거한다.
- *
- * @param values 문자열 배열
- * @returns 빈 문자열이 제거된 배열
+ * EE_DOC_DATA XML 원문을 파싱 및 정제하여 사용자용 한 줄 요약으로 생성한다.
  */
-function filterEmptyStrings(values: string[]): string[] {
-  return values.map(normalizeWhitespace).filter(Boolean);
-}
+function createEffectSummary(
+  eeDocData: string | null | undefined,
+  maxLength = DEFAULT_MAX_LENGTH,
+): string {
+  const cleaned = cleanHtml(eeDocData);
+  if (!cleaned) {
+    return FALLBACK_EFFECT_SUMMARY;
+  }
 
-/**
- * 길이 제한 안에서 쉼표 단위의 의미 있는 문장을 생성한다.
- *
- * @param sentence 압축할 문장
- * @param maxLength 최대 권장 길이
- * @returns 길이 제한에 맞는 의미 단위
- */
-function compressLongSentence(sentence: string, maxLength: number): string {
-  const clauses = sentence
-    .split(/,\s*/)
-    .map(normalizeWhitespace)
+  const effectText = removeNonEffectLines(cleaned);
+  const candidates = extractEffectCandidates(effectText)
+    .map(normalizeEffectExpression)
+    .map(rewriteEffectExpression)
+    .filter(isUsefulEffectExpression)
+    .map(removeTrailingBoilerplate)
     .filter(Boolean);
 
-  const fittingClauses: string[] = [];
+  const uniqueCandidates = removeDuplicateExpressions(candidates);
+  return compressEffect(uniqueCandidates, maxLength) || FALLBACK_EFFECT_SUMMARY;
+}
 
-  for (const clause of clauses) {
-    const candidate = fittingClauses.length
-      ? `${fittingClauses.join(", ")}, ${clause}`
-      : clause;
+/**
+ * Nedrug API로부터 ITEM_SEQ의 효능·효과 XML 문서(EE) 원본 데이터를 가져온다.
+ */
+async function fetchEeDocData(itemSeq: string, timeoutMs = 5000): Promise<string> {
+  const url = `https://nedrug.mfds.go.kr/pbp/cmn/xml/drb/${itemSeq}/EE`;
 
-    const exceedsMaxLength = candidate.length > maxLength;
-
-    if (exceedsMaxLength) {
-      break;
+  try {
+    const response = await axios.get<string>(url, { timeout: timeoutMs });
+    return response.data;
+  } catch (error: any) {
+    if (error?.response?.status === 429) {
+      throw new RateLimitError(`HTTP 429: ${itemSeq}`);
     }
 
-    fittingClauses.push(clause);
+    logger.error(
+      `[EE-SUMMARY] Failed ITEM_SEQ=${itemSeq}. error: ${error?.message || error}`,
+    );
+    return "";
   }
-
-  const hasFittingClauses = fittingClauses.length > 0;
-
-  if (hasFittingClauses) {
-    return fittingClauses.join(", ");
-  }
-
-  // 의미가 끊기는 substring 자르기는 하지 않는다.
-  return clauses[0] ?? sentence;
 }
 
 /**
- * 정제 과정에서 문장이 모두 제거된 경우 원본 텍스트를 사용해 fallback을 생성한다.
- *
- * @param text 정제된 원본 텍스트
- * @param maxLength 권장 최대 길이
- * @returns fallback 요약
+ * 단일 ITEM_SEQ에 대한 효능·효과 데이터를 조회하고 한 줄 요약을 생성한다.
  */
-function createFallbackSummary(text: string, maxLength = 80): string {
-  const hasText = Boolean(text);
-
-  if (!hasText) {
+async function fetchEffectSummary(itemSeq: string): Promise<string> {
+  const eeDocData = await fetchEeDocData(itemSeq);
+  if (!eeDocData) {
+    logger.warn(`[EE-SUMMARY] Empty EE_DOC_DATA: ${itemSeq}`);
     return FALLBACK_EFFECT_SUMMARY;
   }
 
-  const candidates = text
-    .split(/\r?\n|[.;。]/)
-    .map(normalizeWhitespace)
-    .filter(Boolean)
-    .map(normalizeConnectors)
-    .filter(Boolean);
+  return createEffectSummary(eeDocData);
+}
 
-  const hasCandidates = candidates.length > 0;
+/**
+ * 예외 처리를 포함하여 효능·효과 요약을 안전하게 조회하며, Rate Limit(429) 여부를 감지한다.
+ */
+async function fetchEffectSummarySafely(
+  itemSeq: string,
+  isRetry: boolean,
+): Promise<{ summary: string; isRateLimited: boolean }> {
+  try {
+    return {
+      summary: await fetchEffectSummary(itemSeq),
+      isRateLimited: false,
+    };
+  } catch (error: any) {
+    const isRateLimited = error instanceof RateLimitError;
 
-  if (!hasCandidates) {
-    return FALLBACK_EFFECT_SUMMARY;
+    if (isRateLimited && !isRetry) {
+      logger.warn(`[EE-SUMMARY] HTTP 429 ITEM_SEQ=${itemSeq}. Deferred retry.`);
+      return { summary: FALLBACK_EFFECT_SUMMARY, isRateLimited: true };
+    }
+
+    logger.error(
+      "[EE-SUMMARY] Failed ITEM_SEQ=%s. error: %s",
+      itemSeq,
+      error?.message || error,
+    );
+
+    return { summary: FALLBACK_EFFECT_SUMMARY, isRateLimited: false };
+  }
+}
+
+/**
+ * Rate Limit(429)으로 실패했던 ITEM_SEQ들을 대기 후 재시도 처리한다.
+ */
+async function retryRateLimitedItemSeqs(
+  itemSeqs: Set<string>,
+  summaryMap: Map<string, string>,
+): Promise<void> {
+  const retryItemSeqs = [...itemSeqs];
+  if (retryItemSeqs.length === 0) {
+    return;
   }
 
-  return compressEffect(candidates, maxLength) || FALLBACK_EFFECT_SUMMARY;
+  logger.info(`[EE-SUMMARY] Deferred retry start: ${retryItemSeqs.length} ITEM_SEQ`);
+  await sleep(RETRY_DELAY_MS);
+
+  for (let index = 0; index < retryItemSeqs.length; index += 1) {
+    if (index > 0) {
+      await sleep(REQUEST_DELAY_MS);
+    }
+
+    const itemSeq = retryItemSeqs[index];
+    const result = await fetchEffectSummarySafely(itemSeq, true);
+    summaryMap.set(itemSeq, result.summary);
+  }
+
+  logger.info(`[EE-SUMMARY] Deferred retry complete: ${retryItemSeqs.length} ITEM_SEQ`);
 }
 
 /**
- * 문자열의 공백을 하나로 정규화한다.
- *
- * @param text 정규화할 문자열
- * @returns 앞뒤 공백과 연속 공백이 제거된 문자열
+ * 단일 배치 내 ITEM_SEQ들을 지연시간을 두고 순차 조회하여 Map에 저장한다.
  */
-function normalizeWhitespace(text: string): string {
-  return text.replace(/\s+/g, " ").trim();
+async function processEffectSummaryBatch(
+  itemSeqs: string[],
+  summaryMap: Map<string, string>,
+  rateLimitedItemSeqs: Set<string>,
+): Promise<void> {
+  for (let index = 0; index < itemSeqs.length; index += 1) {
+    if (index > 0) {
+      await sleep(REQUEST_DELAY_MS);
+    }
+
+    const itemSeq = itemSeqs[index];
+    const result = await fetchEffectSummarySafely(itemSeq, false);
+
+    summaryMap.set(itemSeq, result.summary);
+    if (result.isRateLimited) {
+      rateLimitedItemSeqs.add(itemSeq);
+    }
+  }
 }
 
 /**
- * 문자열 배열에서 중복 값을 제거한다.
- *
- * @param values 문자열 배열
- * @returns 중복이 제거된 배열
+ * Nedrug ITEM_SEQ 목록을 배치 단위로 순차 처리하여 효능·효과 요약 Map을 생성한다.
  */
-function removeDuplicateValues(values: string[]): string[] {
-  return [...new Set(values)];
+export async function fetchEffectSummaryMap(
+  itemSeqList: string[],
+  batchSize = 5,
+): Promise<Map<string, string>> {
+  const summaryMap = new Map<string, string>();
+  const rateLimitedItemSeqs = new Set<string>();
+  const itemSeqs = removeDuplicateValues(itemSeqList.filter(Boolean));
+
+  if (itemSeqs.length === 0) {
+    return summaryMap;
+  }
+
+  for (let start = 0; start < itemSeqs.length; start += batchSize) {
+    const batch = itemSeqs.slice(start, start + batchSize);
+
+    await processEffectSummaryBatch(batch, summaryMap, rateLimitedItemSeqs);
+
+    const completed = Math.min(start + batchSize, itemSeqs.length);
+    if (completed % 100 === 0 || completed === itemSeqs.length) {
+      logger.info(`[EE-SUMMARY] ${completed} / ${itemSeqs.length}`);
+    }
+  }
+
+  await retryRateLimitedItemSeqs(rateLimitedItemSeqs, summaryMap);
+  return summaryMap;
 }
