@@ -4,6 +4,7 @@ import logger from "./logger";
 const FALLBACK_EFFECT_SUMMARY = "효능·효과 정보를 확인할 수 없습니다.";
 const REQUEST_DELAY_MS = 200;
 const RETRY_DELAY_MS = 1000;
+const MAX_RETRY_ATTEMPTS = 5;
 const DEFAULT_MAX_LENGTH = 80;
 
 /**
@@ -596,10 +597,11 @@ async function fetchEffectSummary(itemSeq: string): Promise<string> {
 
 /**
  * 예외 처리를 포함하여 효능·효과 요약을 안전하게 조회하며, Rate Limit(429) 여부를 감지한다.
+ *
+ * 429 여부를 호출부에 그대로 전달하여 재시도 로직에서 처리할 수 있도록 한다.
  */
 async function fetchEffectSummarySafely(
   itemSeq: string,
-  isRetry: boolean,
 ): Promise<{ summary: string; isRateLimited: boolean }> {
   try {
     return {
@@ -609,15 +611,13 @@ async function fetchEffectSummarySafely(
   } catch (error: any) {
     const isRateLimited = error instanceof RateLimitError;
 
-    if (isRateLimited && !isRetry) {
-      logger.warn(`[EE-SUMMARY] HTTP 429 ITEM_SEQ=${itemSeq}. Deferred retry.`);
+    if (isRateLimited) {
+      logger.warn(`[EE-SUMMARY] HTTP 429 ITEM_SEQ=${itemSeq}. Retry required.`);
       return { summary: FALLBACK_EFFECT_SUMMARY, isRateLimited: true };
     }
 
     logger.error(
-      "[EE-SUMMARY] Failed ITEM_SEQ=%s. error: %s",
-      itemSeq,
-      error?.message || error,
+      `[EE-SUMMARY] Failed ITEM_SEQ=${itemSeq}. error: ${error?.message || error}`,
     );
 
     return { summary: FALLBACK_EFFECT_SUMMARY, isRateLimited: false };
@@ -625,7 +625,14 @@ async function fetchEffectSummarySafely(
 }
 
 /**
- * Rate Limit(429)으로 실패했던 ITEM_SEQ들을 대기 후 재시도 처리한다.
+ * Rate Limit(429)으로 실패했던 ITEM_SEQ들을 지수 백오프로 최대 3회 재시도한다.
+ *
+ * 재시도 대기 시간:
+ * - 1차 재시도: 1초
+ * - 2차 재시도: 2초
+ * - 3차 재시도: 4초
+ *
+ * 재시도 중 성공한 결과는 즉시 summaryMap에 반영하고 최종 Map으로 반환한다.
  */
 async function retryRateLimitedItemSeqs(
   itemSeqs: Set<string>,
@@ -640,22 +647,53 @@ async function retryRateLimitedItemSeqs(
   logger.info(
     `[EE-SUMMARY] Deferred retry start: ${retryItemSeqs.length} ITEM_SEQ`,
   );
-  await sleep(RETRY_DELAY_MS);
 
-  for (let index = 0; index < retryItemSeqs.length; index += 1) {
-    if (index > 0) {
+  for (let itemIndex = 0; itemIndex < retryItemSeqs.length; itemIndex += 1) {
+    if (itemIndex > 0) {
       await sleep(REQUEST_DELAY_MS);
     }
 
-    const itemSeq = retryItemSeqs[index];
-    const result = await fetchEffectSummarySafely(itemSeq, true);
+    const itemSeq = retryItemSeqs[itemIndex];
+    let result = {
+      summary: FALLBACK_EFFECT_SUMMARY,
+      isRateLimited: true,
+    };
 
-    // 최초 요청에서 429가 발생했더라도 재시도 결과를 그대로 Map에 반영한다.
-    summaryMap.set(itemSeq, result.summary);
+    for (
+      let retryAttempt = 1;
+      retryAttempt <= MAX_RETRY_ATTEMPTS;
+      retryAttempt += 1
+    ) {
+      const retryDelay = RETRY_DELAY_MS * 2 ** (retryAttempt - 1);
 
-    logger.info(
-      `[EE-SUMMARY] Retry result ITEM_SEQ=${itemSeq}: ${result.summary}`,
-    );
+      logger.info(
+        `[EE-SUMMARY] Retry ${retryAttempt}/${MAX_RETRY_ATTEMPTS} ITEM_SEQ=${itemSeq}. wait=${retryDelay}ms`,
+      );
+
+      await sleep(retryDelay);
+      result = await fetchEffectSummarySafely(itemSeq);
+
+      // 재시도 성공 시 즉시 결과를 반영하고 추가 요청을 하지 않는다.
+      if (!result.isRateLimited) {
+        summaryMap.set(itemSeq, result.summary);
+        logger.info(
+          `[EE-SUMMARY] Retry success ITEM_SEQ=${itemSeq}, attempt=${retryAttempt}`,
+        );
+        break;
+      }
+
+      logger.warn(
+        `[EE-SUMMARY] Retry ${retryAttempt}/${MAX_RETRY_ATTEMPTS} still rate-limited ITEM_SEQ=${itemSeq}`,
+      );
+    }
+
+    // 3회 모두 429라면 마지막 결과(대체 문구)를 Map에 유지한다.
+    if (result.isRateLimited) {
+      summaryMap.set(itemSeq, FALLBACK_EFFECT_SUMMARY);
+      logger.error(
+        `[EE-SUMMARY] Retry exhausted ITEM_SEQ=${itemSeq}. attempts=${MAX_RETRY_ATTEMPTS}`,
+      );
+    }
   }
 
   logger.info(
@@ -680,7 +718,7 @@ async function processEffectSummaryBatch(
     }
 
     const itemSeq = itemSeqs[index];
-    const result = await fetchEffectSummarySafely(itemSeq, false);
+    const result = await fetchEffectSummarySafely(itemSeq);
 
     summaryMap.set(itemSeq, result.summary);
     if (result.isRateLimited) {
