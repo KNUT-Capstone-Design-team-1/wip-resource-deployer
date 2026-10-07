@@ -130,10 +130,28 @@ function isNonEffectLine(line: string): boolean {
   }
 
   const sectionHeadingPatterns = [
-    /^용법(?:\s*·?\s*용량)?/, /^용량/, /^투여방법/, /^복용방법/, /^사용방법/, /^사용법/,
-    /^주의사항/, /^주의/, /^금기/, /^경고/, /^신중투여/, /^이상반응/, /^부작용/,
-    /^상호작용/, /^임상시험/, /^보관방법/, /^저장방법/, /^취급상주의/, /^첨가제/,
-    /^성상/, /^포장단위/, /^보험/,
+    /^용법(?:\s*·?\s*용량)?/,
+    /^용량/,
+    /^투여방법/,
+    /^복용방법/,
+    /^사용방법/,
+    /^사용법/,
+    /^주의사항/,
+    /^주의/,
+    /^금기/,
+    /^경고/,
+    /^신중투여/,
+    /^이상반응/,
+    /^부작용/,
+    /^상호작용/,
+    /^임상시험/,
+    /^보관방법/,
+    /^저장방법/,
+    /^취급상주의/,
+    /^첨가제/,
+    /^성상/,
+    /^포장단위/,
+    /^보험/,
   ];
 
   if (sectionHeadingPatterns.some((pattern) => pattern.test(line))) {
@@ -187,7 +205,9 @@ function splitTopLevelSentences(text: string): string[] {
 
     const isBoundary =
       depth === 0 &&
-      (char === ";" || char === "。" || (char === "." && !isDecimalPoint(text, index)));
+      (char === ";" ||
+        char === "。" ||
+        (char === "." && !isDecimalPoint(text, index)));
 
     if (isBoundary) {
       pushCandidate(result, text.slice(start, index));
@@ -305,14 +325,8 @@ function rewriteEffectExpression(expression: string): string {
   );
 
   // 규제 문서의 "~하기 위해 투여한다"를 효능 중심 표현으로 정리한다.
-  result = result.replace(
-    /^(.+?)을\s+(?:위해|목적으로)\s+투여한다$/,
-    "$1",
-  );
-  result = result.replace(
-    /^(.+?)를\s+(?:위해|목적으로)\s+투여한다$/,
-    "$1",
-  );
+  result = result.replace(/^(.+?)을\s+(?:위해|목적으로)\s+투여한다$/, "$1");
+  result = result.replace(/^(.+?)를\s+(?:위해|목적으로)\s+투여한다$/, "$1");
 
   // 단독/병용요법 자체가 효능이 아니라 치료 방식임을 드러내되,
   // 원문의 의미는 유지한다.
@@ -348,6 +362,44 @@ function removeTrailingBoilerplate(expression: string): string {
 }
 
 /**
+ * 문장이 조사/연결 표현으로 어색하게 끝나는 경우 마지막 미완성 표현을 제거한다.
+ *
+ * 예:
+ * - "심혈관 질환의" -> "심혈관 질환"
+ * - "질환의 치료로서" -> "질환의 치료"
+ * - "증상의 개선을 위해" -> "증상의 개선"
+ *
+ * 효능·효과 자체에 포함될 수 있는 "치료", "개선", "완화", "감소" 등의
+ * 명사형 표현은 유지하고, 문장을 끝내지 못하는 조사/연결어미만 제거한다.
+ */
+function trimDanglingEnding(expression: string): string {
+  let result = normalizeWhitespace(expression);
+
+  // 반복적으로 적용하여 "A의 B로서", "A를 위한" 같은 중첩된 미완성 표현도 정리한다.
+  const danglingEndingPatterns = [
+    /\s+(?:으로서|로서)$/,
+    /\s+(?:으로써|로써)$/,
+    /\s+(?:때문에|위해|위하여)$/,
+    /\s+(?:및|또는|혹은|그리고|또한)$/,
+    /\s+(?:에\s+대해|에\s+대한|에\s+관한|에\s+관하여)$/,
+    /\s+(?:에서|에게|에게서|으로부터|까지|부터|보다|처럼|같이|만큼)$/,
+    /\s+(?:으로|로)$/,
+    /\s+(?:의|을|를|이|가|은|는|와|과|도|만|에|로부터|부터|까지)$/,
+  ];
+
+  let previous = "";
+  while (result && result !== previous) {
+    previous = result;
+
+    for (const pattern of danglingEndingPatterns) {
+      result = result.replace(pattern, "").trim();
+    }
+  }
+
+  return result;
+}
+
+/**
  * 유의미한 효능·효과 표현인지 여부를 판별한다(제목, 무의미한 문구 배제).
  */
 function isUsefulEffectExpression(expression: string): boolean {
@@ -365,12 +417,16 @@ function isUsefulEffectExpression(expression: string): boolean {
   if (rejectedExact.has(compact)) return false;
 
   // 임상시험 결과/유효성 근거 자체는 환자가 알고 싶은 효능이 아니다.
-  if (/^(?:이 약의)?유효성은|^임상적 증거는|^국내임상시험결과/.test(expression)) {
+  if (
+    /^(?:이 약의)?유효성은|^임상적 증거는|^국내임상시험결과/.test(expression)
+  ) {
     return false;
   }
 
   // 안내 문구만 남은 경우 제거한다.
-  if (/^(?:이 약은|이 약의|투여한다|사용한다|사용할 수 있다)\s*$/.test(expression)) {
+  if (
+    /^(?:이 약은|이 약의|투여한다|사용한다|사용할 수 있다)\s*$/.test(expression)
+  ) {
     return false;
   }
 
@@ -385,9 +441,7 @@ function removeDuplicateExpressions(expressions: string[]): string[] {
   const result: string[] = [];
 
   for (const expression of expressions) {
-    const key = expression
-      .replace(/[\s·ㆍ\-–—]/g, "")
-      .toLowerCase();
+    const key = expression.replace(/[\s·ㆍ\-–—]/g, "").toLowerCase();
 
     if (!key || seen.has(key)) continue;
     seen.add(key);
@@ -403,8 +457,12 @@ function removeDuplicateExpressions(expressions: string[]): string[] {
 function scoreEffectExpression(expression: string): number {
   let score = 0;
 
-  if (/치료|개선|완화|억제|예방|감소|제거|보조치료|조절|보급/.test(expression)) score += 4;
-  if (/질환|질병|증상|장애|염|통|고혈압|당뇨|비염|두통|기침|빈혈/.test(expression)) score += 2;
+  if (/치료|개선|완화|억제|예방|감소|제거|보조치료|조절|보급/.test(expression))
+    score += 4;
+  if (
+    /질환|질병|증상|장애|염|통|고혈압|당뇨|비염|두통|기침|빈혈/.test(expression)
+  )
+    score += 2;
   if (/^\(?정제\)?$|^유효균종$/.test(expression)) score -= 10;
   if (/예:|예\)|임상적|유효성|재평가|추가제출/.test(expression)) score -= 5;
   if (/투여한다|사용한다|복용한다|처방한다/.test(expression)) score -= 2;
@@ -418,7 +476,9 @@ function scoreEffectExpression(expression: string): number {
  * 효능 표현 목록을 중요도 점수 기준 내림차순으로 정렬한다.
  */
 function rankEffectExpressions(expressions: string[]): string[] {
-  return [...expressions].sort((a, b) => scoreEffectExpression(b) - scoreEffectExpression(a));
+  return [...expressions].sort(
+    (a, b) => scoreEffectExpression(b) - scoreEffectExpression(a),
+  );
 }
 
 /**
@@ -490,6 +550,7 @@ function createEffectSummary(
     .map(rewriteEffectExpression)
     .filter(isUsefulEffectExpression)
     .map(removeTrailingBoilerplate)
+    .map(trimDanglingEnding)
     .filter(Boolean);
 
   const uniqueCandidates = removeDuplicateExpressions(candidates);
@@ -499,7 +560,10 @@ function createEffectSummary(
 /**
  * Nedrug API로부터 ITEM_SEQ의 효능·효과 XML 문서(EE) 원본 데이터를 가져온다.
  */
-async function fetchEeDocData(itemSeq: string, timeoutMs = 5000): Promise<string> {
+async function fetchEeDocData(
+  itemSeq: string,
+  timeoutMs = 5000,
+): Promise<string> {
   const url = `https://nedrug.mfds.go.kr/pbp/cmn/xml/drb/${itemSeq}/EE`;
 
   try {
@@ -566,13 +630,16 @@ async function fetchEffectSummarySafely(
 async function retryRateLimitedItemSeqs(
   itemSeqs: Set<string>,
   summaryMap: Map<string, string>,
-): Promise<void> {
+): Promise<Map<string, string>> {
   const retryItemSeqs = [...itemSeqs];
+
   if (retryItemSeqs.length === 0) {
-    return;
+    return summaryMap;
   }
 
-  logger.info(`[EE-SUMMARY] Deferred retry start: ${retryItemSeqs.length} ITEM_SEQ`);
+  logger.info(
+    `[EE-SUMMARY] Deferred retry start: ${retryItemSeqs.length} ITEM_SEQ`,
+  );
   await sleep(RETRY_DELAY_MS);
 
   for (let index = 0; index < retryItemSeqs.length; index += 1) {
@@ -582,10 +649,21 @@ async function retryRateLimitedItemSeqs(
 
     const itemSeq = retryItemSeqs[index];
     const result = await fetchEffectSummarySafely(itemSeq, true);
+
+    // 최초 요청에서 429가 발생했더라도 재시도 결과를 그대로 Map에 반영한다.
     summaryMap.set(itemSeq, result.summary);
+
+    logger.info(
+      `[EE-SUMMARY] Retry result ITEM_SEQ=${itemSeq}: ${result.summary}`,
+    );
   }
 
-  logger.info(`[EE-SUMMARY] Deferred retry complete: ${retryItemSeqs.length} ITEM_SEQ`);
+  logger.info(
+    `[EE-SUMMARY] Deferred retry complete: ${retryItemSeqs.length} ITEM_SEQ`,
+  );
+
+  // 재시도에서 갱신된 결과가 포함된 Map을 호출부로 반환한다.
+  return summaryMap;
 }
 
 /**
@@ -637,6 +715,6 @@ export async function fetchEffectSummaryMap(
     }
   }
 
-  await retryRateLimitedItemSeqs(rateLimitedItemSeqs, summaryMap);
-  return summaryMap;
+  // 429 재시도에서 갱신된 Map을 반환받아 최종 결과로 사용한다.
+  return await retryRateLimitedItemSeqs(rateLimitedItemSeqs, summaryMap);
 }
