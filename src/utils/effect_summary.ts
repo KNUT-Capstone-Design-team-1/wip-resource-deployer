@@ -8,16 +8,6 @@ const MAX_RETRY_ATTEMPTS = 5;
 const DEFAULT_MAX_LENGTH = 80;
 
 /**
- * 에러 정의: HTTP 429 Too Many Requests 대응 예외 클래스
- */
-class RateLimitError extends Error {
-  constructor(message = "HTTP 429 Too Many Requests") {
-    super(message);
-    this.name = "RateLimitError";
-  }
-}
-
-/**
  * 지정된 시간(ms) 동안 대기(sleep)한다.
  */
 function sleep(ms: number): Promise<void> {
@@ -559,7 +549,10 @@ function createEffectSummary(
 }
 
 /**
- * Nedrug API로부터 ITEM_SEQ의 효능·효과 XML 문서(EE) 원본 데이터를 가져온다.
+ * Nedrug API에서 ITEM_SEQ의 효능·효과 XML 원본 데이터를 조회한다.
+ *
+ * HTTP 429는 호출부에서 재시도할 수 있도록 그대로 throw한다.
+ * 그 외 오류는 로그를 남기고 빈 문자열을 반환한다.
  */
 async function fetchEeDocData(
   itemSeq: string,
@@ -568,25 +561,30 @@ async function fetchEeDocData(
   const url = `https://nedrug.mfds.go.kr/pbp/cmn/xml/drb/${itemSeq}/EE`;
 
   try {
-    const response = await axios.get<string>(url, { timeout: timeoutMs });
+    const response = await axios.get<string>(url, {
+      timeout: timeoutMs,
+    });
+
     return response.data;
-  } catch (error: any) {
-    if (error?.response?.status === 429) {
-      throw new RateLimitError(`HTTP 429: ${itemSeq}`);
+  } catch (e) {
+    logger.error(
+      `[EE-SUMMARY] Failed ITEM_SEQ=${itemSeq}. error=${e?.message || e}`,
+    );
+
+    if (axios.isAxiosError(e) && e.response?.status === 429) {
+      throw e;
     }
 
-    logger.error(
-      `[EE-SUMMARY] Failed ITEM_SEQ=${itemSeq}. error: ${error?.message || error}`,
-    );
     return "";
   }
 }
 
 /**
- * 단일 ITEM_SEQ에 대한 효능·효과 데이터를 조회하고 한 줄 요약을 생성한다.
+ * 단일 ITEM_SEQ의 효능·효과 데이터를 조회하여 한 줄 요약으로 변환한다.
  */
 async function fetchEffectSummary(itemSeq: string): Promise<string> {
   const eeDocData = await fetchEeDocData(itemSeq);
+
   if (!eeDocData) {
     logger.warn(`[EE-SUMMARY] Empty EE_DOC_DATA: ${itemSeq}`);
     return FALLBACK_EFFECT_SUMMARY;
@@ -596,121 +594,82 @@ async function fetchEffectSummary(itemSeq: string): Promise<string> {
 }
 
 /**
- * 예외 처리를 포함하여 효능·효과 요약을 안전하게 조회하며, Rate Limit(429) 여부를 감지한다.
+ * HTTP 429가 발생한 ITEM_SEQ를 지수 백오프로 재시도한다.
  *
- * 429 여부를 호출부에 그대로 전달하여 재시도 로직에서 처리할 수 있도록 한다.
+ * 최초 요청 이후 최대 MAX_RETRY_ATTEMPTS회까지 재시도한다.
  */
-async function fetchEffectSummarySafely(
-  itemSeq: string,
-): Promise<{ summary: string; isRateLimited: boolean }> {
-  try {
-    return {
-      summary: await fetchEffectSummary(itemSeq),
-      isRateLimited: false,
-    };
-  } catch (error: any) {
-    const isRateLimited = error instanceof RateLimitError;
+async function fetchEffectSummaryWithRetry(itemSeq: string): Promise<string> {
+  for (
+    let retryAttempt = 1;
+    retryAttempt <= MAX_RETRY_ATTEMPTS;
+    retryAttempt += 1
+  ) {
+    const retryDelay = RETRY_DELAY_MS * 2 ** (retryAttempt - 1);
 
-    if (isRateLimited) {
-      logger.warn(`[EE-SUMMARY] HTTP 429 ITEM_SEQ=${itemSeq}. Retry required.`);
-      return { summary: FALLBACK_EFFECT_SUMMARY, isRateLimited: true };
+    logger.warn(
+      `[EE-SUMMARY] HTTP 429 ITEM_SEQ=${itemSeq}. ` +
+        `Retry ${retryAttempt}/${MAX_RETRY_ATTEMPTS} after ${retryDelay}ms`,
+    );
+
+    await sleep(retryDelay);
+
+    try {
+      const summary = await fetchEffectSummary(itemSeq);
+
+      logger.info(
+        `[EE-SUMMARY] Retry success ITEM_SEQ=${itemSeq}. ` +
+          `attempt=${retryAttempt}/${MAX_RETRY_ATTEMPTS}`,
+      );
+
+      return summary;
+    } catch (e) {
+      logger.error(
+        `[EE-SUMMARY] Retry failed ITEM_SEQ=${itemSeq}. ` +
+          `attempt=${retryAttempt}/${MAX_RETRY_ATTEMPTS}. error=${e?.message || e}`,
+      );
+
+      if (retryAttempt === MAX_RETRY_ATTEMPTS) {
+        logger.error(
+          `[EE-SUMMARY] Retry exhausted ITEM_SEQ=${itemSeq}. ` +
+            `attempts=${MAX_RETRY_ATTEMPTS}`,
+        );
+
+        return FALLBACK_EFFECT_SUMMARY;
+      }
+    }
+  }
+
+  return FALLBACK_EFFECT_SUMMARY;
+}
+
+/**
+ * 단일 ITEM_SEQ를 조회한다.
+ *
+ * 429가 아니면 최초 요청의 결과를 그대로 사용하고,
+ * 429가 발생한 경우에만 재시도 로직을 실행한다.
+ */
+async function fetchEffectSummarySafely(itemSeq: string): Promise<string> {
+  try {
+    return await fetchEffectSummary(itemSeq);
+  } catch (e) {
+    if (axios.isAxiosError(e) && e.response?.status === 429) {
+      return fetchEffectSummaryWithRetry(itemSeq);
     }
 
     logger.error(
-      `[EE-SUMMARY] Failed ITEM_SEQ=${itemSeq}. error: ${error?.message || error}`,
+      `[EE-SUMMARY] Failed ITEM_SEQ=${itemSeq}. error=${e?.message || e}`,
     );
 
-    return { summary: FALLBACK_EFFECT_SUMMARY, isRateLimited: false };
+    return FALLBACK_EFFECT_SUMMARY;
   }
 }
 
 /**
- * Rate Limit(429)으로 실패했던 ITEM_SEQ들을 지수 백오프로 최대 3회 재시도한다.
- *
- * 재시도 대기 시간:
- * - 1차 재시도: 1초
- * - 2차 재시도: 2초
- * - 3차 재시도: 4초
- *
- * 재시도 중 성공한 결과는 즉시 summaryMap에 반영하고 최종 Map으로 반환한다.
- */
-async function retryRateLimitedItemSeqs(
-  itemSeqs: Set<string>,
-  summaryMap: Map<string, string>,
-): Promise<Map<string, string>> {
-  const retryItemSeqs = [...itemSeqs];
-
-  if (retryItemSeqs.length === 0) {
-    return summaryMap;
-  }
-
-  logger.info(
-    `[EE-SUMMARY] Deferred retry start: ${retryItemSeqs.length} ITEM_SEQ`,
-  );
-
-  for (let itemIndex = 0; itemIndex < retryItemSeqs.length; itemIndex += 1) {
-    if (itemIndex > 0) {
-      await sleep(REQUEST_DELAY_MS);
-    }
-
-    const itemSeq = retryItemSeqs[itemIndex];
-    let result = {
-      summary: FALLBACK_EFFECT_SUMMARY,
-      isRateLimited: true,
-    };
-
-    for (
-      let retryAttempt = 1;
-      retryAttempt <= MAX_RETRY_ATTEMPTS;
-      retryAttempt += 1
-    ) {
-      const retryDelay = RETRY_DELAY_MS * 2 ** (retryAttempt - 1);
-
-      logger.info(
-        `[EE-SUMMARY] Retry ${retryAttempt}/${MAX_RETRY_ATTEMPTS} ITEM_SEQ=${itemSeq}. wait=${retryDelay}ms`,
-      );
-
-      await sleep(retryDelay);
-      result = await fetchEffectSummarySafely(itemSeq);
-
-      // 재시도 성공 시 즉시 결과를 반영하고 추가 요청을 하지 않는다.
-      if (!result.isRateLimited) {
-        summaryMap.set(itemSeq, result.summary);
-        logger.info(
-          `[EE-SUMMARY] Retry success ITEM_SEQ=${itemSeq}, attempt=${retryAttempt}`,
-        );
-        break;
-      }
-
-      logger.warn(
-        `[EE-SUMMARY] Retry ${retryAttempt}/${MAX_RETRY_ATTEMPTS} still rate-limited ITEM_SEQ=${itemSeq}`,
-      );
-    }
-
-    // 3회 모두 429라면 마지막 결과(대체 문구)를 Map에 유지한다.
-    if (result.isRateLimited) {
-      summaryMap.set(itemSeq, FALLBACK_EFFECT_SUMMARY);
-      logger.error(
-        `[EE-SUMMARY] Retry exhausted ITEM_SEQ=${itemSeq}. attempts=${MAX_RETRY_ATTEMPTS}`,
-      );
-    }
-  }
-
-  logger.info(
-    `[EE-SUMMARY] Deferred retry complete: ${retryItemSeqs.length} ITEM_SEQ`,
-  );
-
-  // 재시도에서 갱신된 결과가 포함된 Map을 호출부로 반환한다.
-  return summaryMap;
-}
-
-/**
- * 단일 배치 내 ITEM_SEQ들을 지연시간을 두고 순차 조회하여 Map에 저장한다.
+ * 단일 배치의 ITEM_SEQ들을 요청 간 지연시간을 두고 순차 처리한다.
  */
 async function processEffectSummaryBatch(
   itemSeqs: string[],
   summaryMap: Map<string, string>,
-  rateLimitedItemSeqs: Set<string>,
 ): Promise<void> {
   for (let index = 0; index < itemSeqs.length; index += 1) {
     if (index > 0) {
@@ -718,24 +677,21 @@ async function processEffectSummaryBatch(
     }
 
     const itemSeq = itemSeqs[index];
-    const result = await fetchEffectSummarySafely(itemSeq);
+    const summary = await fetchEffectSummarySafely(itemSeq);
 
-    summaryMap.set(itemSeq, result.summary);
-    if (result.isRateLimited) {
-      rateLimitedItemSeqs.add(itemSeq);
-    }
+    summaryMap.set(itemSeq, summary);
   }
 }
 
 /**
- * Nedrug ITEM_SEQ 목록을 배치 단위로 순차 처리하여 효능·효과 요약 Map을 생성한다.
+ * Nedrug ITEM_SEQ 목록을 배치 단위로 순차 처리하여
+ * 최종 효능·효과 요약 Map을 반환한다.
  */
 export async function fetchEffectSummaryMap(
   itemSeqList: string[],
   batchSize = 5,
 ): Promise<Map<string, string>> {
   const summaryMap = new Map<string, string>();
-  const rateLimitedItemSeqs = new Set<string>();
   const itemSeqs = removeDuplicateValues(itemSeqList.filter(Boolean));
 
   if (itemSeqs.length === 0) {
@@ -745,14 +701,14 @@ export async function fetchEffectSummaryMap(
   for (let start = 0; start < itemSeqs.length; start += batchSize) {
     const batch = itemSeqs.slice(start, start + batchSize);
 
-    await processEffectSummaryBatch(batch, summaryMap, rateLimitedItemSeqs);
+    await processEffectSummaryBatch(batch, summaryMap);
 
     const completed = Math.min(start + batchSize, itemSeqs.length);
+
     if (completed % 100 === 0 || completed === itemSeqs.length) {
       logger.info(`[EE-SUMMARY] ${completed} / ${itemSeqs.length}`);
     }
   }
 
-  // 429 재시도에서 갱신된 Map을 반환받아 최종 결과로 사용한다.
-  return await retryRateLimitedItemSeqs(rateLimitedItemSeqs, summaryMap);
+  return summaryMap;
 }
