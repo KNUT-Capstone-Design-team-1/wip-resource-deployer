@@ -1,4 +1,7 @@
-import { createResourceFile } from "../../infrastructure/resources/writer";
+import path from "path";
+import { RESOURCE_DIRECTORY } from "../../shared/paths";
+import { removeEffectSummaryFailure, writeAtomicFile } from "./effects/storage";
+import { FALLBACK_EFFECT_SUMMARY } from "./effects/summary";
 import logger from "../../shared/logging/logger";
 import { ResourceLoader } from "../../infrastructure/resources/loader";
 import { fetchEffectSummaryMap } from "./effects/client";
@@ -20,12 +23,18 @@ export async function createPillDataResourceFile() {
   logger.info("[PILL-DATA] Complete create pill data");
   logger.info("[PILL-DATA] Start fetch effect summaries");
   const itemSeqList = pillData.map(({ ITEM_SEQ }) => ITEM_SEQ);
-  const effectSummaryMap = await fetchEffectSummaryMap(itemSeqList);
+  const effectSummaryMap = await fetchEffectSummaryMap(itemSeqList, 5, { useCache: false });
   pillData.forEach((pill) => {
     pill.EFFECT_SUMMARY = effectSummaryMap.get(pill.ITEM_SEQ) ?? null;
   });
   logger.info("[PILL-DATA] Complete fetch effect summaries");
   logger.info("[PILL-DATA] Start create pill data resource file");
-  await createResourceFile("pill_data.json", pillData, false);
+  await writeAtomicFile(path.join(RESOURCE_DIRECTORY, "pill_data.json"), JSON.stringify({ resources: pillData }, null, 2));
+
+  for (const [itemSeq, summary] of effectSummaryMap) {
+    if (summary !== FALLBACK_EFFECT_SUMMARY) {
+      await removeEffectSummaryFailure(itemSeq);
+    }
+  }
   logger.info("[PILL-DATA] Complete create pill data resource file");
 }

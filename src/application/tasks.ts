@@ -1,6 +1,7 @@
 import { createCatalogResource } from "../features/catalogs/service";
 import { AppConfig } from "./config";
 import { createPillDataResourceFile } from "../features/pills/service";
+import { retryFailedPillEffectSummaries } from "../features/pills/effects/maintenance";
 import { createNearbyPharmaciesResource } from "../features/pharmacies/service";
 import { createMarkImageResource } from "../features/mark-images/service";
 import { updateUnifiedSearchDB } from "../features/search/service";
@@ -17,6 +18,7 @@ export interface ResourceTask {
 export function createResourceTasks(config: AppConfig): ResourceTask[] {
   return [
     { name: "pill_data", execute: createPillDataResourceFile },
+    { name: "pill_effect_summary_retry", execute: () => retryFailedPillEffectSummaries() },
     { name: "nearby_pharmacies", execute: () => createNearbyPharmaciesResource(config.nearbyPharmacies?.apiUrl) },
     { name: "mark_images", execute: createMarkImageResource },
     { name: "unified_search", execute: () => updateUnifiedSearchDB(config.unifiedSearch?.dbInitialize) },

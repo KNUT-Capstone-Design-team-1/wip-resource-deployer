@@ -2,6 +2,7 @@
   "common": {
     "targetResource": [
       "_pill_data",
+      "_pill_effect_summary_retry",
       "_mark_images",
       "_nearby_pharmacies",
       "_unified_search",

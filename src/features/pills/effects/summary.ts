@@ -2,10 +2,6 @@ export const FALLBACK_EFFECT_SUMMARY = "효능·효과 정보를 확인할 수 �
 const DEFAULT_MAX_LENGTH = 80;
 
 /**
- * 문자열 배열 내 중복 요소를 제거하여 고유값 배열을 반환한다.
- */
-
-/**
  * 연속된 공백 및 줄바꿈 문자를 단일 공백으로 치환하고 앞뒤 여백을 제거한다.
  */
 function normalizeWhitespace(text: string): string {
@@ -169,7 +165,7 @@ function removeNonEffectLines(text: string): string {
  */
 function removeEffectHeading(text: string): string {
   return text
-    .replace(/^\d+[.)]\s*/, "")
+    .replace(/^\d+(?:\.(?!\d)|\))\s*/, "")
     .replace(/^[①②③④⑤⑥⑦⑧⑨⑩]\s*/, "")
     .replace(/^(?:효능[·ㆍ]?효과|효능 및 효과|효과)\s*[:：]?\s*/i, "")
     .replace(/^유효균종\s*[:：]?\s*/i, "")
@@ -242,7 +238,9 @@ function extractLineCandidates(line: string): string[] {
     return [];
   }
 
-  return splitTopLevelSentences(content).flatMap(splitTopLevelCommaClauses);
+  return splitTopLevelSentences(content)
+    .map(rewriteEffectExpression)
+    .flatMap(splitTopLevelCommaClauses);
 }
 
 /** 효능 문서를 줄 단위로 분석해 요약 후보 표현을 수집한다. */
@@ -278,6 +276,9 @@ function normalizeEffectExpression(expression: string): string {
 function rewriteEffectExpression(expression: string): string {
   let result = normalizeWhitespace(expression);
 
+  // 적응 대상과 보조요법 조건을 함께 보존한다.
+  result = result.replace(/^(.+?)의\s+혈당조절을\s+(?:개선|향상)시키기\s*위해\s+식사요법\s*(?:,|및|·)\s*운동요법(?:의)?\s+보조제로(?:서)?$/, "$1의 혈당조절 개선(식사요법·운동요법 보조치료)");
+
   // "다음 질환의 보조치료: A, B" -> "A, B의 보조치료"
   result = result.replace(/^다음\s+(?:질환|질병)(?:\s+및\s+증상)?의\s+보조치료\s*[:：]\s*(.+)$/, "$1의 보조치료");
 
@@ -303,7 +304,12 @@ function rewriteEffectExpression(expression: string): string {
   result = result.replace(/병용요법/g, "병용 치료");
 
   // "~의 보조제로 투여한다"는 사용자에게는 "~의 보조치료"가 더 자연스럽다.
-  result = result.replace(/(.+?)의\s+보조제로\s+투여한다$/, "$1의 보조치료");
+  result = result.replace(/(.+?)의\s+보조제로\s+(?:투여한다|사용한다|사용된다)$/, "$1의 보조치료");
+  result = result.replace(/보조제로서$/, "보조치료");
+  result = result.replace(/(?:에|으로)\s+사용된다$/, "");
+  result = result.replace(/\s+사용된다$/, "");
+  result = result.replace(/(?:을|를)\s+(치료|개선|완화|억제|예방|감소|조절)한다$/, " $1");
+  result = result.replace(/(치료|개선|완화|억제|예방|감소|조절)한다$/, "$1");
 
   // 의미 없는 종결형만 제거한다.
   result = result
@@ -343,9 +349,16 @@ function trimDanglingEnding(expression: string): string {
   let result = normalizeWhitespace(expression);
 
   // 반복적으로 적용하여 "A의 B로서", "A를 위한" 같은 중첩된 미완성 표현도 정리한다.
+  result = result
+    .replace(/병용\s*(?:하며|하고)$/, "병용")
+    .replace(/(치료|요법|요법제|대체요법|보조제)(?:으로|로)$/, "$1")
+    .replace(/(폐경여성|환자|성인|소아)에서$/, "$1 대상")
+    .replace(/을\s*목적으로$/, "")
+    .replace(/를\s*목적으로$/, "");
+
   const danglingEndingPatterns = [
-    /\s+(?:으로서|로서)$/,
-    /\s+(?:으로써|로써)$/,
+    /(?:으로서|로서)$/,
+    /(?:으로써|로써)$/,
     /\s+(?:때문에|위해|위하여)$/,
     /\s+(?:및|또는|혹은|그리고|또한)$/,
     /\s+(?:에\s+대해|에\s+대한|에\s+관한|에\s+관하여)$/,
@@ -373,6 +386,10 @@ function isUsefulEffectExpression(expression: string): boolean {
   const isEmptyExpression = !expression;
 
   if (isEmptyExpression) {
+    return false;
+  }
+
+  if (/다음\s*(?:질환|질병)(?:에|의)?$/.test(expression) || /삭제|유효성을\s*입증하지\s*못함/.test(expression)) {
     return false;
   }
 
@@ -513,6 +530,14 @@ function compressEffect(expressions: string[], maxLength: number): string {
   return result.value || expressions[0] || "";
 }
 
+
+/** 효능이 아닌 위험 평가, 계산식, 사용 조건만 설명하는 안내 구문을 구별한다. */
+function isGuidanceExpression(expression: string): boolean {
+  return /위험\s*인자.*고려해야|전반적인?\s*위험성|위험성을?\s*평가해야|체질량지수.*계산|성적\s*자극.*필요로|효과적이려면|선택성\s*COX-2\s*억제제인.*투여하는\s*경우/.test(expression) ||
+    /^(?:다른\s*식욕억제제와|여성에\s*의한\s*사용을)/.test(expression) ||
+    /^(?:평가해야\s*한다|고려해야\s*한다)$/.test(expression);
+}
+
 /**
  * EE_DOC_DATA XML 원문을 파싱 및 정제하여 사용자용 한 줄 요약으로 생성한다.
  */
@@ -526,12 +551,13 @@ export function createEffectSummary(eeDocData: string | null | undefined, maxLen
 
   const effectText = removeNonEffectLines(cleaned);
   const candidates = extractEffectCandidates(effectText)
+    .filter((expression) => !isGuidanceExpression(expression))
     .map(normalizeEffectExpression)
     .map(rewriteEffectExpression)
     .filter(isUsefulEffectExpression)
     .map(removeTrailingBoilerplate)
     .map(trimDanglingEnding)
-    .filter(Boolean);
+    .filter(isUsefulEffectExpression);
   const uniqueCandidates = removeDuplicateExpressions(candidates);
 
   return compressEffect(uniqueCandidates, maxLength) || FALLBACK_EFFECT_SUMMARY;

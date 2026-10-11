@@ -1,177 +1,181 @@
 import axios from "axios";
 import logger from "../../../shared/logging/logger";
+import { RESOURCE_DIRECTORY } from "../../../shared/paths";
 import { createEffectSummary, FALLBACK_EFFECT_SUMMARY } from "./summary";
+import { EffectFailureReason, effectFilePath, readEffectDocument, writeAtomicFile, writeEffectSummaryFailure } from "./storage";
 
-/** 입력 순서를 유지하며 문자열 배열의 중복 값을 제거한다. */
-function removeDuplicateValues(values: string[]): string[] {
-  return [...new Set(values)];
+const REQUEST_DELAY_MS = 1000;
+const RETRY_DELAY_MS = 2000;
+const MAX_ATTEMPTS = 5;
+
+export interface EffectSummaryResult {
+  summary: string;
+  reason?: EffectFailureReason;
+  httpStatus: number | null;
+  attempts: number;
+  message: string;
 }
 
-const REQUEST_DELAY_MS = 200;
-const RETRY_DELAY_MS = 1000;
-const MAX_RETRY_ATTEMPTS = 5;
+export interface EffectSummaryOptions {
+  directory?: string;
+  requestDelayMs?: number;
+  retryDelayMs?: number;
+  maxAttempts?: number;
+  useCache?: boolean;
+  fetchDocument?: (itemSeq: string) => Promise<string>;
+  wait?: (ms: number) => Promise<void>;
+  onResult?: (itemSeq: string, result: EffectSummaryResult) => Promise<void>;
+}
 
-/**
- * 지정된 시간(ms) 동안 대기(sleep)한다.
- */
+/** 지정한 시간 동안 대기하여 요청 간격과 서버의 재시도 지시를 지킨다. */
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/**
- * Nedrug API에서 ITEM_SEQ의 효능·효과 XML 원본 데이터를 조회한다.
- *
- * HTTP 429는 호출부에서 재시도할 수 있도록 그대로 throw한다.
- * 그 외 오류는 로그를 남기고 빈 문자열을 반환한다.
- */
-async function fetchEeDocData(itemSeq: string, timeoutMs = 5000): Promise<string> {
-  const url = `https://nedrug.mfds.go.kr/pbp/cmn/xml/drb/${itemSeq}/EE`;
+/** 효능 XML 조회 오류를 호출자에게 전달해 실패 원인과 HTTP 상태를 보존한다. */
+async function fetchEeDocData(itemSeq: string): Promise<string> {
+  const response = await axios.get<string>("https://nedrug.mfds.go.kr/pbp/cmn/xml/drb/" + itemSeq + "/EE", {
+    timeout: 15000,
+    responseType: "text",
+  });
 
-  try {
-    const response = await axios.get<string>(url, {
-      timeout: timeoutMs,
-    });
-
-    return response.data;
-  }
-  catch (e) {
-    logger.error(`[EE-SUMMARY] Failed ITEM_SEQ=${itemSeq}. error=${e?.message || e}`);
-    const isRateLimited = axios.isAxiosError(e) && e.response?.status === 429;
-
-    if (isRateLimited) {
-      throw e;
-    }
-
-    return "";
-  }
+  return response.data;
 }
 
-/**
- * 단일 ITEM_SEQ의 효능·효과 데이터를 조회하여 한 줄 요약으로 변환한다.
- */
-async function fetchEffectSummary(itemSeq: string): Promise<string> {
-  const eeDocData = await fetchEeDocData(itemSeq);
-  const hasNoEffectDocument = !eeDocData;
+/** Retry-After의 초 단위 또는 HTTP 날짜를 밀리초 단위의 대기 시간으로 변환한다. */
+export function getRetryAfterMs(value: unknown, now = Date.now()): number {
+  if (value === undefined || value === null || String(value).trim() === "") {
+    return 0;
+  }
 
-  if (hasNoEffectDocument) {
-    logger.warn(`[EE-SUMMARY] Empty EE_DOC_DATA: ${itemSeq}`);
+  const seconds = Number(value);
 
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return seconds * 1000;
+  }
+
+  const date = Date.parse(String(value));
+
+  return Number.isFinite(date) ? Math.max(0, date - now) : 0;
+}
+
+/** 조회 결과가 아닌 오류 페이지를 문서로 오인하지 않고 비어 있는 응답도 실패로 구분한다. */
+function summarizeDocument(document: string): string {
+  if (typeof document !== "string" || !document.trim() || /<!doctype\s+html|<html[\s>]/i.test(document)) {
     return FALLBACK_EFFECT_SUMMARY;
   }
 
-  return createEffectSummary(eeDocData);
+  return createEffectSummary(document);
 }
 
-/**
- * HTTP 429가 발생한 ITEM_SEQ를 지수 백오프로 재시도한다.
- *
- * 최초 요청 이후 최대 MAX_RETRY_ATTEMPTS회까지 재시도한다.
- */
-async function tryEffectSummaryRetry(itemSeq: string, attempt: number): Promise<string | null> {
-  const delay = RETRY_DELAY_MS * 2 ** (attempt - 1);
-  logger.warn("[EE-SUMMARY] Retry %s/%s ITEM_SEQ=%s after %sms", attempt, MAX_RETRY_ATTEMPTS, itemSeq, delay);
-  await sleep(delay);
+/** 원문 캐시를 활용하고 일시적 HTTP·네트워크 오류만 지수 백오프로 재시도한다. */
+export async function fetchEffectSummaryResult(itemSeq: string, options: EffectSummaryOptions = {}): Promise<EffectSummaryResult> {
+  const directory = options.directory ?? RESOURCE_DIRECTORY;
+  const maxAttempts = options.maxAttempts ?? MAX_ATTEMPTS;
+  const retryDelayMs = options.retryDelayMs ?? RETRY_DELAY_MS;
+  const wait = options.wait ?? sleep;
+  const fetchDocument = options.fetchDocument ?? fetchEeDocData;
+  effectFilePath(itemSeq, "documents", directory);
 
-  try {
-    return await fetchEffectSummary(itemSeq);
-  }
-  catch (error) {
-    logger.error("[EE-SUMMARY] Retry failed ITEM_SEQ=%s. %s", itemSeq, error.message || error);
-
-    return null;
-  }
-}
-
-/** 효능 요약을 제한 횟수까지 재시도하고 계속 실패하면 기본 요약을 반환한다. */
-async function fetchEffectSummaryWithRetry(itemSeq: string): Promise<string> {
-  let summary: string | null = null;
-  let attempt = 1;
-
-  while (summary === null && attempt <= MAX_RETRY_ATTEMPTS) {
-    summary = await tryEffectSummaryRetry(itemSeq, attempt);
-    attempt += 1;
+  if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || !Number.isFinite(retryDelayMs) || retryDelayMs < 0) {
+    throw new Error("Invalid effect summary retry options");
   }
 
-  return summary ?? FALLBACK_EFFECT_SUMMARY;
-}
+  if (options.useCache !== false) {
+    const cached = await readEffectDocument(itemSeq, directory);
+    const summary = cached === null ? FALLBACK_EFFECT_SUMMARY : summarizeDocument(cached);
 
-/**
- * 단일 ITEM_SEQ를 조회한다.
- *
- * 429가 아니면 최초 요청의 결과를 그대로 사용하고,
- * 429가 발생한 경우에만 재시도 로직을 실행한다.
- */
-async function fetchEffectSummarySafely(itemSeq: string): Promise<string> {
-  try {
-    return await fetchEffectSummary(itemSeq);
+    if (summary !== FALLBACK_EFFECT_SUMMARY) {
+      return { summary, httpStatus: null, attempts: 0, message: "cached" };
+    }
   }
-  catch (e) {
-    const isRateLimited = axios.isAxiosError(e) && e.response?.status === 429;
 
-    if (isRateLimited) {
-      return fetchEffectSummaryWithRetry(itemSeq);
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    let document: string;
+
+    try {
+      document = await fetchDocument(itemSeq);
+    }
+    catch (error) {
+      const httpStatus = axios.isAxiosError(error) ? error.response?.status ?? null : null;
+      const retryable = httpStatus === null || httpStatus === 429 || httpStatus >= 500;
+      const message = error.message || String(error);
+      logger.warn("[EE-SUMMARY] Failed ITEM_SEQ=%s attempt=%s status=%s: %s", itemSeq, attempt, httpStatus, message);
+
+      if (!retryable || attempt === maxAttempts) {
+        return { summary: FALLBACK_EFFECT_SUMMARY, reason: httpStatus === null ? "network_error" : "http_error", httpStatus, attempts: attempt, message };
+      }
+
+      const retryAfter = getRetryAfterMs(error.response?.headers?.["retry-after"]);
+      const delay = Math.max(retryDelayMs * 2 ** (attempt - 1), retryAfter);
+      logger.warn("[EE-SUMMARY] Retry ITEM_SEQ=%s after %sms", itemSeq, delay);
+      await wait(delay);
+      continue;
     }
 
-    logger.error(`[EE-SUMMARY] Failed ITEM_SEQ=${itemSeq}. error=${e?.message || e}`);
+    const summary = summarizeDocument(document);
 
-    return FALLBACK_EFFECT_SUMMARY;
+    if (summary === FALLBACK_EFFECT_SUMMARY) {
+      return {
+        summary,
+        reason: typeof document !== "string" || !document.trim() ? "empty_document" : "empty_summary",
+        httpStatus: null,
+        attempts: attempt,
+        message: "조회 응답에서 유효한 효능 요약을 만들 수 없습니다.",
+      };
+    }
+
+    // 캐시 저장 오류는 조회 실패로 숨기지 않고 호출자에게 전달한다.
+    await writeAtomicFile(effectFilePath(itemSeq, "documents", directory), document);
+
+    return { summary, httpStatus: null, attempts: attempt, message: "success" };
   }
+
+  throw new Error("Unreachable effect summary retry state");
 }
 
-/**
- * 단일 배치의 ITEM_SEQ들을 요청 간 지연시간을 두고 순차 처리한다.
- */
-async function processSummaryItem(itemSeq: string, index: number, summaryMap: Map<string, string>): Promise<void> {
-  const shouldDelay = index > 0;
+/** 실패를 항목별 파일에 기록하고 지속적인 429 발생 시 나머지 요청을 다음 실행으로 미룬다. */
+export async function fetchEffectSummaryMap(itemSeqList: string[], batchSize = 5, options: EffectSummaryOptions = {}): Promise<Map<string, string>> {
+  const requestDelayMs = options.requestDelayMs ?? REQUEST_DELAY_MS;
 
-  if (shouldDelay) {
-    await sleep(REQUEST_DELAY_MS);
+  if (!Number.isInteger(batchSize) || batchSize <= 0 || !Number.isFinite(requestDelayMs) || requestDelayMs < 0) {
+    throw new Error("Invalid effect summary batch options");
   }
 
-  summaryMap.set(itemSeq, await fetchEffectSummarySafely(itemSeq));
-}
-
-/** 배치의 의약품 효능 요약을 순차적으로 조회해 결과 맵에 저장한다. */
-async function processEffectSummaryBatch(itemSeqs: string[], summaryMap: Map<string, string>): Promise<void> {
-  for (let index = 0; index < itemSeqs.length; index += 1) {
-    await processSummaryItem(itemSeqs[index], index, summaryMap);
-  }
-}
-
-/**
- * Nedrug ITEM_SEQ 목록을 배치 단위로 순차 처리하여
- * 최종 효능·효과 요약 Map을 반환한다.
- */
-export async function fetchEffectSummaryMap(itemSeqList: string[], batchSize = 5): Promise<Map<string, string>> {
-  const isValidBatchSize = Number.isInteger(batchSize) && batchSize > 0;
-
-  if (!isValidBatchSize) {
-    throw new Error("batchSize must be a positive integer");
-  }
-
+  const directory = options.directory ?? RESOURCE_DIRECTORY;
+  const itemSeqs = [...new Set(itemSeqList.filter(Boolean))];
   const summaryMap = new Map<string, string>();
-  const itemSeqs = removeDuplicateValues(itemSeqList.filter(Boolean));
-  const isEmptyItemList = itemSeqs.length === 0;
+  const wait = options.wait ?? sleep;
+  let rateLimited = false;
 
-  if (isEmptyItemList) {
-    return summaryMap;
-  }
+  for (let index = 0; index < itemSeqs.length; index += 1) {
+    const itemSeq = itemSeqs[index];
 
-  for (let start = 0; start < itemSeqs.length; start += batchSize) {
-    const batch = itemSeqs.slice(start, start + batchSize);
-    await processEffectSummaryBatch(batch, summaryMap);
-    const completed = Math.min(start + batchSize, itemSeqs.length);
-    logSummaryProgress(completed, itemSeqs.length);
+    if (index > 0 && !rateLimited) {
+      await wait(requestDelayMs);
+    }
+
+    const result: EffectSummaryResult = rateLimited
+      ? { summary: FALLBACK_EFFECT_SUMMARY, reason: "rate_limit_deferred", httpStatus: null, attempts: 0, message: "이전 항목의 HTTP 429가 지속되어 조회를 다음 실행으로 연기했습니다." }
+      : await fetchEffectSummaryResult(itemSeq, options);
+
+    if (result.reason) {
+      await writeEffectSummaryFailure({ ITEM_SEQ: itemSeq, reason: result.reason, httpStatus: result.httpStatus, attempts: result.attempts, message: result.message }, directory);
+    }
+
+    if (result.httpStatus === 429) {
+      rateLimited = true;
+      logger.warn("[EE-SUMMARY] Persistent HTTP 429. Remaining items will be saved for a later run.");
+    }
+
+    summaryMap.set(itemSeq, result.summary);
+    await options.onResult?.(itemSeq, result);
+    const completed = index + 1;
+
+    if (completed % Math.max(batchSize, 100) === 0 || completed === itemSeqs.length) {
+      logger.info("[EE-SUMMARY] %s / %s", completed, itemSeqs.length);
+    }
   }
 
   return summaryMap;
-}
-
-/** 효능 요약 처리 100건마다 또는 마지막 항목 처리 후 진행 상황을 기록한다. */
-function logSummaryProgress(completed: number, total: number): void {
-  const shouldLog = completed % 100 === 0 || completed === total;
-
-  if (shouldLog) {
-    logger.info("[EE-SUMMARY] %s / %s", completed, total);
-  }
 }
