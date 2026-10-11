@@ -96,6 +96,13 @@ export async function retryFailedPillEffectSummaries(options: EffectRetryOptions
       onResult: async (itemSeq, result) => {
         processed += 1;
 
+        if (result.reason) {
+          logger.warn(
+            "[EE-SUMMARY-RETRY] Failed ITEM_SEQ=%s reason=%s status=%s attempts=%s: %s",
+            itemSeq, result.reason, result.httpStatus, result.attempts, result.message,
+          );
+        }
+
         if (!result.reason && result.summary !== FALLBACK_EFFECT_SUMMARY) {
           for (const pill of byId.get(itemSeq)!) {
             pill.EFFECT_SUMMARY = result.summary;
