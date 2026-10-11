@@ -110,13 +110,14 @@ function cleanHtml(raw: string | null | undefined) {
     .replace(/<[^>]+>/g, " ");
 
   text = decodeHtmlEntities(text)
+    .replace(/<\/?(?:sub|sup|b|strong|em|span)\b[^>]*>/gi, "")
     // PDF/웹 변환 과정에서 들어오는 특수 bullet을 줄바꿈으로 취급한다.
     .replace(/[•◦▪▫●○◎◇◆□■▶▷]/g, "\n")
     .replace(/\r\n?/g, "\n");
 
   return text
     .replace(/급\s*[.·ㆍ]\s*만성/g, "급·만성")
-    .replace(/뼈\s*,\s*이의/g, "뼈·이의")
+    .replace(/뼈\s*[,.]\s*이의/g, "뼈·이의")
     .replace(/([ABC]형)\s*,\s*(?=니만[-\s]*피크)/g, "$1 ")
     .replace(/위\s*,\s*십이지장/g, "위·십이지장")
     .split("\n")
@@ -173,8 +174,26 @@ function isNonEffectLine(line: string) {
  * 효능·효과와 명백히 무관한 섹션 라인을 제거한다.
  */
 function removeNonEffectLines(text: string) {
-  return text .split("\n") .map(normalizeWhitespace) .filter(Boolean)
-    .filter((line) => !isNonEffectLine(line))
+  let isOrganismSection = false;
+
+  return text
+    .split("\n")
+    .map(normalizeWhitespace)
+    .filter((line) => {
+      const heading = line.replace(/^\d+[.)]\s*/, "");
+
+      if (/^유효균종/.test(line)) {
+        isOrganismSection = true;
+        return false;
+      }
+
+      if (/^적응증(?:\s*[:：]|$)/.test(heading)) {
+        isOrganismSection = false;
+        return !/^적응증\s*[:：]?$/.test(heading);
+      }
+
+      return Boolean(line) && !isOrganismSection && !isNonEffectLine(line);
+    })
     .join("\n");
 }
 
@@ -184,7 +203,7 @@ function removeNonEffectLines(text: string) {
 function removeEffectHeading(text: string) {
   return text .replace(/^\d+(?:\.(?!\d)|\))\s*/, "") .replace(/^[①②③④⑤⑥⑦⑧⑨⑩]\s*/, "")
     .replace(/^(?:효능[·ㆍ]?효과|효능 및 효과|효과)\s*[:：]?\s*/i, "")
-    .replace(/^유효균종\s*[:：]?\s*/i, "")
+    .replace(/^(?:유효균종|적응증)\s*[:：]?\s*/i, "")
     .trim();
 }
 
@@ -256,21 +275,47 @@ function extractLineCandidates(line: string) {
   // 쉼표로 나누면 수식어와 적응증의 연결이 끊기므로 문장 단위를 유지한다.
   return splitTopLevelSentences(content)
     .filter((expression) => !isGuidanceExpression(expression))
-    .map(rewriteEffectExpression);
+    .map(rewriteEffectExpression)
+    .flatMap((expression) => {
+      const clauses = splitTopLevelCommaClauses(expression);
+      const isIndependentList = clauses.length > 1 && clauses.every((clause) =>
+        !/비타민|보급|의|경우|환자|다음|위한|으로|에서|및|또는|수반|동반|따른|인한|필요|이상|미만/.test(clause));
+
+      return isIndependentList ? clauses : [expression];
+    });
 }
 
 /**
  * 효능 문서를 줄 단위로 분석해 요약 후보 표현을 수집한다.
  */
 function extractEffectCandidates(text: string) {
-  return text.split("\n").flatMap(extractLineCandidates);
+  let effectContext = "";
+  const candidates: string[] = [];
+
+  for (const line of text.split("\n")) {
+    const heading = removeEffectHeading(line);
+    const context = /^다음\s*(?:질환|질병)(?:\s*및\s*증상)?의?\s*(보조\s*치료|증상\s*완화|증상\s*개선)$/.exec(heading);
+
+    if (context) {
+      effectContext = context[1].replace(/보조\s+치료/, "보조치료");
+      continue;
+    }
+
+    for (const candidate of extractLineCandidates(line)) {
+      candidates.push(effectContext && !candidate.includes(effectContext)
+        ? `${candidate}의 ${effectContext}`
+        : candidate);
+    }
+  }
+
+  return candidates;
 }
 
 /**
  * 특수문자, 조사 및 불필요한 안내성 상투 표현을 정리한다.
  */
 function normalizeEffectExpression(expression: string) {
-  let result = normalizeWhitespace(expression) .replace(/^(?:[-–—ㆍ•◦▪▫]+)\s*/, "")
+  let result = normalizeWhitespace(expression) .replace(/^(?:[-–—·ㆍ․∙⦁•◦▪▫]+)\s*/, "")
     .replace(/^[,;:]+\s*/, "")
     .replace(/\s*,\s*/g, ", ")
     .replace(/\s*:\s*/g, ": ")
@@ -328,8 +373,10 @@ function rewriteEffectExpression(expression: string) {
   result = result.replace(/단독요법/g, "단독 치료");
   result = result.replace(/병용요법/g, "병용 치료");
 
+  result = result.replace(/증상을\s+다음과\s+같이\s+개선하기\s+위해\s+사용한다$/, "증상 개선");
+
   // 투여 지시를 지워 목적어만 남기지 않고 보조치료 표현으로 마무리한다.
-  result = result.replace(/보조제로서\s+이\s*약을\s+투여한다$/, "보조치료");
+  result = result.replace(/보조제로서\s*,?\s*이\s*약을\s+투여한다$/, "보조치료");
   result = result.replace(/경우\s+이\s*약을\s+투여한다$/, "경우의 치료");
 
   // "~의 보조제로 투여한다"는 사용자에게는 "~의 보조치료"가 더 자연스럽다.
@@ -379,6 +426,8 @@ function trimDanglingEnding(expression: string) {
     /(치료|개선|완화|억제|예방|감소|조절)(?:하며|하고|하여)$/,
     "$1",
   );
+
+  result = result.replace(/(치료|개선|완화|억제|예방|감소|조절)(?:에|하기)$/, "$1");
 
   // 반복적으로 적용하여 "A의 B로서", "A를 위한" 같은 중첩된 미완성 표현도 정리한다.
   result = result .replace(/병용\s*(?:하며|하고)$/, "병용")
@@ -434,10 +483,14 @@ function isUsefulEffectExpression(expression: string) {
   }
 
   const compact = expression.replace(/\s+/g, "");
-  const rejectedExact = new Set(["유효균종", "효능·효과", "효능효과", "다음질환의증상완화", "다음질환의보조치료", "증상완화", "증상개선", "기", "급", "급성", "&nbsp",]);
+  const rejectedExact = new Set(["유효균종", "효능·효과", "효능효과", "다음질환의증상완화", "다음질환의보조치료", "증상완화", "증상개선", "보조치료", "치료", "예방", "주효능", "기", "급", "급성", "&nbsp", "적응증", "주효능·효과", "주효능효과", "주효능ㆍ효과",]);
   const isRejectedHeading = rejectedExact.has(compact);
 
   if (isRejectedHeading) {
+    return false;
+  }
+
+  if (/(?:이\s*약을|이\s*약은)$/.test(expression)) {
     return false;
   }
 
