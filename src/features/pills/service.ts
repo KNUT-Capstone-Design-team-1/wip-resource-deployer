@@ -3,6 +3,7 @@ import logger from "../../shared/logging/logger";
 import { ResourceLoader } from "../../infrastructure/resources/loader";
 import { fetchEffectSummaryMap } from "./effects/client";
 import { createPillData } from "./transform";
+
 /**
  * pill_data 리소스 파일 생성
  */

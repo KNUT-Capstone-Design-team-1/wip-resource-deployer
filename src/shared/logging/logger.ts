@@ -1,4 +1,5 @@
 import { createLogger, format, transports } from "winston";
+
 const logDirectoryName = "log";
 const { combine, timestamp, printf, splat } = format;
 const logger = createLogger({
@@ -14,4 +15,5 @@ const logger = createLogger({
     }),
   ],
 });
+
 export default logger;

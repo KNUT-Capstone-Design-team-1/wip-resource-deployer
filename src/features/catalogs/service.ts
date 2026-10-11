@@ -2,7 +2,9 @@ import { ResourceLoader } from "../../infrastructure/resources/loader";
 import { createResourceFile } from "../../infrastructure/resources/writer";
 import logger from "../../shared/logging/logger";
 import { TLoadedResource, TResourceDirectoryName } from "../../infrastructure/resources/types";
+
 type CatalogName = Exclude<TResourceDirectoryName, "drug_recognition" | "finished_medicine_permission_detail">;
+
 const catalogKeys: Record<CatalogName, keyof TLoadedResource> = {
   cannabis: "cannabis",
   narcotics: "narcotics",
@@ -10,6 +12,8 @@ const catalogKeys: Record<CatalogName, keyof TLoadedResource> = {
   prohibited_list: "prohibitedList",
   functional_food_nutrients: "functionalFoodNutrients",
 };
+
+/** 지정한 카탈로그 원본을 읽어 JSON 리소스 파일로 저장한다. */
 export async function createCatalogResource(name: CatalogName): Promise<void> {
   logger.info("[%s] Start load resource", name);
   const resources = await new ResourceLoader([name]).loadResource();

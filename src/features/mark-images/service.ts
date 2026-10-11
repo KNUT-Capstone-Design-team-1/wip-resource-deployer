@@ -2,6 +2,7 @@ import logger from "../../shared/logging/logger";
 import { ResourceLoader } from "../../infrastructure/resources/loader";
 import { createResourceFile } from "../../infrastructure/resources/writer";
 import { createMarkImageData } from "./transform";
+
 /**
  * 마크 이미지 리소스 파일 생성
  */

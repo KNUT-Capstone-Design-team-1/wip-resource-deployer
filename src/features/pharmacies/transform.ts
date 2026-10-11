@@ -1,5 +1,8 @@
 import { INearbyPharmacies, ISafemapPharmacyItem } from "./types";
+
 type PharmacyItem = ISafemapPharmacyItem;
+
+/** API 약국 정보를 리소스 구조로 변환하고 요일별 영업 시간을 JSON 문자열로 저장한다. */
 export function toPharmacy(item: PharmacyItem): INearbyPharmacies {
   // 인덱스 기준: 0은 월요일(dutytime1s), 7은 공휴일(dutytime8s)
   const openTimeArray = [
@@ -12,6 +15,7 @@ export function toPharmacy(item: PharmacyItem): INearbyPharmacies {
     item.dutytime7s ?? "",
     item.dutytime8s ?? "",
   ];
+
   // 인덱스 기준: 0은 월요일(dutytime1c), 7은 공휴일(dutytime8c)
   const closeTimeArray = [
     item.dutytime1c ?? "",
@@ -23,6 +27,7 @@ export function toPharmacy(item: PharmacyItem): INearbyPharmacies {
     item.dutytime7c ?? "",
     item.dutytime8c ?? "",
   ];
+
   return {
     id: item.num !== undefined && item.num !== null ? String(item.num) : "",
     name: item.dutyname ?? "",

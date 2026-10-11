@@ -1,6 +1,7 @@
 import logger from "../../shared/logging/logger";
 import { createResourceFile } from "../../infrastructure/resources/writer";
 import { fetchAllNearbyPharmacies } from "./client";
+
 /**
  * 주변 약국 리소스 파일(nearby_pharmacies.json) 생성
  */

@@ -7,10 +7,12 @@ import { updateUnifiedSearchDB } from "../features/search/service";
 import { createTables } from "../features/search/schema";
 import { rebuildFTS5 } from "../features/search/rebuild";
 import { upsertFailedRetryAll } from "../features/search/retry";
+
 export interface ResourceTask {
   name: string;
   execute: () => Promise<unknown>;
 }
+
 /** 기존 순서를 유지한다. 검색 초기화와 갱신 등 의존 작업은 순차 실행한다. */
 export function createResourceTasks(config: AppConfig): ResourceTask[] {
   return [

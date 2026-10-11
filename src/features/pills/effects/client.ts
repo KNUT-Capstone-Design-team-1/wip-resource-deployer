@@ -1,18 +1,23 @@
 import axios from "axios";
 import logger from "../../../shared/logging/logger";
 import { createEffectSummary, FALLBACK_EFFECT_SUMMARY } from "./summary";
+
+/** 입력 순서를 유지하며 문자열 배열의 중복 값을 제거한다. */
 function removeDuplicateValues(values: string[]): string[] {
   return [...new Set(values)];
 }
+
 const REQUEST_DELAY_MS = 200;
 const RETRY_DELAY_MS = 1000;
 const MAX_RETRY_ATTEMPTS = 5;
+
 /**
  * 지정된 시간(ms) 동안 대기(sleep)한다.
  */
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
 /**
  * Nedrug API에서 ITEM_SEQ의 효능·효과 XML 원본 데이터를 조회한다.
  *
@@ -21,33 +26,42 @@ function sleep(ms: number): Promise<void> {
  */
 async function fetchEeDocData(itemSeq: string, timeoutMs = 5000): Promise<string> {
   const url = `https://nedrug.mfds.go.kr/pbp/cmn/xml/drb/${itemSeq}/EE`;
+
   try {
     const response = await axios.get<string>(url, {
       timeout: timeoutMs,
     });
+
     return response.data;
   }
   catch (e) {
     logger.error(`[EE-SUMMARY] Failed ITEM_SEQ=${itemSeq}. error=${e?.message || e}`);
     const isRateLimited = axios.isAxiosError(e) && e.response?.status === 429;
+
     if (isRateLimited) {
       throw e;
     }
+
     return "";
   }
 }
+
 /**
  * 단일 ITEM_SEQ의 효능·효과 데이터를 조회하여 한 줄 요약으로 변환한다.
  */
 async function fetchEffectSummary(itemSeq: string): Promise<string> {
   const eeDocData = await fetchEeDocData(itemSeq);
   const hasNoEffectDocument = !eeDocData;
+
   if (hasNoEffectDocument) {
     logger.warn(`[EE-SUMMARY] Empty EE_DOC_DATA: ${itemSeq}`);
+
     return FALLBACK_EFFECT_SUMMARY;
   }
+
   return createEffectSummary(eeDocData);
 }
+
 /**
  * HTTP 429가 발생한 ITEM_SEQ를 지수 백오프로 재시도한다.
  *
@@ -57,23 +71,30 @@ async function tryEffectSummaryRetry(itemSeq: string, attempt: number): Promise<
   const delay = RETRY_DELAY_MS * 2 ** (attempt - 1);
   logger.warn("[EE-SUMMARY] Retry %s/%s ITEM_SEQ=%s after %sms", attempt, MAX_RETRY_ATTEMPTS, itemSeq, delay);
   await sleep(delay);
+
   try {
     return await fetchEffectSummary(itemSeq);
   }
   catch (error) {
     logger.error("[EE-SUMMARY] Retry failed ITEM_SEQ=%s. %s", itemSeq, error.message || error);
+
     return null;
   }
 }
+
+/** 효능 요약을 제한 횟수까지 재시도하고 계속 실패하면 기본 요약을 반환한다. */
 async function fetchEffectSummaryWithRetry(itemSeq: string): Promise<string> {
   let summary: string | null = null;
   let attempt = 1;
+
   while (summary === null && attempt <= MAX_RETRY_ATTEMPTS) {
     summary = await tryEffectSummaryRetry(itemSeq, attempt);
     attempt += 1;
   }
+
   return summary ?? FALLBACK_EFFECT_SUMMARY;
 }
+
 /**
  * 단일 ITEM_SEQ를 조회한다.
  *
@@ -86,53 +107,70 @@ async function fetchEffectSummarySafely(itemSeq: string): Promise<string> {
   }
   catch (e) {
     const isRateLimited = axios.isAxiosError(e) && e.response?.status === 429;
+
     if (isRateLimited) {
       return fetchEffectSummaryWithRetry(itemSeq);
     }
+
     logger.error(`[EE-SUMMARY] Failed ITEM_SEQ=${itemSeq}. error=${e?.message || e}`);
+
     return FALLBACK_EFFECT_SUMMARY;
   }
 }
+
 /**
  * 단일 배치의 ITEM_SEQ들을 요청 간 지연시간을 두고 순차 처리한다.
  */
 async function processSummaryItem(itemSeq: string, index: number, summaryMap: Map<string, string>): Promise<void> {
   const shouldDelay = index > 0;
+
   if (shouldDelay) {
     await sleep(REQUEST_DELAY_MS);
   }
+
   summaryMap.set(itemSeq, await fetchEffectSummarySafely(itemSeq));
 }
+
+/** 배치의 의약품 효능 요약을 순차적으로 조회해 결과 맵에 저장한다. */
 async function processEffectSummaryBatch(itemSeqs: string[], summaryMap: Map<string, string>): Promise<void> {
   for (let index = 0; index < itemSeqs.length; index += 1) {
     await processSummaryItem(itemSeqs[index], index, summaryMap);
   }
 }
+
 /**
  * Nedrug ITEM_SEQ 목록을 배치 단위로 순차 처리하여
  * 최종 효능·효과 요약 Map을 반환한다.
  */
 export async function fetchEffectSummaryMap(itemSeqList: string[], batchSize = 5): Promise<Map<string, string>> {
   const isValidBatchSize = Number.isInteger(batchSize) && batchSize > 0;
+
   if (!isValidBatchSize) {
     throw new Error("batchSize must be a positive integer");
   }
+
   const summaryMap = new Map<string, string>();
   const itemSeqs = removeDuplicateValues(itemSeqList.filter(Boolean));
   const isEmptyItemList = itemSeqs.length === 0;
+
   if (isEmptyItemList) {
     return summaryMap;
   }
+
   for (let start = 0; start < itemSeqs.length; start += batchSize) {
     const batch = itemSeqs.slice(start, start + batchSize);
     await processEffectSummaryBatch(batch, summaryMap);
     const completed = Math.min(start + batchSize, itemSeqs.length);
     logSummaryProgress(completed, itemSeqs.length);
   }
+
   return summaryMap;
 }
+
+/** 효능 요약 처리 100건마다 또는 마지막 항목 처리 후 진행 상황을 기록한다. */
 function logSummaryProgress(completed: number, total: number): void {
   const shouldLog = completed % 100 === 0 || completed === total;
+
   if (shouldLog) {
     logger.info("[EE-SUMMARY] %s / %s", completed, total);
   }

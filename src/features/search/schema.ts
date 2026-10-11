@@ -1,6 +1,7 @@
 import logger from "../../shared/logging/logger";
 import { runQuery } from "../../infrastructure/database/wrangler";
 import { TARGET_DB } from "./repository";
+
 /**
  * 메인 통합 검색 테이블 생성
  */
@@ -13,6 +14,7 @@ export function createUnifiedSearchTable() {
     )`;
   runQuery(createTableQuery, TARGET_DB);
 }
+
 /**
  * FTS5 가상 테이블 생성
  */
@@ -27,6 +29,7 @@ export function createUnifiedSearchFTSTable() {
     )`;
   runQuery(createFTS5Query, TARGET_DB);
 }
+
 /**
  * INSERT Trigger 생성
  */
@@ -40,6 +43,7 @@ export function createUnifiedSearchFTSInsertTrigger() {
     END`;
   runQuery(createTriggerQuery, TARGET_DB);
 }
+
 /**
  * UPDATE Trigger 생성 (OLD rowid delete & NEW rowid insert)
  */
@@ -55,6 +59,7 @@ export function createUnifiedSearchFTSUpdateTrigger() {
     END`;
   runQuery(createTriggerQuery, TARGET_DB);
 }
+
 /**
  * DELETE Trigger 생성 (OLD rowid delete)
  */
@@ -68,6 +73,7 @@ export function createUnifiedSearchFTSDeleteTrigger() {
     END`;
   runQuery(createTriggerQuery, TARGET_DB);
 }
+
 /**
  * 통합 검색 테이블, FTS5 가상 테이블 및 동기화 트리거 생성
  */
