@@ -55,6 +55,7 @@ NEARBY_PHARMACIES_API_KEY=your_service_key_here
 - `true` (기본값): 효능 XML을 조회해 요약을 생성한다.
 - `false`: XML 조회와 `pill_effect_summary_retry`를 실행하지 않고 원본 효능·효과를 사용한다. 원본도 없으면 “효능·효과 정보가 없습니다.”를 넣는다.
 - 설정을 생략하면 기존 동작대로 요약을 생성한다.
+- `pill_data` 생성이 성공하면, `pill_effect_summary_retry`가 실행 대상에 없거나 `createEffectSummary`가 `false`인 경우 `resources/pill_effect_documents` 캐시 폴더를 삭제한다.
 
 4. 실행
 

@@ -100,3 +100,15 @@ export async function readEffectDocument(itemSeq: string, directory = RESOURCE_D
     return null;
   }
 }
+
+/** 효능 원문 캐시 폴더만 삭제한다. */
+export async function removeEffectDocuments(directory = RESOURCE_DIRECTORY) {
+  const resourceDirectory = path.resolve(directory);
+  const documentsDirectory = path.resolve(resourceDirectory, "pill_effect_documents");
+
+  if (path.dirname(documentsDirectory) !== resourceDirectory) {
+    throw new Error("Invalid effect documents directory");
+  }
+
+  await fs.promises.rm(documentsDirectory, { recursive: true, force: true });
+}
