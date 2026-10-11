@@ -59,20 +59,34 @@ function decodeHtmlEntities(text: string) {
     apos: "'",
   };
 
-  return text
+  let decoded = text;
+
+  // &amp;nbsp;처럼 중첩 인코딩된 엔티티도 제한된 횟수 안에서 해석한다.
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const previous = decoded;
+    decoded = decoded
     .replace(/&([a-z][a-z0-9]+);/gi, (match, name: string) => {
       return namedEntities[name.toLowerCase()] ?? match;
     })
     .replace(/&#x([0-9a-f]+);/gi, (match, hex: string) => {
       const codePoint = Number.parseInt(hex, 16);
 
-      return Number.isNaN(codePoint) ? match : String.fromCodePoint(codePoint);
+      return Number.isInteger(codePoint) && codePoint >= 0 && codePoint <= 0x10ffff
+        ? String.fromCodePoint(codePoint)
+        : match;
     })
     .replace(/&#(\d+);/g, (match, decimal: string) => {
       const codePoint = Number.parseInt(decimal, 10);
 
       return Number.isNaN(codePoint) ? match : String.fromCodePoint(codePoint);
     });
+
+    if (decoded === previous) {
+      break;
+    }
+  }
+
+  return decoded;
 }
 
 /**
@@ -92,7 +106,7 @@ function cleanHtml(raw: string | null | undefined) {
       return title ? `\n${title[1] ?? title[2]}\n` : "\n";
     })
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, "$1")
-    .replace(/<(?:br|\/p|\/div|\/li|\/section|\/article)[^>]*>/gi, "\n")
+    .replace(/<(?:br|\/p|\/paragraph|\/div|\/li|\/section|\/article)[^>]*>/gi, "\n")
     .replace(/<[^>]+>/g, " ");
 
   text = decodeHtmlEntities(text)
@@ -100,7 +114,16 @@ function cleanHtml(raw: string | null | undefined) {
     .replace(/[•◦▪▫●○◎◇◆□■▶▷]/g, "\n")
     .replace(/\r\n?/g, "\n");
 
-  return text .split("\n") .map(normalizeWhitespace) .filter(Boolean) .join("\n") .trim();
+  return text
+    .replace(/급\s*[.·ㆍ]\s*만성/g, "급·만성")
+    .replace(/뼈\s*,\s*이의/g, "뼈·이의")
+    .replace(/([ABC]형)\s*,\s*(?=니만[-\s]*피크)/g, "$1 ")
+    .replace(/위\s*,\s*십이지장/g, "위·십이지장")
+    .split("\n")
+    .map(normalizeWhitespace)
+    .filter(Boolean)
+    .join("\n")
+    .trim();
 }
 
 /**
@@ -230,8 +253,10 @@ function extractLineCandidates(line: string) {
     return [];
   }
 
-  return splitTopLevelSentences(content) .map(rewriteEffectExpression)
-    .flatMap(splitTopLevelCommaClauses);
+  // 쉼표로 나누면 수식어와 적응증의 연결이 끊기므로 문장 단위를 유지한다.
+  return splitTopLevelSentences(content)
+    .filter((expression) => !isGuidanceExpression(expression))
+    .map(rewriteEffectExpression);
 }
 
 /**
@@ -265,7 +290,8 @@ function normalizeEffectExpression(expression: string) {
  * 식약처 원문의 문어체/투여 지시형 표현을 사용자 친화적 효능 표현으로 재구성한다.
  */
 function rewriteEffectExpression(expression: string) {
-  let result = normalizeWhitespace(expression);
+  let result = normalizeWhitespace(expression)
+    .replace(/^다음\s*경우(?:의)?\s+/, "");
 
   // 적응 대상과 보조요법 조건을 함께 보존한다.
   result = result.replace(
@@ -297,8 +323,14 @@ function rewriteEffectExpression(expression: string) {
   // 원문의 의미는 유지한다.
   result = result.replace(/단독요법으로\s+투여한다/g, "단독 치료");
   result = result.replace(/병용요법으로\s+투여한다/g, "병용 치료");
+  result = result.replace(/단독요법으로/g, "단독 치료로");
+  result = result.replace(/병용요법으로/g, "병용 치료로");
   result = result.replace(/단독요법/g, "단독 치료");
   result = result.replace(/병용요법/g, "병용 치료");
+
+  // 투여 지시를 지워 목적어만 남기지 않고 보조치료 표현으로 마무리한다.
+  result = result.replace(/보조제로서\s+이\s*약을\s+투여한다$/, "보조치료");
+  result = result.replace(/경우\s+이\s*약을\s+투여한다$/, "경우의 치료");
 
   // "~의 보조제로 투여한다"는 사용자에게는 "~의 보조치료"가 더 자연스럽다.
   result = result.replace(/(.+?)의\s+보조제로\s+(?:투여한다|사용한다|사용된다)$/, "$1의 보조치료");
@@ -341,6 +373,12 @@ function removeTrailingBoilerplate(expression: string) {
  */
 function trimDanglingEnding(expression: string) {
   let result = normalizeWhitespace(expression);
+
+  // 효능 동작이 분명할 때만 연결 어미를 명사형으로 정리한다.
+  result = result.replace(
+    /(치료|개선|완화|억제|예방|감소|조절)(?:하며|하고|하여)$/,
+    "$1",
+  );
 
   // 반복적으로 적용하여 "A의 B로서", "A를 위한" 같은 중첩된 미완성 표현도 정리한다.
   result = result .replace(/병용\s*(?:하며|하고)$/, "병용")
@@ -386,8 +424,17 @@ function isUsefulEffectExpression(expression: string) {
     return false;
   }
 
+  if (/(?:하며|하고|하여|이며|이고|있으며|하므로|하면서|경우로)$/.test(expression)) {
+    return false;
+  }
+
+  if (/^(?:\([^)]*\)\s*)+$/.test(expression) ||
+    /^\*?\s*\d+(?:\.\d+)?\s*(?:mg|㎎|밀리그램)$/i.test(expression)) {
+    return false;
+  }
+
   const compact = expression.replace(/\s+/g, "");
-  const rejectedExact = new Set(["유효균종", "효능·효과", "효능효과", "다음질환의증상완화", "다음질환의보조치료",]);
+  const rejectedExact = new Set(["유효균종", "효능·효과", "효능효과", "다음질환의증상완화", "다음질환의보조치료", "증상완화", "증상개선", "기", "급", "급성", "&nbsp",]);
   const isRejectedHeading = rejectedExact.has(compact);
 
   if (isRejectedHeading) {
@@ -402,6 +449,11 @@ function isUsefulEffectExpression(expression: string) {
   }
 
   // 안내 문구만 남은 경우 제거한다.
+  if (/^ACE억제제에\s+(?:대한\s+추가요법|내약성이)/.test(expression) ||
+    /^다음\s*질환에서\s*혈전\s*생성\s*억제$/.test(expression)) {
+    return false;
+  }
+
   const isInstructionOnly = /^(?:이 약은|이 약의|투여한다|사용한다|사용할 수 있다)\s*$/.test(expression);
 
   if (isInstructionOnly) {
@@ -452,7 +504,12 @@ function scoreEffectExpression(expression: string) {
     0
   );
 
-  return score + (expression.length < 4 ? -3 : 0);
+  // 짧고 독립적인 적응증을 긴 설명·적용 조건보다 우선한다.
+  const isIndicationHeading = expression.length <= 45 &&
+    !/[,：:]|경우|환자|다음|임신|수유|발육기|노년기/.test(expression) &&
+    /혈증|혈압|염|궤양|암|증|질환|장애|치료|예방|보급/.test(expression);
+
+  return score + (isIndicationHeading ? 6 : 0) + (expression.length < 4 ? -3 : 0);
 }
 
 /**
@@ -466,22 +523,10 @@ function rankEffectExpressions(expressions: string[]) {
 }
 
 /**
- * 단일 표현이 최대 길이를 초과할 때 최상위 쉼표 단위로 가능한 범위까지만 압축한다.
+ * 단일 적응증이 길어도 수식어와 적용 조건을 보존한다.
  */
-function compressLongExpression(expression: string, maxLength: number) {
-  const clauses = splitTopLevelCommaClauses(expression);
-  let length = 0;
-  const fitting = clauses.filter((clause, index) => {
-    length += clause.length + (index > 0 ? 2 : 0);
-
-    return length <= maxLength;
-  });
-  const hasFittingClauses = fitting.length > 0;
-
-  if (hasFittingClauses) {
-    return fitting.join(", ");
-  }
-
+function compressLongExpression(expression: string, _maxLength: number) {
+  // 조건을 임의로 잘라 의미를 바꾸지 않고, 긴 단일 적응증은 완전한 문장으로 유지한다.
   return expression;
 }
 
@@ -500,9 +545,10 @@ function appendSummary(state: SummaryState, expression: string, maxLength: numbe
     return { value: candidate, stopped: false };
   }
 
+  // 이미 선택한 효능이 있으면 긴 후보를 건너뛰고 뒤의 짧은 적응증도 검토한다.
   return {
     value: state.value || compressLongExpression(expression, maxLength),
-    stopped: true,
+    stopped: false,
   };
 }
 
@@ -525,6 +571,10 @@ function compressEffect(expressions: string[], maxLength: number) {
  * 효능이 아닌 위험 평가, 계산식, 사용 조건만 설명하는 안내 구문을 구별한다.
  */
 function isGuidanceExpression(expression: string) {
+  if (/이\s*약(?:을)?\s*투여에?\s*앞서|이\s*약에\s*함유된.*효능|확인하여야|배제해야|측정해야|측정하여야|검사시에는|검사\s*시에는/.test(expression)) {
+    return true;
+  }
+
   return /위험\s*인자.*고려해야|전반적인?\s*위험성|위험성을?\s*평가해야|체질량지수.*계산|성적\s*자극.*필요로|효과적이려면|선택성\s*COX-2\s*억제제인.*투여하는\s*경우/.test(
     expression
   ) ||
@@ -548,7 +598,6 @@ export function createEffectSummary(eeDocData: string | null | undefined, maxLen
     .filter((expression) => !isGuidanceExpression(expression))
     .map(normalizeEffectExpression)
     .map(rewriteEffectExpression)
-    .filter(isUsefulEffectExpression)
     .map(removeTrailingBoilerplate)
     .map(trimDanglingEnding)
     .filter(isUsefulEffectExpression);
