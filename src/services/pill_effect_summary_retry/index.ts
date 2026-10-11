@@ -26,6 +26,8 @@ async function readPillResource(directory: string): Promise<PillResourceFile> {
  * 실패 항목만 재조회하고 체크포인트 저장을 마친 성공 항목만 실패 파일에서 제거한다.
  */
 export async function retryFailedPillEffectSummaries(options: EffectRetryOptions = {}) {
+  logger.info("[EE-SUMMARY-RETRY] Start retry failed effect summaries");
+
   // 리소스 경로와 체크포인트 간격을 준비한다.
   const directory = options.directory ?? RESOURCE_DIRECTORY;
   const checkpointSize = options.checkpointSize ?? 50;
