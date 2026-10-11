@@ -25,8 +25,7 @@ function getApiKey() {
     throw new Error("NEARBY_PHARMACIES_API_KEY is not defined in .env or environment variables");
   }
 
-  const match = fs.readFileSync(envPath, "utf8")
-    .match(/NEARBY_PHARMACIES_API_KEY\s*=\s*(.+)/);
+  const match = fs.readFileSync(envPath, "utf8") .match(/NEARBY_PHARMACIES_API_KEY\s*=\s*(.+)/);
   const fileKey = match?.[1]?.trim();
   const hasFileKey = Boolean(fileKey);
 
@@ -76,7 +75,12 @@ export async function fetchAllNearbyPharmacies(
     const page = await fetchPharmacyPage(url, key, pageNo);
 
     page.pharmacies.forEach((pharmacy) => pharmacies.push(pharmacy));
-    logger.info("[NEARBY-PHARMACIES] Fetched %s / %s items (Page %s)", pharmacies.length, page.totalCount, pageNo);
+    logger.info(
+      "[NEARBY-PHARMACIES] Fetched %s / %s items (Page %s)",
+      pharmacies.length,
+      page.totalCount,
+      pageNo
+    );
     hasMorePages = page.pharmacies.length > 0 && pharmacies.length < page.totalCount;
     pageNo += 1;
   }

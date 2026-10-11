@@ -17,10 +17,7 @@ export function normalizeText(input: string) {
   });
 
   // HTML 엔티티 직접 처리 (DOMParser 없는 환경 대비)
-  text = text
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
+  text = text .replace(/&nbsp;/gi, " ") .replace(/&lt;/gi, "<") .replace(/&gt;/gi, ">")
     .replace(/&amp;/gi, "&")
     .replace(/&quot;/gi, '"')
     .replace(/&#39;/gi, "'");

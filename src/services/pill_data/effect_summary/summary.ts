@@ -100,12 +100,7 @@ function cleanHtml(raw: string | null | undefined) {
     .replace(/[•◦▪▫●○◎◇◆□■▶▷]/g, "\n")
     .replace(/\r\n?/g, "\n");
 
-  return text
-    .split("\n")
-    .map(normalizeWhitespace)
-    .filter(Boolean)
-    .join("\n")
-    .trim();
+  return text .split("\n") .map(normalizeWhitespace) .filter(Boolean) .join("\n") .trim();
 }
 
 /**
@@ -148,22 +143,14 @@ function isNonEffectLine(line: string) {
     return true;
   }
 
-  return [
-    "환자에게만 투여",
-    "환자에게 투여",
-    "의사 또는 약사의 지시에 따라",
-    "전문의의 처방",
-  ].some((keyword) => line.includes(keyword));
+  return ["환자에게만 투여", "환자에게 투여", "의사 또는 약사의 지시에 따라", "전문의의 처방",].some((keyword) => line.includes(keyword));
 }
 
 /**
  * 효능·효과와 명백히 무관한 섹션 라인을 제거한다.
  */
 function removeNonEffectLines(text: string) {
-  return text
-    .split("\n")
-    .map(normalizeWhitespace)
-    .filter(Boolean)
+  return text .split("\n") .map(normalizeWhitespace) .filter(Boolean)
     .filter((line) => !isNonEffectLine(line))
     .join("\n");
 }
@@ -172,9 +159,7 @@ function removeNonEffectLines(text: string) {
  * 번호 매기기나 '효능·효과' 같은 제목성 머리말을 제거한다.
  */
 function removeEffectHeading(text: string) {
-  return text
-    .replace(/^\d+(?:\.(?!\d)|\))\s*/, "")
-    .replace(/^[①②③④⑤⑥⑦⑧⑨⑩]\s*/, "")
+  return text .replace(/^\d+(?:\.(?!\d)|\))\s*/, "") .replace(/^[①②③④⑤⑥⑦⑧⑨⑩]\s*/, "")
     .replace(/^(?:효능[·ㆍ]?효과|효능 및 효과|효과)\s*[:：]?\s*/i, "")
     .replace(/^유효균종\s*[:：]?\s*/i, "")
     .trim();
@@ -245,8 +230,7 @@ function extractLineCandidates(line: string) {
     return [];
   }
 
-  return splitTopLevelSentences(content)
-    .map(rewriteEffectExpression)
+  return splitTopLevelSentences(content) .map(rewriteEffectExpression)
     .flatMap(splitTopLevelCommaClauses);
 }
 
@@ -261,16 +245,14 @@ function extractEffectCandidates(text: string) {
  * 특수문자, 조사 및 불필요한 안내성 상투 표현을 정리한다.
  */
 function normalizeEffectExpression(expression: string) {
-  let result = normalizeWhitespace(expression)
-    .replace(/^(?:[-–—ㆍ•◦▪▫]+)\s*/, "")
+  let result = normalizeWhitespace(expression) .replace(/^(?:[-–—ㆍ•◦▪▫]+)\s*/, "")
     .replace(/^[,;:]+\s*/, "")
     .replace(/\s*,\s*/g, ", ")
     .replace(/\s*:\s*/g, ": ")
     .trim();
 
   // "다음 질환의 보조치료"처럼 데이터 원문의 안내 문구를 자연스럽게 제거한다.
-  result = result
-    .replace(/^다음\s+(?:질환|질병)(?:\s*,\s*증상)?의\s+/, "")
+  result = result .replace(/^다음\s+(?:질환|질병)(?:\s*,\s*증상)?의\s+/, "")
     .replace(/^다음\s+(?:질환|질병),\s*(?:증상\s*)?/, "")
     .replace(/^다음\s+경우(?:의)?\s+/, "")
     .replace(/^이 약은\s+/, "")
@@ -286,7 +268,10 @@ function rewriteEffectExpression(expression: string) {
   let result = normalizeWhitespace(expression);
 
   // 적응 대상과 보조요법 조건을 함께 보존한다.
-  result = result.replace(/^(.+?)의\s+혈당조절을\s+(?:개선|향상)시키기\s*위해\s+식사요법\s*(?:,|및|·)\s*운동요법(?:의)?\s+보조제로(?:서)?$/, "$1의 혈당조절 개선(식사요법·운동요법 보조치료)");
+  result = result.replace(
+    /^(.+?)의\s+혈당조절을\s+(?:개선|향상)시키기\s*위해\s+식사요법\s*(?:,|및|·)\s*운동요법(?:의)?\s+보조제로(?:서)?$/,
+    "$1의 혈당조절 개선(식사요법·운동요법 보조치료)"
+  );
 
   // "다음 질환의 보조치료: A, B" -> "A, B의 보조치료"
   result = result.replace(/^다음\s+(?:질환|질병)(?:\s+및\s+증상)?의\s+보조치료\s*[:：]\s*(.+)$/, "$1의 보조치료");
@@ -296,7 +281,10 @@ function rewriteEffectExpression(expression: string) {
 
   // "... 혈당조절을 향상시키기 위해 ... 보조제로 투여한다"
   // 같은 규격 문구는 핵심 효과를 앞세워 읽기 쉽게 만든다.
-  result = result.replace(/^(.+?)의\s+혈당조절을\s+향상시키기\s+위해\s+식사요법,\s*운동요법의\s+보조제로\s+투여한다$/, "$1의 혈당조절 개선을 위한 식사요법·운동요법 보조치료");
+  result = result.replace(
+    /^(.+?)의\s+혈당조절을\s+향상시키기\s+위해\s+식사요법,\s*운동요법의\s+보조제로\s+투여한다$/,
+    "$1의 혈당조절 개선을 위한 식사요법·운동요법 보조치료"
+  );
 
   // "... 증상 완화를 위해 투여한다" -> "... 증상 완화"
   result = result.replace(/^(.+?)의\s+증상\s+(완화|개선)을\s+위해\s+투여한다$/, "$1의 증상 $2");
@@ -321,9 +309,7 @@ function rewriteEffectExpression(expression: string) {
   result = result.replace(/(치료|개선|완화|억제|예방|감소|조절)한다$/, "$1");
 
   // 의미 없는 종결형만 제거한다.
-  result = result
-    .replace(/\s+투여한다$/, "")
-    .replace(/\s+사용한다$/, "")
+  result = result .replace(/\s+투여한다$/, "") .replace(/\s+사용한다$/, "")
     .replace(/\s+사용할\s+수\s+있다$/, "")
     .trim();
 
@@ -334,8 +320,7 @@ function rewriteEffectExpression(expression: string) {
  * 문장 끝에 붙은 각주 번호나 불필요한 메타 정보 문구를 제거한다.
  */
 function removeTrailingBoilerplate(expression: string) {
-  return expression
-    .replace(/\s*\*\s*\d+[,.]?\s*$/g, "")
+  return expression .replace(/\s*\*\s*\d+[,.]?\s*$/g, "")
     .replace(/\s*[☆★]\s*국내임상시험결과\s*추가제출[^,;]*$/g, "")
     .replace(/\s*국내임상시험결과\s*추가제출[^,;]*$/g, "")
     .replace(/\s*\(?(?:의약품\s*)?재평가\s*진행\s*중\)?\s*$/g, "")
@@ -358,8 +343,7 @@ function trimDanglingEnding(expression: string) {
   let result = normalizeWhitespace(expression);
 
   // 반복적으로 적용하여 "A의 B로서", "A를 위한" 같은 중첩된 미완성 표현도 정리한다.
-  result = result
-    .replace(/병용\s*(?:하며|하고)$/, "병용")
+  result = result .replace(/병용\s*(?:하며|하고)$/, "병용")
     .replace(/(치료|요법|요법제|대체요법|보조제)(?:으로|로)$/, "$1")
     .replace(/(폐경여성|환자|성인|소아)에서$/, "$1 대상")
     .replace(/을\s*목적으로$/, "")
@@ -403,13 +387,7 @@ function isUsefulEffectExpression(expression: string) {
   }
 
   const compact = expression.replace(/\s+/g, "");
-  const rejectedExact = new Set([
-    "유효균종",
-    "효능·효과",
-    "효능효과",
-    "다음질환의증상완화",
-    "다음질환의보조치료",
-  ]);
+  const rejectedExact = new Set(["유효균종", "효능·효과", "효능효과", "다음질환의증상완화", "다음질환의보조치료",]);
   const isRejectedHeading = rejectedExact.has(compact);
 
   if (isRejectedHeading) {
@@ -457,19 +435,22 @@ function removeDuplicateExpressions(expressions: string[]) {
  * 각 효능 표현의 중요도를 점수화하여 반환한다.
  */
 const EFFECT_SCORE_RULES: EffectScoreRule[] = [
-    { pattern: /치료|개선|완화|억제|예방|감소|제거|보조치료|조절|보급/, score: 4 },
-    { pattern: /질환|질병|증상|장애|염|통|고혈압|당뇨|비염|두통|기침|빈혈/, score: 2 },
-    { pattern: /^\(?정제\)?$|^유효균종$/, score: -10 },
-    { pattern: /예:|예\)|임상적|유효성|재평가|추가제출/, score: -5 },
-    { pattern: /투여한다|사용한다|복용한다|처방한다/, score: -2 },
-    { pattern: /환자의|환자에서/, score: 1 },
-  ];
+  { pattern: /치료|개선|완화|억제|예방|감소|제거|보조치료|조절|보급/, score: 4 },
+  { pattern: /질환|질병|증상|장애|염|통|고혈압|당뇨|비염|두통|기침|빈혈/, score: 2 },
+  { pattern: /^\(?정제\)?$|^유효균종$/, score: -10 },
+  { pattern: /예:|예\)|임상적|유효성|재평가|추가제출/, score: -5 },
+  { pattern: /투여한다|사용한다|복용한다|처방한다/, score: -2 },
+  { pattern: /환자의|환자에서/, score: 1 },
+];
 
 /**
  * 효능 표현에 점수 규칙과 짧은 표현의 감점을 적용한다.
  */
 function scoreEffectExpression(expression: string) {
-  const score = EFFECT_SCORE_RULES.reduce((total, rule) => total + (rule.pattern.test(expression) ? rule.score : 0), 0);
+  const score = EFFECT_SCORE_RULES.reduce(
+    (total, rule) => total + (rule.pattern.test(expression) ? rule.score : 0),
+    0
+  );
 
   return score + (expression.length < 4 ? -3 : 0);
 }
@@ -529,17 +510,24 @@ function appendSummary(state: SummaryState, expression: string, maxLength: numbe
  * 점수가 높은 효능 표현부터 길이 제한에 맞춰 요약 문자열을 만든다.
  */
 function compressEffect(expressions: string[], maxLength: number) {
-  const result = rankEffectExpressions(expressions).reduce((state, expression) => appendSummary(state, expression, maxLength), { value: "", stopped: false });
+  const result = rankEffectExpressions(expressions).reduce(
+    (state, expression) => appendSummary(state, expression, maxLength),
+    {
+      value: "",
+      stopped: false
+    }
+  );
 
   return result.value || expressions[0] || "";
 }
-
 
 /**
  * 효능이 아닌 위험 평가, 계산식, 사용 조건만 설명하는 안내 구문을 구별한다.
  */
 function isGuidanceExpression(expression: string) {
-  return /위험\s*인자.*고려해야|전반적인?\s*위험성|위험성을?\s*평가해야|체질량지수.*계산|성적\s*자극.*필요로|효과적이려면|선택성\s*COX-2\s*억제제인.*투여하는\s*경우/.test(expression) ||
+  return /위험\s*인자.*고려해야|전반적인?\s*위험성|위험성을?\s*평가해야|체질량지수.*계산|성적\s*자극.*필요로|효과적이려면|선택성\s*COX-2\s*억제제인.*투여하는\s*경우/.test(
+    expression
+  ) ||
     /^(?:다른\s*식욕억제제와|여성에\s*의한\s*사용을)/.test(expression) ||
     /^(?:평가해야\s*한다|고려해야\s*한다)$/.test(expression);
 }
@@ -569,7 +557,9 @@ export function createEffectSummary(eeDocData: string | null | undefined, maxLen
   return compressEffect(uniqueCandidates, maxLength) || FALLBACK_EFFECT_SUMMARY;
 }
 
-/** 기존 효능·효과 원문을 유지하고 내용이 없으면 없음 문구를 반환한다. */
+/**
+ * 기존 효능·효과 원문을 유지하고 내용이 없으면 없음 문구를 반환한다.
+ */
 export function existingEffectText(document: string | null | undefined) {
   return cleanHtml(document) || FALLBACK_EFFECT_SUMMARY;
 }

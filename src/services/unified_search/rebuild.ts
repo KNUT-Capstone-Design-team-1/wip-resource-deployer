@@ -79,10 +79,15 @@ export async function rebuildFTS5() {
   createUnifiedSearchFTSTable();
 
   // 3. unified_search 테이블의 min/max rowid 및 총 row 수 확인 (stdout 캡처)
-  const statsOutput = runQueryWithOutput(`SELECT MIN(rowid) AS min_id, MAX(rowid) AS max_id, COUNT(*) AS total_count FROM unified_search;`, TARGET_DB);
+  const statsOutput = runQueryWithOutput(
+    `SELECT MIN(rowid) AS min_id, MAX(rowid) AS max_id, COUNT(*) AS total_count FROM unified_search;`,
+    TARGET_DB
+  );
   const { minRowId, maxRowId, totalCount } = parseStatsOutput(statsOutput);
 
-  logger.info(`[UNIFIED-SEARCH-FTS-REBUILD] Target data: ${totalCount} rows (rowid: ${minRowId} ~ ${maxRowId})`);
+  logger.info(
+    `[UNIFIED-SEARCH-FTS-REBUILD] Target data: ${totalCount} rows (rowid: ${minRowId} ~ ${maxRowId})`
+  );
 
   // 원본 rowid 범위의 데이터를 청크 단위로 인덱스에 적재
   populateFTS(minRowId, maxRowId);

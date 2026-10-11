@@ -22,11 +22,20 @@ export function createResourceTasks(config: AppConfig) {
       name: "pill_data",
       execute: () => createPillDataResourceFile(config.pillData?.createEffectSummary ?? true),
     },
-    { name: "pill_effect_summary_retry", execute: () => config.pillData?.createEffectSummary === false ? Promise.resolve() : retryFailedPillEffectSummaries() },
-    { name: "nearby_pharmacies", execute: () => createNearbyPharmaciesResource(config.nearbyPharmacies?.apiUrl) },
+    {
+      name: "pill_effect_summary_retry",
+      execute: () => config.pillData?.createEffectSummary === false ? Promise.resolve() : retryFailedPillEffectSummaries()
+    },
+    {
+      name: "nearby_pharmacies",
+      execute: () => createNearbyPharmaciesResource(config.nearbyPharmacies?.apiUrl)
+    },
     { name: "mark_images", execute: createMarkImageResource },
     { name: "unified_search_create_tables", execute: createTables },
-    { name: "unified_search", execute: () => updateUnifiedSearchDB(config.unifiedSearch?.dbInitialize) },
+    {
+      name: "unified_search",
+      execute: () => updateUnifiedSearchDB(config.unifiedSearch?.dbInitialize)
+    },
     { name: "unified_search_insert_failed", execute: upsertFailedRetryAll },
     { name: "cannabis", execute: createCannabisResource },
     { name: "narcotics", execute: createNarcoticsResource },

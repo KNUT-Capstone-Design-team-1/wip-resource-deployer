@@ -26,7 +26,11 @@ async function fetchEeDocData(itemSeq: string) {
     responseType: "text",
   });
 
-  return { document: response.data, httpStatus: response.status, contentType: response.headers["content-type"] as string | undefined };
+  return {
+    document: response.data,
+    httpStatus: response.status,
+    contentType: response.headers["content-type"] as string | undefined
+  };
 }
 
 /**
@@ -52,7 +56,9 @@ export function getRetryAfterMs(value: unknown, now = Date.now()) {
  * 조회 결과가 아닌 오류 페이지를 문서로 오인하지 않고 비어 있는 응답도 실패로 구분한다.
  */
 function summarizeDocument(document: string) {
-  if (typeof document !== "string" || !document.trim() || /<!doctype\s+html|<html[\s>]/i.test(document)) {
+  if (typeof document !== "string" ||
+    !document.trim() ||
+    /<!doctype\s+html|<html[\s>]/i.test(document)) {
     return FALLBACK_EFFECT_SUMMARY;
   }
 
@@ -71,7 +77,10 @@ export async function fetchEffectSummaryResult(itemSeq: string, options: EffectS
 
   effectFilePath(itemSeq, "documents", directory);
 
-  if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || !Number.isFinite(retryDelayMs) || retryDelayMs < 0) {
+  if (!Number.isInteger(maxAttempts) ||
+    maxAttempts < 1 ||
+    !Number.isFinite(retryDelayMs) ||
+    retryDelayMs < 0) {
     throw new Error("Invalid effect summary retry options");
   }
 
@@ -106,10 +115,22 @@ export async function fetchEffectSummaryResult(itemSeq: string, options: EffectS
       const retryable = httpStatus === 429;
       const message = e.message || String(e);
 
-      logger.warn("[EE-SUMMARY] Failed ITEM_SEQ=%s attempt=%s status=%s: %s", itemSeq, attempt, httpStatus, message);
+      logger.warn(
+        "[EE-SUMMARY] Failed ITEM_SEQ=%s attempt=%s status=%s: %s",
+        itemSeq,
+        attempt,
+        httpStatus,
+        message
+      );
 
       if (!retryable || attempt === maxAttempts) {
-        return { summary: FALLBACK_EFFECT_SUMMARY, reason: httpStatus === null ? "network_error" : "http_error", httpStatus, attempts: attempt, message };
+        return {
+          summary: FALLBACK_EFFECT_SUMMARY,
+          reason: httpStatus === null ? "network_error" : "http_error",
+          httpStatus,
+          attempts: attempt,
+          message
+        };
       }
 
       const retryAfter = getRetryAfterMs(e.response?.headers?.["retry-after"]);
@@ -128,8 +149,20 @@ export async function fetchEffectSummaryResult(itemSeq: string, options: EffectS
       const detail = empty ? "응답 본문이 비어 있습니다." : html ? "XML 대신 HTML 페이지가 반환되었습니다." : "응답 본문에서 요약 가능한 효능 내용을 추출하지 못했습니다.";
       const preview = typeof document === "string" ? document.replace(/\s+/g, " ").slice(0, 300) : "";
       const message = `${detail} contentType=${contentType ?? "unknown"} length=${typeof document === "string" ? document.length : 0} preview=${preview}`;
-      logger.warn("[EE-SUMMARY] Invalid response ITEM_SEQ=%s attempt=%s status=%s: %s", itemSeq, attempt, httpStatus, message);
-      return { summary, reason: empty ? "empty_document" : "empty_summary", httpStatus, attempts: attempt, message };
+      logger.warn(
+        "[EE-SUMMARY] Invalid response ITEM_SEQ=%s attempt=%s status=%s: %s",
+        itemSeq,
+        attempt,
+        httpStatus,
+        message
+      );
+      return {
+        summary,
+        reason: empty ? "empty_document" : "empty_summary",
+        httpStatus,
+        attempts: attempt,
+        message
+      };
     }
 
     // 캐시 저장 오류는 조회 실패로 숨기지 않고 호출자에게 전달한다.
@@ -180,16 +213,33 @@ export async function fetchEffectSummaryMap(itemSeqList: string[], options: Effe
     const itemSeq = itemSeqs[index];
 
     const result: EffectSummaryResult = rateLimited
-      ? { summary: FALLBACK_EFFECT_SUMMARY, reason: "rate_limit_deferred", httpStatus: null, attempts: 0, message: "이전 항목의 HTTP 429가 지속되어 조회를 다음 실행으로 연기했습니다." }
+      ? {
+        summary: FALLBACK_EFFECT_SUMMARY,
+        reason: "rate_limit_deferred",
+        httpStatus: null,
+        attempts: 0,
+        message: "이전 항목의 HTTP 429가 지속되어 조회를 다음 실행으로 연기했습니다."
+      }
       : await fetchEffectSummaryResult(itemSeq, { ...options, fetchDocument: fetchPacedDocument });
 
     if (result.reason) {
-      await writeEffectSummaryFailure({ ITEM_SEQ: itemSeq, reason: result.reason, httpStatus: result.httpStatus, attempts: result.attempts, message: result.message }, directory);
+      await writeEffectSummaryFailure(
+        {
+          ITEM_SEQ: itemSeq,
+          reason: result.reason,
+          httpStatus: result.httpStatus,
+          attempts: result.attempts,
+          message: result.message
+        },
+        directory
+      );
     }
 
     if (result.httpStatus === 429) {
       rateLimited = true;
-      logger.warn("[EE-SUMMARY] Persistent HTTP 429. Remaining items will be saved for a later run.");
+      logger.warn(
+        "[EE-SUMMARY] Persistent HTTP 429. Remaining items will be saved for a later run."
+      );
     }
 
     summaryMap.set(itemSeq, result.summary);

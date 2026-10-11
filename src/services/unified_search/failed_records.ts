@@ -10,5 +10,9 @@ export async function writeFailedData(record: IUnifiedSearchData) {
   const directory = path.join(RESOURCE_DIRECTORY, "unified_search_insert_failed");
 
   await fs.promises.mkdir(directory, { recursive: true });
-  await fs.promises.writeFile(path.join(directory, record.ITEM_SEQ + ".json"), JSON.stringify(record, null, 2), "utf8");
+  await fs.promises.writeFile(
+    path.join(directory, record.ITEM_SEQ + ".json"),
+    JSON.stringify(record, null, 2),
+    "utf8"
+  );
 }

@@ -101,7 +101,9 @@ export async function readEffectDocument(itemSeq: string, directory = RESOURCE_D
   }
 }
 
-/** 효능 원문 캐시 폴더만 삭제한다. */
+/**
+ * 효능 원문 캐시 폴더만 삭제한다.
+ */
 export async function removeEffectDocuments(directory = RESOURCE_DIRECTORY) {
   const resourceDirectory = path.resolve(directory);
   const documentsDirectory = path.resolve(resourceDirectory, "pill_effect_documents");

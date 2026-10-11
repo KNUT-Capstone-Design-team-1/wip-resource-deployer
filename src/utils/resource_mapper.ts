@@ -25,7 +25,9 @@ function mapRow(value: unknown, propertyMap: Record<string, string>) {
  * 속성명 매핑에서 공백을 제거하고 원본 행을 리소스 배열로 변환한다.
  */
 export function mappingProperty(rows: unknown[], propertyMap: Record<string, string>) {
-  const normalizedMap = Object.fromEntries(Object.entries(propertyMap).map(([from, to]) => [from.replace(/\s/g, ""), to]));
+  const normalizedMap = Object.fromEntries(
+    Object.entries(propertyMap).map(([from, to]) => [from.replace(/\s/g, ""), to])
+  );
 
   return rows.map((row) => mapRow(row, normalizedMap))
     .filter((row) => Object.keys(row).length > 0) as unknown as TResource[];

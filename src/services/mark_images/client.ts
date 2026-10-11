@@ -38,7 +38,9 @@ export function isValidBase64(base64Payload: string) {
     return false;
   }
 
-  return /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$/.test(base64Payload);
+  return /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$/.test(
+    base64Payload
+  );
 }
 
 /**
@@ -56,8 +58,7 @@ async function downloadImage(url: string) {
       Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
     },
   });
-  const contentType = response.headers["content-type"]
-    ?.split(";")[0].trim().toLowerCase();
+  const contentType = response.headers["content-type"] ?.split(";")[0].trim().toLowerCase();
   const isImage = contentType?.startsWith("image/");
 
   if (!isImage) {

@@ -20,7 +20,12 @@ async function upsertFailedRetry(filePath: string) {
     return true;
   }
   catch (e: any) {
-    logger.error(`[UNIFIED-SEARCH-UPSERT-FAILED] Failed to read file %s. error: %s`, filePath, e.stack || e);
+    logger.error(
+      `[UNIFIED-SEARCH-UPSERT-FAILED] Failed to read file %s. error: %s`,
+      filePath,
+      e.stack ||
+      e
+    );
 
     return false;
   }

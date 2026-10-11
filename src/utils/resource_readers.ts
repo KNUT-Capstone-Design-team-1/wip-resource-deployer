@@ -20,8 +20,7 @@ export async function readExcelContents(fileName: string) {
       e: { c: 0, r: 0 },
     };
 
-    Object.keys(worksheet)
-      .filter((cell) => !cell.startsWith("!"))
+    Object.keys(worksheet) .filter((cell) => !cell.startsWith("!"))
       .map((cell) => XLSX.utils.decode_cell(cell))
       .forEach((cell) => {
         range.e.r = Math.max(range.e.r, cell.r);
