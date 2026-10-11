@@ -23,7 +23,13 @@ export interface EffectSummaryOptions {
   onResult?: (itemSeq: string, result: EffectSummaryResult) => Promise<void>;
 }
 
-export type EffectFailureReason = "http_error" | "network_error" | "empty_document" | "empty_summary" | "legacy_missing_summary" | "rate_limit_deferred";
+export type EffectFailureReason =
+  | "http_error"
+  | "network_error"
+  | "empty_document"
+  | "empty_summary"
+  | "legacy_missing_summary"
+  | "rate_limit_deferred";
 
 export interface EffectSummaryFailure {
   ITEM_SEQ: string;

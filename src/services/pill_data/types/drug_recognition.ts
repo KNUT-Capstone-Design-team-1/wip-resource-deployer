@@ -41,4 +41,3 @@ export type TDrugRecognitionResource = Record<
   "drugRecognition",
   Array<IDrugRecognition>
 >;
-

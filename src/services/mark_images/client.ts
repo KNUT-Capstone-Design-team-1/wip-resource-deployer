@@ -39,7 +39,7 @@ export function isValidBase64(base64Payload: string) {
   }
 
   return /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$/.test(
-    base64Payload
+    base64Payload,
   );
 }
 
@@ -55,10 +55,14 @@ async function downloadImage(url: string) {
     headers: {
       "User-Agent": getLatestUserAgent(),
       Referer: "https://nedrug.mfds.go.kr/",
-      Accept: "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+      Accept:
+        "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
     },
   });
-  const contentType = response.headers["content-type"] ?.split(";")[0].trim().toLowerCase();
+  const contentType = response.headers["content-type"]
+    ?.split(";")[0]
+    .trim()
+    .toLowerCase();
   const isImage = contentType?.startsWith("image/");
 
   if (!isImage) {
@@ -71,22 +75,36 @@ async function downloadImage(url: string) {
 /**
  * 이미지 다운로드 실패 시 응답 상태와 시도 횟수에 따라 대기한 뒤 재시도한다.
  */
-async function downloadWithRetry(url: string, attempt: number, retries: number): Promise<string> {
+async function downloadWithRetry(
+  url: string,
+  attempt: number,
+  retries: number,
+): Promise<string> {
   try {
     return await downloadImage(url);
-  }
-  catch (e) {
+  } catch (e) {
     const status = e.response?.status ?? null;
     const isLastAttempt = attempt === retries;
 
     if (isLastAttempt) {
-      throw new Error("Failed after " + retries + " attempts (" +
-        (status || e.message) + "): " + url);
+      throw new Error(
+        "Failed after " +
+          retries +
+          " attempts (" +
+          (status || e.message) +
+          "): " +
+          url,
+      );
     }
 
     const delay = status === 429 ? 2000 * attempt : 1000 * attempt;
 
-    logger.warn("[MARK-IMAGE] Retrying in %sms for %s: %s", delay, url, status || e.message);
+    logger.warn(
+      "[MARK-IMAGE] Retrying in %sms for %s: %s",
+      delay,
+      url,
+      status || e.message,
+    );
     await sleep(delay);
   }
 

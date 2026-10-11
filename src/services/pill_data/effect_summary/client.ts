@@ -1,10 +1,17 @@
 import { writeAtomicFile } from "../../../utils/atomic_file";
-import type { EffectSummaryResult, EffectSummaryOptions } from "../types/effect_summary";
+import type {
+  EffectSummaryResult,
+  EffectSummaryOptions,
+} from "../types/effect_summary";
 import axios from "axios";
 import logger from "../../../utils/logger";
 import { RESOURCE_DIRECTORY } from "../../../utils/paths";
 import { createEffectSummary, FALLBACK_EFFECT_SUMMARY } from "./summary";
-import { effectFilePath, readEffectDocument, writeEffectSummaryFailure } from "./storage";
+import {
+  effectFilePath,
+  readEffectDocument,
+  writeEffectSummaryFailure,
+} from "./storage";
 
 const REQUEST_DELAY_MS = 1000;
 const RETRY_DELAY_MS = 2000;
@@ -21,15 +28,18 @@ function sleep(ms: number): Promise<void> {
  * 효능 XML 조회 오류를 호출자에게 전달해 실패 원인과 HTTP 상태를 보존한다.
  */
 async function fetchEeDocData(itemSeq: string) {
-  const response = await axios.get<string>("https://nedrug.mfds.go.kr/pbp/cmn/xml/drb/" + itemSeq + "/EE", {
-    timeout: 15000,
-    responseType: "text",
-  });
+  const response = await axios.get<string>(
+    "https://nedrug.mfds.go.kr/pbp/cmn/xml/drb/" + itemSeq + "/EE",
+    {
+      timeout: 15000,
+      responseType: "text",
+    },
+  );
 
   return {
     document: response.data,
     httpStatus: response.status,
-    contentType: response.headers["content-type"] as string | undefined
+    contentType: response.headers["content-type"] as string | undefined,
   };
 }
 
@@ -56,9 +66,11 @@ export function getRetryAfterMs(value: unknown, now = Date.now()) {
  * 조회 결과가 아닌 오류 페이지를 문서로 오인하지 않고 비어 있는 응답도 실패로 구분한다.
  */
 function summarizeDocument(document: string) {
-  if (typeof document !== "string" ||
+  if (
+    typeof document !== "string" ||
     !document.trim() ||
-    /<!doctype\s+html|<html[\s>]/i.test(document)) {
+    /<!doctype\s+html|<html[\s>]/i.test(document)
+  ) {
     return FALLBACK_EFFECT_SUMMARY;
   }
 
@@ -68,7 +80,10 @@ function summarizeDocument(document: string) {
 /**
  * 원문 캐시를 활용하고 HTTP 429만 지수 백오프로 재시도한다.
  */
-export async function fetchEffectSummaryResult(itemSeq: string, options: EffectSummaryOptions = {}): Promise<EffectSummaryResult> {
+export async function fetchEffectSummaryResult(
+  itemSeq: string,
+  options: EffectSummaryOptions = {},
+): Promise<EffectSummaryResult> {
   const directory = options.directory ?? RESOURCE_DIRECTORY;
   const maxAttempts = options.maxAttempts ?? MAX_ATTEMPTS;
   const retryDelayMs = options.retryDelayMs ?? RETRY_DELAY_MS;
@@ -77,16 +92,19 @@ export async function fetchEffectSummaryResult(itemSeq: string, options: EffectS
 
   effectFilePath(itemSeq, "documents", directory);
 
-  if (!Number.isInteger(maxAttempts) ||
+  if (
+    !Number.isInteger(maxAttempts) ||
     maxAttempts < 1 ||
     !Number.isFinite(retryDelayMs) ||
-    retryDelayMs < 0) {
+    retryDelayMs < 0
+  ) {
     throw new Error("Invalid effect summary retry options");
   }
 
   if (options.useCache !== false) {
     const cached = await readEffectDocument(itemSeq, directory);
-    const summary = cached === null ? FALLBACK_EFFECT_SUMMARY : summarizeDocument(cached);
+    const summary =
+      cached === null ? FALLBACK_EFFECT_SUMMARY : summarizeDocument(cached);
 
     if (summary !== FALLBACK_EFFECT_SUMMARY) {
       return { summary, httpStatus: null, attempts: 0, message: "cached" };
@@ -105,13 +123,19 @@ export async function fetchEffectSummaryResult(itemSeq: string, options: EffectS
         httpStatus = response.httpStatus;
         contentType = response.contentType;
       }
-    }
-    catch (e) {
+    } catch (e) {
       if (axios.isAxiosError(e)) {
-        logger.warn("[EE-SUMMARY] Axios error ITEM_SEQ=%s attempt=%s: %O", itemSeq, attempt, e);
+        logger.warn(
+          "[EE-SUMMARY] Axios error ITEM_SEQ=%s attempt=%s: %O",
+          itemSeq,
+          attempt,
+          e,
+        );
       }
 
-      const httpStatus = axios.isAxiosError(e) ? e.response?.status ?? null : null;
+      const httpStatus = axios.isAxiosError(e)
+        ? (e.response?.status ?? null)
+        : null;
       const retryable = httpStatus === 429;
       const message = e.message || String(e);
 
@@ -120,7 +144,7 @@ export async function fetchEffectSummaryResult(itemSeq: string, options: EffectS
         itemSeq,
         attempt,
         httpStatus,
-        message
+        message,
       );
 
       if (!retryable || attempt === maxAttempts) {
@@ -129,7 +153,7 @@ export async function fetchEffectSummaryResult(itemSeq: string, options: EffectS
           reason: httpStatus === null ? "network_error" : "http_error",
           httpStatus,
           attempts: attempt,
-          message
+          message,
         };
       }
 
@@ -146,27 +170,37 @@ export async function fetchEffectSummaryResult(itemSeq: string, options: EffectS
     if (summary === FALLBACK_EFFECT_SUMMARY) {
       const empty = typeof document !== "string" || !document.trim();
       const html = !empty && /<!doctype\s+html|<html[\s>]/i.test(document);
-      const detail = empty ? "응답 본문이 비어 있습니다." : html ? "XML 대신 HTML 페이지가 반환되었습니다." : "응답 본문에서 요약 가능한 효능 내용을 추출하지 못했습니다.";
-      const preview = typeof document === "string" ? document.replace(/\s+/g, " ").slice(0, 300) : "";
+      const detail = empty
+        ? "응답 본문이 비어 있습니다."
+        : html
+          ? "XML 대신 HTML 페이지가 반환되었습니다."
+          : "응답 본문에서 요약 가능한 효능 내용을 추출하지 못했습니다.";
+      const preview =
+        typeof document === "string"
+          ? document.replace(/\s+/g, " ").slice(0, 300)
+          : "";
       const message = `${detail} contentType=${contentType ?? "unknown"} length=${typeof document === "string" ? document.length : 0} preview=${preview}`;
       logger.warn(
         "[EE-SUMMARY] Invalid response ITEM_SEQ=%s attempt=%s status=%s: %s",
         itemSeq,
         attempt,
         httpStatus,
-        message
+        message,
       );
       return {
         summary,
         reason: empty ? "empty_document" : "empty_summary",
         httpStatus,
         attempts: attempt,
-        message
+        message,
       };
     }
 
     // 캐시 저장 오류는 조회 실패로 숨기지 않고 호출자에게 전달한다.
-    await writeAtomicFile(effectFilePath(itemSeq, "documents", directory), document);
+    await writeAtomicFile(
+      effectFilePath(itemSeq, "documents", directory),
+      document,
+    );
 
     return { summary, httpStatus, attempts: attempt, message: "success" };
   }
@@ -177,7 +211,10 @@ export async function fetchEffectSummaryResult(itemSeq: string, options: EffectS
 /**
  * 실패를 항목별 파일에 기록하고 지속적인 429 발생 시 나머지 요청을 다음 실행으로 미룬다.
  */
-export async function fetchEffectSummaryMap(itemSeqList: string[], options: EffectSummaryOptions = {}) {
+export async function fetchEffectSummaryMap(
+  itemSeqList: string[],
+  options: EffectSummaryOptions = {},
+) {
   const requestDelayMs = options.requestDelayMs ?? REQUEST_DELAY_MS;
 
   if (!Number.isFinite(requestDelayMs) || requestDelayMs < 0) {
@@ -214,13 +251,17 @@ export async function fetchEffectSummaryMap(itemSeqList: string[], options: Effe
 
     const result: EffectSummaryResult = rateLimited
       ? {
-        summary: FALLBACK_EFFECT_SUMMARY,
-        reason: "rate_limit_deferred",
-        httpStatus: null,
-        attempts: 0,
-        message: "이전 항목의 HTTP 429가 지속되어 조회를 다음 실행으로 연기했습니다."
-      }
-      : await fetchEffectSummaryResult(itemSeq, { ...options, fetchDocument: fetchPacedDocument });
+          summary: FALLBACK_EFFECT_SUMMARY,
+          reason: "rate_limit_deferred",
+          httpStatus: null,
+          attempts: 0,
+          message:
+            "이전 항목의 HTTP 429가 지속되어 조회를 다음 실행으로 연기했습니다.",
+        }
+      : await fetchEffectSummaryResult(itemSeq, {
+          ...options,
+          fetchDocument: fetchPacedDocument,
+        });
 
     if (result.reason) {
       await writeEffectSummaryFailure(
@@ -229,16 +270,16 @@ export async function fetchEffectSummaryMap(itemSeqList: string[], options: Effe
           reason: result.reason,
           httpStatus: result.httpStatus,
           attempts: result.attempts,
-          message: result.message
+          message: result.message,
         },
-        directory
+        directory,
       );
     }
 
     if (result.httpStatus === 429) {
       rateLimited = true;
       logger.warn(
-        "[EE-SUMMARY] Persistent HTTP 429. Remaining items will be saved for a later run."
+        "[EE-SUMMARY] Persistent HTTP 429. Remaining items will be saved for a later run.",
       );
     }
 

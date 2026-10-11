@@ -12,4 +12,3 @@ export interface INarcotics {
 }
 
 export type TNarcoticsResource = Record<"narcotics", Array<INarcotics>>;
-

@@ -48,8 +48,7 @@ function parseStatsOutput(output: string) {
 
   try {
     return parseStatsRow(JSON.parse(jsonMatch[0]));
-  }
-  catch (e) {
+  } catch (e) {
     logger.warn("[UNIFIED-SEARCH-FTS-REBUILD] Failed to parse JSON stats");
 
     return EMPTY_STATS;
@@ -63,7 +62,9 @@ export async function rebuildFTS5() {
   logger.info("[UNIFIED-SEARCH-FTS-REBUILD] Start chunked FTS5 rebuild");
 
   // 1. 기존 FTS 테이블 및 동기화 트리거 삭제
-  logger.info("[UNIFIED-SEARCH-FTS-REBUILD] Dropping old FTS table and triggers");
+  logger.info(
+    "[UNIFIED-SEARCH-FTS-REBUILD] Dropping old FTS table and triggers",
+  );
 
   const dropQuery = `
       DROP TRIGGER IF EXISTS unified_search_ai;
@@ -81,23 +82,27 @@ export async function rebuildFTS5() {
   // 3. unified_search 테이블의 min/max rowid 및 총 row 수 확인 (stdout 캡처)
   const statsOutput = runQueryWithOutput(
     `SELECT MIN(rowid) AS min_id, MAX(rowid) AS max_id, COUNT(*) AS total_count FROM unified_search;`,
-    TARGET_DB
+    TARGET_DB,
   );
   const { minRowId, maxRowId, totalCount } = parseStatsOutput(statsOutput);
 
   logger.info(
-    `[UNIFIED-SEARCH-FTS-REBUILD] Target data: ${totalCount} rows (rowid: ${minRowId} ~ ${maxRowId})`
+    `[UNIFIED-SEARCH-FTS-REBUILD] Target data: ${totalCount} rows (rowid: ${minRowId} ~ ${maxRowId})`,
   );
 
   // 원본 rowid 범위의 데이터를 청크 단위로 인덱스에 적재
   populateFTS(minRowId, maxRowId);
 
   // 4. 트리거 등록 (이후 INSERT/UPDATE/DELETE 실시간 동기화)
-  logger.info("[UNIFIED-SEARCH-FTS-REBUILD] Creating sync triggers (INSERT, UPDATE, DELETE)");
+  logger.info(
+    "[UNIFIED-SEARCH-FTS-REBUILD] Creating sync triggers (INSERT, UPDATE, DELETE)",
+  );
   createUnifiedSearchFTSInsertTrigger();
   createUnifiedSearchFTSUpdateTrigger();
   createUnifiedSearchFTSDeleteTrigger();
-  logger.info("[UNIFIED-SEARCH-FTS-REBUILD] Complete chunked FTS5 rebuild successfully");
+  logger.info(
+    "[UNIFIED-SEARCH-FTS-REBUILD] Complete chunked FTS5 rebuild successfully",
+  );
 }
 
 /**
@@ -107,7 +112,9 @@ function populateFTS(minRowId: number, maxRowId: number) {
   for (let startId = minRowId; startId <= maxRowId; startId += CHUNK_SIZE) {
     const endId = startId + CHUNK_SIZE - 1;
 
-    logger.info(`[UNIFIED-SEARCH-FTS-REBUILD] Populating FTS chunk: rowid ${startId} ~ ${endId}`);
+    logger.info(
+      `[UNIFIED-SEARCH-FTS-REBUILD] Populating FTS chunk: rowid ${startId} ~ ${endId}`,
+    );
 
     const chunkQuery = `
           INSERT INTO unified_search_fts(rowid, CONTENTS)

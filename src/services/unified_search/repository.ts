@@ -20,7 +20,8 @@ export async function upsert(unifiedSearchDataList: IUnifiedSearchData[]) {
   const columnNames = ["ITEM_SEQ", "CONTENTS"];
   const setClauses = `CONTENTS = excluded.CONTENTS`;
   const valuesClauses = unifiedSearchDataList.map(
-    (data) => `(${getSafeValue(data.ITEM_SEQ)}, ${getSafeValue(data.CONTENTS)})`
+    (data) =>
+      `(${getSafeValue(data.ITEM_SEQ)}, ${getSafeValue(data.CONTENTS)})`,
   );
   let insertQuery = `
   INSERT INTO unified_search (

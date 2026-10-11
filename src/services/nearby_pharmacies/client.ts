@@ -1,7 +1,10 @@
 import fs from "fs";
 import path from "path";
 import axios from "axios";
-import { INearbyPharmacies, ISafemapPharmacyResponse } from "./types/nearby_pharmacies";
+import {
+  INearbyPharmacies,
+  ISafemapPharmacyResponse,
+} from "./types/nearby_pharmacies";
 import { toPharmacy } from "./transform";
 import logger from "../../utils/logger";
 
@@ -22,10 +25,14 @@ function getApiKey() {
   const hasEnvFile = fs.existsSync(envPath);
 
   if (!hasEnvFile) {
-    throw new Error("NEARBY_PHARMACIES_API_KEY is not defined in .env or environment variables");
+    throw new Error(
+      "NEARBY_PHARMACIES_API_KEY is not defined in .env or environment variables",
+    );
   }
 
-  const match = fs.readFileSync(envPath, "utf8") .match(/NEARBY_PHARMACIES_API_KEY\s*=\s*(.+)/);
+  const match = fs
+    .readFileSync(envPath, "utf8")
+    .match(/NEARBY_PHARMACIES_API_KEY\s*=\s*(.+)/);
   const fileKey = match?.[1]?.trim();
   const hasFileKey = Boolean(fileKey);
 
@@ -33,13 +40,19 @@ function getApiKey() {
     return fileKey!;
   }
 
-  throw new Error("NEARBY_PHARMACIES_API_KEY is not defined in .env or environment variables");
+  throw new Error(
+    "NEARBY_PHARMACIES_API_KEY is not defined in .env or environment variables",
+  );
 }
 
 /**
  * 약국 API의 한 페이지를 조회하고 변환된 약국 목록과 전체 건수를 반환한다.
  */
-async function fetchPharmacyPage(url: string, serviceKey: string, pageNo: number) {
+async function fetchPharmacyPage(
+  url: string,
+  serviceKey: string,
+  pageNo: number,
+) {
   logger.info("[NEARBY-PHARMACIES] Fetching page %s", pageNo);
 
   const response = await axios.get<ISafemapPharmacyResponse>(url, {
@@ -49,7 +62,10 @@ async function fetchPharmacyPage(url: string, serviceKey: string, pageNo: number
   const hasBody = body !== undefined && body !== null;
 
   if (!hasBody) {
-    logger.error("[NEARBY-PHARMACIES] Unexpected response structure: %j", response.data);
+    logger.error(
+      "[NEARBY-PHARMACIES] Unexpected response structure: %j",
+      response.data,
+    );
 
     return { pharmacies: [], totalCount: 0 };
   }
@@ -79,9 +95,10 @@ export async function fetchAllNearbyPharmacies(
       "[NEARBY-PHARMACIES] Fetched %s / %s items (Page %s)",
       pharmacies.length,
       page.totalCount,
-      pageNo
+      pageNo,
     );
-    hasMorePages = page.pharmacies.length > 0 && pharmacies.length < page.totalCount;
+    hasMorePages =
+      page.pharmacies.length > 0 && pharmacies.length < page.totalCount;
     pageNo += 1;
   }
 

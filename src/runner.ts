@@ -10,8 +10,7 @@ async function runTask(task: ResourceTask) {
     await task.execute();
 
     return true;
-  }
-  catch (e) {
+  } catch (e) {
     // 실패 원인을 기록하고 다음 작업을 계속할 수 있도록 실패 결과를 반환한다.
     logger.error("[%s] Task failed. %s", task.name, e.stack || e);
 

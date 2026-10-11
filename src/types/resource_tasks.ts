@@ -1,5 +1,3 @@
-
-
 export interface AppConfig {
   common: {
     targetResource: string[];

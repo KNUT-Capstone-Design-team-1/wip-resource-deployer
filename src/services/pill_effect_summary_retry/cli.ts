@@ -8,10 +8,15 @@ async function main() {
   const [command, ...args] = process.argv.slice(2);
 
   // 허용된 명령과 옵션 형식이면 실패 요약 재조회를 실행한다.
-  if (command === "retry" && (args.length === 0 || (args.length === 2 && args[0] === "--limit"))) {
+  if (
+    command === "retry" &&
+    (args.length === 0 || (args.length === 2 && args[0] === "--limit"))
+  ) {
     const limit = args.length ? Number(args[1]) : undefined;
 
-    console.log(JSON.stringify(await retryFailedPillEffectSummaries({ limit }), null, 2));
+    console.log(
+      JSON.stringify(await retryFailedPillEffectSummaries({ limit }), null, 2),
+    );
 
     return;
   }

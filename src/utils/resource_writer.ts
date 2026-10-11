@@ -13,8 +13,14 @@ export function createResourcesDirectory() {
 /**
  * 생성한 데이터를 JSON 리소스로 저장하고 완료된 파일로 교체한다.
  */
-export async function createResourceFile(resourceFileName: string, resourceData: Record<string, any>[]) {
+export async function createResourceFile(
+  resourceFileName: string,
+  resourceData: Record<string, any>[],
+) {
   const filePath = path.join(RESOURCE_DIRECTORY, resourceFileName);
 
-  await writeAtomicFile(filePath, JSON.stringify({ resources: resourceData }, null, 2));
+  await writeAtomicFile(
+    filePath,
+    JSON.stringify({ resources: resourceData }, null, 2),
+  );
 }

@@ -15,4 +15,3 @@ export type TpsychotropicsResource = Record<
   "psychotropics",
   Array<Ipsychotropics>
 >;
-

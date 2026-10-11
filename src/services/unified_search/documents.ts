@@ -21,9 +21,12 @@ export async function getDocData(itemSeq: string) {
     logger.info("get data (%s)", itemSeq);
 
     return nedrugData;
-  }
-  catch (e) {
-    logger.error("Failed to get doc data. item_seq: %s. %s", itemSeq, e.stack || e);
+  } catch (e) {
+    logger.error(
+      "Failed to get doc data. item_seq: %s. %s",
+      itemSeq,
+      e.stack || e,
+    );
 
     return { EE_DOC_DATA: "", UD_DOC_DATA: "", NB_DOC_DATA: "" };
   }

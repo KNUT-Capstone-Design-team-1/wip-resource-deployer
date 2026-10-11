@@ -4,7 +4,9 @@
   "description": "wip resource deploy module",
   "main": "app.ts",
   "scripts": {
-    "start": "ts-node ./src/app.ts"
+    "start": "ts-node ./src/app.ts",
+    "format": "prettier --write .",
+    "lint": "prettier --check ."
   },
   "repository": {
     "type": "git",
@@ -29,6 +31,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.9.1",
+    "prettier": "^3.9.10",
     "ts-node": "^10.9.2"
   }
 }

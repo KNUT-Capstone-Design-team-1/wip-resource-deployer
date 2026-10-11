@@ -20,7 +20,8 @@ export async function readExcelContents(fileName: string) {
       e: { c: 0, r: 0 },
     };
 
-    Object.keys(worksheet) .filter((cell) => !cell.startsWith("!"))
+    Object.keys(worksheet)
+      .filter((cell) => !cell.startsWith("!"))
       .map((cell) => XLSX.utils.decode_cell(cell))
       .forEach((cell) => {
         range.e.r = Math.max(range.e.r, cell.r);
@@ -52,7 +53,8 @@ export async function readCSVContents(fileName: string) {
  * UTF-8 BOM을 제거하고 UTF-8 디코딩 실패 시 EUC-KR로 읽는다.
  */
 export function decodeCSVBuffer(buffer: Buffer) {
-  const isUtf8Bom = buffer[0] === 0xef && buffer[1] === 0xbb && buffer[2] === 0xbf;
+  const isUtf8Bom =
+    buffer[0] === 0xef && buffer[1] === 0xbb && buffer[2] === 0xbf;
 
   if (isUtf8Bom) {
     return buffer.toString("utf8").slice(1);

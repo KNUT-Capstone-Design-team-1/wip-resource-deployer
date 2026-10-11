@@ -31,8 +31,8 @@ export type OmitPillDataProps =
  * 알약 데이터
  */
 export interface IPillData
-  extends Omit<IDrugRecognition, OmitPillDataProps>,
-  Omit<IFinishedMedicinePermissionDetail, OmitPillDataProps> {
+  extends
+    Omit<IDrugRecognition, OmitPillDataProps>,
+    Omit<IFinishedMedicinePermissionDetail, OmitPillDataProps> {
   EFFECT_SUMMARY?: string | null;
 }
-

@@ -51,4 +51,3 @@ export type TFunctionalFoodNutrientsResource = Record<
   "functionalFoodNutrients",
   Array<IFunctionalFoodNutrients>
 >;
-

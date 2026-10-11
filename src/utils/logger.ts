@@ -5,14 +5,12 @@ const { combine, timestamp, printf, splat } = format;
 const logger = createLogger({
   format: combine(
     splat(),
-    timestamp(
-      {
-        format: "YYYY-MM-DD HH:mm:ss"
-      }
-    ),
+    timestamp({
+      format: "YYYY-MM-DD HH:mm:ss",
+    }),
     printf(
-      ({ timestamp: time, level, message }) => `${time} [${level}] ${message}`
-    )
+      ({ timestamp: time, level, message }) => `${time} [${level}] ${message}`,
+    ),
   ),
   transports: [
     new transports.Console(),

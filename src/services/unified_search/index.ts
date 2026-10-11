@@ -13,12 +13,15 @@ export async function updateUnifiedSearchDB(dbInitialize = false) {
   // 검색에 필요한 낱알식별 정보와 의약품 허가 상세 원본을 읽는다.
   logger.info("[UNIFIED-SEARCH] Start load resource");
 
-  const resources = await new ResourceLoader(["drug_recognition", "finished_medicine_permission_detail",]).loadResource();
+  const resources = await new ResourceLoader([
+    "drug_recognition",
+    "finished_medicine_permission_detail",
+  ]).loadResource();
 
   // 두 원본을 결합해 검색 대상 의약품 목록을 만든다.
   const pills = createPillData(
     resources.drugRecognition,
-    resources.finishedMedicinePermissionDetail
+    resources.finishedMedicinePermissionDetail,
   );
 
   // 초기화가 설정된 경우 검색 테이블과 동기화 트리거를 준비한다.

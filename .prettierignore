@@ -1,0 +1,13 @@
+node_modules/
+.git/
+.wrangler/
+.aws/
+.agents/
+.codex/
+resources/
+origin_data/
+log/
+tmp/
+config.json
+.env
+yarn.lock

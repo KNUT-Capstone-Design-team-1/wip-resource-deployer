@@ -9,4 +9,3 @@ export type TProhibitedListResource = Record<
   "prohibitedList",
   Array<IProhibitedList>
 >;
-

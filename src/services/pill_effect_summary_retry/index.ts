@@ -1,5 +1,8 @@
 import { writeAtomicFile } from "../../utils/atomic_file";
-import type { PillResourceFile, EffectRetryOptions } from "./types/pill_effect_summary_retry";
+import type {
+  PillResourceFile,
+  EffectRetryOptions,
+} from "./types/pill_effect_summary_retry";
 import fs from "fs";
 import path from "path";
 import logger from "../../utils/logger";
@@ -14,15 +17,16 @@ import { removeEffectSummaryFailure } from "../pill_data/effect_summary/storage"
  */
 async function readPillResource(directory: string): Promise<PillResourceFile> {
   const parsed = JSON.parse(
-    await fs.promises.readFile(path.join(directory, "pill_data.json"), "utf8")
+    await fs.promises.readFile(path.join(directory, "pill_data.json"), "utf8"),
   );
 
-  if (!parsed ||
+  if (
+    !parsed ||
     !Array.isArray(parsed.resources) ||
     parsed.resources.some(
-      (pill: IPillData) => !pill ||
-        !/^\d+$/.test(pill.ITEM_SEQ)
-    )) {
+      (pill: IPillData) => !pill || !/^\d+$/.test(pill.ITEM_SEQ),
+    )
+  ) {
     throw new Error("Invalid pill_data.json resource structure");
   }
 
@@ -34,11 +38,15 @@ async function readPillResource(directory: string): Promise<PillResourceFile> {
  */
 async function readFailedItemSeqs(directory: string): Promise<Set<string>> {
   try {
-    const entries = await fs.promises.readdir(directory, { withFileTypes: true });
-    return new Set(entries .filter((entry) => entry.isFile() && /^\d+\.json$/.test(entry.name))
-      .map((entry) => entry.name.slice(0, -5)));
-  }
-  catch (e) {
+    const entries = await fs.promises.readdir(directory, {
+      withFileTypes: true,
+    });
+    return new Set(
+      entries
+        .filter((entry) => entry.isFile() && /^\d+\.json$/.test(entry.name))
+        .map((entry) => entry.name.slice(0, -5)),
+    );
+  } catch (e) {
     if (e.code !== "ENOENT") {
       throw e;
     }
@@ -62,7 +70,9 @@ function indexPills(pills: IPillData[]) {
 /**
  * 실패 항목만 재조회하고 체크포인트 저장을 마친 성공 항목만 실패 파일에서 제거한다.
  */
-export async function retryFailedPillEffectSummaries(options: EffectRetryOptions = {}) {
+export async function retryFailedPillEffectSummaries(
+  options: EffectRetryOptions = {},
+) {
   logger.info("[EE-SUMMARY-RETRY] Start retry failed effect summaries");
 
   // 리소스 경로와 체크포인트 간격을 준비한다.
@@ -70,11 +80,12 @@ export async function retryFailedPillEffectSummaries(options: EffectRetryOptions
   const checkpointSize = options.checkpointSize ?? 50;
 
   // 처리 건수와 저장 간격이 유효한 값인지 확인한다.
-  if (!Number.isInteger(checkpointSize) ||
+  if (
+    !Number.isInteger(checkpointSize) ||
     checkpointSize <= 0 ||
     (options.limit !== undefined &&
-      (!Number.isInteger(options.limit) ||
-        options.limit <= 0))) {
+      (!Number.isInteger(options.limit) || options.limit <= 0))
+  ) {
     throw new Error("limit and checkpointSize must be positive integers");
   }
 
@@ -87,10 +98,10 @@ export async function retryFailedPillEffectSummaries(options: EffectRetryOptions
   const byId = indexPills(resource.resources);
 
   // 실패 목록에서 현재 리소스에 있는 항목만 정렬하고 처리 건수 제한을 적용한다.
-  const targets = [...failedItemSeqs].filter((itemSeq) => byId.has(itemSeq)).sort().slice(
-    0,
-    options.limit
-  );
+  const targets = [...failedItemSeqs]
+    .filter((itemSeq) => byId.has(itemSeq))
+    .sort()
+    .slice(0, options.limit);
   const pendingSuccesses = new Set<string>();
   let processed = 0;
   let recovered = 0;
@@ -106,7 +117,7 @@ export async function retryFailedPillEffectSummaries(options: EffectRetryOptions
     // 복구한 요약을 리소스 파일에 먼저 저장한다.
     await writeAtomicFile(
       path.join(directory, "pill_data.json"),
-      JSON.stringify(resource, null, 2)
+      JSON.stringify(resource, null, 2),
     );
 
     // 저장이 완료된 항목의 실패 파일만 제거한다.
@@ -127,7 +138,11 @@ export async function retryFailedPillEffectSummaries(options: EffectRetryOptions
         if (result.reason) {
           logger.warn(
             "[EE-SUMMARY-RETRY] Failed ITEM_SEQ=%s reason=%s status=%s attempts=%s: %s",
-            itemSeq, result.reason, result.httpStatus, result.attempts, result.message,
+            itemSeq,
+            result.reason,
+            result.httpStatus,
+            result.attempts,
+            result.message,
           );
         }
 
@@ -147,21 +162,22 @@ export async function retryFailedPillEffectSummaries(options: EffectRetryOptions
         }
       },
     });
-  }
-  finally {
+  } finally {
     // 예상치 못한 중단에서도 지금까지 복구한 요약을 저장한다.
     await checkpoint();
   }
 
   // 남아 있는 실패 항목 수를 집계해 재처리 결과를 반환한다.
   const remainingItemSeqs = await readFailedItemSeqs(failedDirectory);
-  const remaining = [...remainingItemSeqs].filter((itemSeq) => failedItemSeqs.has(itemSeq)).length;
+  const remaining = [...remainingItemSeqs].filter((itemSeq) =>
+    failedItemSeqs.has(itemSeq),
+  ).length;
 
   logger.info(
     "[EE-SUMMARY-RETRY] Processed=%s recovered=%s remaining=%s",
     processed,
     recovered,
-    remaining
+    remaining,
   );
 
   return { processed, recovered, remaining };

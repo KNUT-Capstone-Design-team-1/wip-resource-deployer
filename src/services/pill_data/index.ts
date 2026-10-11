@@ -15,7 +15,10 @@ export async function createPillDataResourceFile(createEffectSummary = true) {
   // 낱알식별 정보와 의약품 허가 상세 원본을 읽는다.
   logger.info("[PILL-DATA] Start load resource");
 
-  const resourceLoader = new ResourceLoader(["drug_recognition", "finished_medicine_permission_detail",]);
+  const resourceLoader = new ResourceLoader([
+    "drug_recognition",
+    "finished_medicine_permission_detail",
+  ]);
   const resource = await resourceLoader.loadResource();
 
   logger.info("[PILL-DATA] Complete load resource");
@@ -25,7 +28,7 @@ export async function createPillDataResourceFile(createEffectSummary = true) {
 
   const pillData = createPillData(
     resource.drugRecognition,
-    resource.finishedMedicinePermissionDetail
+    resource.finishedMedicinePermissionDetail,
   );
 
   logger.info("[PILL-DATA] Complete create pill data");
@@ -54,11 +57,11 @@ export async function createPillDataResourceFile(createEffectSummary = true) {
     path.join(RESOURCE_DIRECTORY, "pill_data.json"),
     JSON.stringify(
       {
-        resources: pillData
+        resources: pillData,
       },
       null,
-      2
-    )
+      2,
+    ),
   );
 
   // 리소스 저장을 마친 정상 요약의 실패 기록을 제거한다.

@@ -55,9 +55,13 @@ async function resolveImage(entry: MarkEntry) {
     await new Promise((resolve) => setTimeout(resolve, 150));
 
     return image;
-  }
-  catch (e) {
-    logger.error("[MARK-IMAGE] Failed image %s (%s): %s", entry.code, entry.url, e.message);
+  } catch (e) {
+    logger.error(
+      "[MARK-IMAGE] Failed image %s (%s): %s",
+      entry.code,
+      entry.url,
+      e.message,
+    );
 
     return entry.url;
   }
@@ -108,7 +112,7 @@ export async function createMarkImageData(drugs: IDrugRecognition[]) {
   const images: IMarkImageData[] = [];
 
   for (let index = 0; index < entries.length; index += 1) {
-    images.push(...await createMark(entries[index]));
+    images.push(...(await createMark(entries[index])));
     logProgress(index + 1, entries.length);
   }
 

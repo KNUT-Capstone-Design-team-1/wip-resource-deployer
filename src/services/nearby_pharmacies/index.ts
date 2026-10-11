@@ -12,11 +12,13 @@ export async function createNearbyPharmaciesResource(apiUrl?: string) {
   const nearbyPharmacies = await fetchAllNearbyPharmacies(apiUrl || undefined);
 
   logger.info(
-    `[NEARBY-PHARMACIES] Successfully fetched ${nearbyPharmacies.length} nearby pharmacies`
+    `[NEARBY-PHARMACIES] Successfully fetched ${nearbyPharmacies.length} nearby pharmacies`,
   );
 
   // 수집한 약국 목록을 JSON 리소스로 저장한다.
   logger.info("[NEARBY-PHARMACIES] Start create nearby pharmacies data file");
   await createResourceFile("nearby_pharmacies.json", nearbyPharmacies);
-  logger.info("[NEARBY-PHARMACIES] Complete create nearby pharmacies data file");
+  logger.info(
+    "[NEARBY-PHARMACIES] Complete create nearby pharmacies data file",
+  );
 }

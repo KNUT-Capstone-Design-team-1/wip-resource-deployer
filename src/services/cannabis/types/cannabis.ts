@@ -12,4 +12,3 @@ export interface ICannabis {
 }
 
 export type TCannabisResource = Record<"cannabis", Array<ICannabis>>;
-

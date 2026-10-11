@@ -45,4 +45,3 @@ export type TFinishedMedicinePermissionDetailResource = Record<
   "finishedMedicinePermissionDetail",
   Array<IFinishedMedicinePermissionDetail>
 >;
-

@@ -23,5 +23,7 @@ export async function createTables() {
   createUnifiedSearchFTSDeleteTrigger();
 
   // 테이블 및 트리거 준비가 완료됐음을 기록한다.
-  logger.info("[UNIFIED-SEARCH-TABLES] Successfully created tables and triggers");
+  logger.info(
+    "[UNIFIED-SEARCH-TABLES] Successfully created tables and triggers",
+  );
 }

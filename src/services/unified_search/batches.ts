@@ -33,8 +33,7 @@ async function createSearchRecord(pill: IPillData) {
 async function saveBatch(records: IUnifiedSearchData[]) {
   try {
     await upsert(records);
-  }
-  catch (e) {
+  } catch (e) {
     logger.error("[UNIFIED-SEARCH] Failed to upsert batch. %s", e.stack || e);
 
     for (const record of records) {
