@@ -86,6 +86,11 @@ function cleanHtml(raw: string | null | undefined) {
   }
 
   let text = raw
+    // 효능 XML은 본문 없이 ARTICLE/SECTION의 title 속성에 내용을 담기도 한다.
+    .replace(/<(?:article|section)\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi, (tag) => {
+      const title = /\btitle\s*=\s*(?:"([^"]*)"|'([^']*)')/i.exec(tag);
+      return title ? `\n${title[1] ?? title[2]}\n` : "\n";
+    })
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, "$1")
     .replace(/<(?:br|\/p|\/div|\/li|\/section|\/article)[^>]*>/gi, "\n")
     .replace(/<[^>]+>/g, " ");

@@ -10,7 +10,11 @@ export function normalizeText(input: string) {
     return "";
   }
 
-  let text = input;
+  // XML 문서의 ARTICLE/SECTION title에 담긴 내용도 검색 텍스트에 포함한다.
+  let text = input.replace(/<(?:article|section)\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi, (tag) => {
+    const title = /\btitle\s*=\s*(?:"([^"]*)"|'([^']*)')/i.exec(tag);
+    return title ? ` ${title[1] ?? title[2]} ` : " ";
+  });
 
   // HTML 엔티티 직접 처리 (DOMParser 없는 환경 대비)
   text = text
@@ -22,10 +26,10 @@ export function normalizeText(input: string) {
     .replace(/&#39;/gi, "'");
 
   // CDATA 제거
-  text = text.replace(/<!\[CDATA\[(.*?)\]\]>/g, "$1");
+  text = text.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1");
 
   // XML / HTML 태그 제거
-  text = text.replace(/<[^>]+>/g, "");
+  text = text.replace(/<[^>]+>/g, " ");
 
   // 특수문자 제거 (한글 / 영문 / 숫자 / 공백만 유지)
   text = text.replace(/[^ㄱ-ㅎ가-힣a-zA-Z0-9\s]/g, " ");
