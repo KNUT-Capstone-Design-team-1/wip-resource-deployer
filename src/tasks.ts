@@ -18,8 +18,8 @@ import { upsertFailedRetryAll } from "./services/unified_search_insert_failed";
 export function createResourceTasks(config: AppConfig) {
   // 리소스 생성과 검색 DB 관리 작업을 의존 순서에 맞춰 등록한다.
   return [
-    { name: "pill_data", execute: createPillDataResourceFile },
-    { name: "pill_effect_summary_retry", execute: () => retryFailedPillEffectSummaries() },
+    { name: "pill_data", execute: () => createPillDataResourceFile(config.pillData?.createEffectSummary ?? true) },
+    { name: "pill_effect_summary_retry", execute: () => config.pillData?.createEffectSummary === false ? Promise.resolve() : retryFailedPillEffectSummaries() },
     { name: "nearby_pharmacies", execute: () => createNearbyPharmaciesResource(config.nearbyPharmacies?.apiUrl) },
     { name: "mark_images", execute: createMarkImageResource },
     { name: "unified_search_create_tables", execute: createTables },

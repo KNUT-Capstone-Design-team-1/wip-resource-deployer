@@ -4,6 +4,9 @@ export interface AppConfig {
   common: {
     targetResource: string[];
   };
+  pillData?: {
+    createEffectSummary?: boolean;
+  };
   unifiedSearch?: {
     dbInitialize?: boolean;
   };

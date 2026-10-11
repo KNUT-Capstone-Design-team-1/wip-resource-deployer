@@ -11,7 +11,7 @@ import { createPillData } from "./transform";
 /**
  * pill_data 리소스 파일 생성
  */
-export async function createPillDataResourceFile() {
+export async function createPillDataResourceFile(createEffectSummary = true) {
   // 낱알식별 정보와 의약품 허가 상세 원본을 읽는다.
   logger.info("[PILL-DATA] Start load resource");
 
@@ -30,20 +30,23 @@ export async function createPillDataResourceFile() {
 
   logger.info("[PILL-DATA] Complete create pill data");
 
-  // 품목별 최신 효능 원문을 조회하고 요약을 생성한다.
-  logger.info("[PILL-DATA] Start fetch effect summaries");
-
-  const itemSeqList = pillData.map(({ ITEM_SEQ }) => ITEM_SEQ);
-  const effectSummaryMap = await fetchEffectSummaryMap(itemSeqList, { useCache: false });
-
-  // 생성한 효능 요약을 각 알약 데이터에 반영한다.
-  pillData.forEach((pill) => {
-    const summary = effectSummaryMap.get(pill.ITEM_SEQ);
-    if (summary && summary !== FALLBACK_EFFECT_SUMMARY) {
-      pill.EFFECT_SUMMARY = summary;
-    }
-  });
-  logger.info("[PILL-DATA] Complete fetch effect summaries");
+  let effectSummaryMap = new Map<string, string>();
+  if (createEffectSummary) {
+    // 품목별 최신 효능 원문을 조회하고 요약을 생성한다.
+    logger.info("[PILL-DATA] Start fetch effect summaries");
+  
+    const itemSeqList = pillData.map(({ ITEM_SEQ }) => ITEM_SEQ);
+    effectSummaryMap = await fetchEffectSummaryMap(itemSeqList, { useCache: false });
+  
+    // 생성한 효능 요약을 각 알약 데이터에 반영한다.
+    pillData.forEach((pill) => {
+      const summary = effectSummaryMap.get(pill.ITEM_SEQ);
+      if (summary && summary !== FALLBACK_EFFECT_SUMMARY) {
+        pill.EFFECT_SUMMARY = summary;
+      }
+    });
+    logger.info("[PILL-DATA] Complete fetch effect summaries");
+  }
 
   // 완성된 리소스를 임시 파일에 쓴 뒤 출력 파일을 교체한다.
   logger.info("[PILL-DATA] Start create pill data resource file");

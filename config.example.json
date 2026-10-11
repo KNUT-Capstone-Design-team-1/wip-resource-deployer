@@ -20,5 +20,8 @@
   },
   "nearbyPharmacies": {
     "apiUrl": "http://safemap.go.kr/openapi2/IF_0048"
+  },
+  "pillData": {
+    "createEffectSummary": true
   }
 }

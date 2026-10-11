@@ -44,6 +44,18 @@ NEARBY_PHARMACIES_API_KEY=your_service_key_here
 
 - common > targetResource
 
+효능·효과 요약 생성 여부는 `pillData.createEffectSummary`로 설정한다.
+
+```json
+"pillData": {
+  "createEffectSummary": false
+}
+```
+
+- `true` (기본값): 효능 XML을 조회해 요약을 생성한다.
+- `false`: XML 조회와 `pill_effect_summary_retry`를 실행하지 않고 원본 효능·효과를 사용한다. 원본도 없으면 “효능·효과 정보가 없습니다.”를 넣는다.
+- 설정을 생략하면 기존 동작대로 요약을 생성한다.
+
 4. 실행
 
 ```bash
