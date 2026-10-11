@@ -39,8 +39,8 @@ NEARBY_PHARMACIES_API_KEY=your_service_key_here
 - `prohibited_list` (도핑 금지 약물 / pdf)
 
 3. 처음 `yarn start`를 실행하면 `config.json`이 없을 때 `config.example.json`의 기본값으로 생성한 뒤 실행한다.
-기본 설정은 모든 작업을 비활성화한다. `config.json`에서 실행할 리소스 타입의 `_`를 제거한 후 다시 실행한다.
-기존 설정은 덮어쓰지 않으며, `config.json`은 Git 추적에서 제외한다.
+   기본 설정은 모든 작업을 비활성화한다. `config.json`에서 실행할 리소스 타입의 `_`를 제거한 후 다시 실행한다.
+   기존 설정은 덮어쓰지 않으며, `config.json`은 Git 추적에서 제외한다.
 
 - common > targetResource
 
