@@ -1,0 +1,12 @@
+/**
+ * 도핑 금지 약물
+ */
+export interface IProhibitedList {
+  contents: string;
+}
+
+export type TProhibitedListResource = Record<
+  "prohibitedList",
+  Array<IProhibitedList>
+>;
+
