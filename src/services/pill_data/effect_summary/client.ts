@@ -26,7 +26,7 @@ async function fetchEeDocData(itemSeq: string) {
     responseType: "text",
   });
 
-  return response.data;
+  return { document: response.data, httpStatus: response.status, contentType: response.headers["content-type"] as string | undefined };
 }
 
 /**
@@ -86,11 +86,22 @@ export async function fetchEffectSummaryResult(itemSeq: string, options: EffectS
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     let document: string;
+    let httpStatus: number | null = null;
+    let contentType: string | undefined;
 
     try {
-      document = await fetchDocument(itemSeq);
+      const response = await fetchDocument(itemSeq);
+      document = typeof response === "string" ? response : response.document;
+      if (typeof response !== "string") {
+        httpStatus = response.httpStatus;
+        contentType = response.contentType;
+      }
     }
     catch (e) {
+      if (axios.isAxiosError(e)) {
+        logger.warn("[EE-SUMMARY] Axios error ITEM_SEQ=%s attempt=%s: %O", itemSeq, attempt, e);
+      }
+
       const httpStatus = axios.isAxiosError(e) ? e.response?.status ?? null : null;
       const retryable = httpStatus === 429;
       const message = e.message || String(e);
@@ -112,19 +123,19 @@ export async function fetchEffectSummaryResult(itemSeq: string, options: EffectS
     const summary = summarizeDocument(document);
 
     if (summary === FALLBACK_EFFECT_SUMMARY) {
-      return {
-        summary,
-        reason: typeof document !== "string" || !document.trim() ? "empty_document" : "empty_summary",
-        httpStatus: null,
-        attempts: attempt,
-        message: "조회 응답에서 유효한 효능 요약을 만들 수 없습니다.",
-      };
+      const empty = typeof document !== "string" || !document.trim();
+      const html = !empty && /<!doctype\s+html|<html[\s>]/i.test(document);
+      const detail = empty ? "응답 본문이 비어 있습니다." : html ? "XML 대신 HTML 페이지가 반환되었습니다." : "응답 본문에서 요약 가능한 효능 내용을 추출하지 못했습니다.";
+      const preview = typeof document === "string" ? document.replace(/\s+/g, " ").slice(0, 300) : "";
+      const message = `${detail} contentType=${contentType ?? "unknown"} length=${typeof document === "string" ? document.length : 0} preview=${preview}`;
+      logger.warn("[EE-SUMMARY] Invalid response ITEM_SEQ=%s attempt=%s status=%s: %s", itemSeq, attempt, httpStatus, message);
+      return { summary, reason: empty ? "empty_document" : "empty_summary", httpStatus, attempts: attempt, message };
     }
 
     // 캐시 저장 오류는 조회 실패로 숨기지 않고 호출자에게 전달한다.
     await writeAtomicFile(effectFilePath(itemSeq, "documents", directory), document);
 
-    return { summary, httpStatus: null, attempts: attempt, message: "success" };
+    return { summary, httpStatus, attempts: attempt, message: "success" };
   }
 
   throw new Error("Unreachable effect summary retry state");

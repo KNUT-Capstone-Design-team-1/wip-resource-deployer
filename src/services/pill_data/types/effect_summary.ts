@@ -6,13 +6,19 @@ export interface EffectSummaryResult {
   message: string;
 }
 
+export interface EffectDocumentResponse {
+  document: string;
+  httpStatus: number;
+  contentType?: string;
+}
+
 export interface EffectSummaryOptions {
   directory?: string;
   requestDelayMs?: number;
   retryDelayMs?: number;
   maxAttempts?: number;
   useCache?: boolean;
-  fetchDocument?: (itemSeq: string) => Promise<string>;
+  fetchDocument?: (itemSeq: string) => Promise<string | EffectDocumentResponse>;
   wait?: (ms: number) => Promise<void>;
   onResult?: (itemSeq: string, result: EffectSummaryResult) => Promise<void>;
 }
