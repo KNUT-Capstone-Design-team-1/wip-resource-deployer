@@ -7,7 +7,7 @@ import { RESOURCE_DIRECTORY } from "../../utils/paths";
 import { IPillData } from "../pill_data/types/pill_data";
 import { fetchEffectSummaryMap } from "../pill_data/effect_summary/client";
 import { FALLBACK_EFFECT_SUMMARY } from "../pill_data/effect_summary/summary";
-import { collectMissingEffectSummary, removeEffectSummaryFailure } from "../pill_data/effect_summary/storage";
+import { removeEffectSummaryFailure } from "../pill_data/effect_summary/storage";
 
 /**
  * 기존 리소스 구조를 검증하여 잘못된 입력 파일을 덮어쓰지 않는다.
@@ -20,13 +20,6 @@ async function readPillResource(directory: string): Promise<PillResourceFile> {
   }
 
   return parsed;
-}
-
-/**
- * 누락 안내 문구 또는 빈 요약인지 확인한다.
- */
-function isMissingSummary(summary: string | null | undefined) {
-  return !summary?.trim() || summary.trim() === FALLBACK_EFFECT_SUMMARY;
 }
 
 /**
@@ -54,22 +47,22 @@ export async function retryFailedPillEffectSummaries(options: EffectRetryOptions
 
     return [];
   });
-  const failedItemSeqs = new Set(entries
-    .filter((entry) => entry.isFile() && /^\d+\.json$/.test(entry.name))
-    .map((entry) => entry.name.slice(0, -5)));
+  const failedItemSeqs = new Set<string>();
+  for (const entry of entries) {
+    if (!entry.isFile() || !/^\d+\.json$/.test(entry.name)) continue;
+    const failure = JSON.parse(await fs.promises.readFile(path.join(failedDirectory, entry.name), "utf8"));
+    if (failure.httpStatus === 429 || failure.reason === "rate_limit_deferred") {
+      failedItemSeqs.add(entry.name.slice(0, -5));
+    }
+  }
   const byId = new Map<string, IPillData[]>();
 
-  // 품목을 인덱싱하고 누락된 요약을 실패 목록에 추가한다.
+  // 품목을 인덱싱한다.
   for (const pill of resource.resources) {
     const group = byId.get(pill.ITEM_SEQ) ?? [];
 
     group.push(pill);
     byId.set(pill.ITEM_SEQ, group);
-
-    if (isMissingSummary(pill.EFFECT_SUMMARY) && !failedItemSeqs.has(pill.ITEM_SEQ)) {
-      await collectMissingEffectSummary(pill.ITEM_SEQ, directory, pill.EFFECT_SUMMARY);
-      failedItemSeqs.add(pill.ITEM_SEQ);
-    }
   }
 
   // 실패 목록에서 현재 리소스에 있는 항목만 정렬하고 처리 건수 제한을 적용한다.
@@ -113,6 +106,15 @@ export async function retryFailedPillEffectSummaries(options: EffectRetryOptions
           recovered += 1;
         }
 
+        else if (result.httpStatus !== 429 && result.reason !== "rate_limit_deferred") {
+          for (const pill of byId.get(itemSeq)!) {
+            if (!pill.EFFECT_SUMMARY?.trim() || pill.EFFECT_SUMMARY === "효능·효과 정보를 확인할 수 없습니다.") {
+              pill.EFFECT_SUMMARY = FALLBACK_EFFECT_SUMMARY;
+            }
+          }
+          pendingSuccesses.add(itemSeq);
+        }
+
         await options.onResult?.(itemSeq, result);
 
         if (processed % checkpointSize === 0) {
@@ -133,7 +135,7 @@ export async function retryFailedPillEffectSummaries(options: EffectRetryOptions
     }
 
     return [];
-  })).filter((name) => /^\d+\.json$/.test(name)).length;
+  })).filter((name) => failedItemSeqs.has(name.slice(0, -5))).length;
 
   logger.info("[EE-SUMMARY-RETRY] Processed=%s recovered=%s remaining=%s", processed, recovered, remaining);
 

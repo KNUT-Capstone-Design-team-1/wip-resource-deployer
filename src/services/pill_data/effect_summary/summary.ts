@@ -1,6 +1,6 @@
 import type { EffectScoreRule } from "../types/effect_summary";
 import type { SplitState, SummaryState } from "../types/effect_summary";
-export const FALLBACK_EFFECT_SUMMARY = "효능·효과 정보를 확인할 수 없습니다.";
+export const FALLBACK_EFFECT_SUMMARY = "효능·효과 정보가 없습니다.";
 const DEFAULT_MAX_LENGTH = 80;
 
 /**
@@ -562,4 +562,9 @@ export function createEffectSummary(eeDocData: string | null | undefined, maxLen
   const uniqueCandidates = removeDuplicateExpressions(candidates);
 
   return compressEffect(uniqueCandidates, maxLength) || FALLBACK_EFFECT_SUMMARY;
+}
+
+/** 기존 효능·효과 원문을 유지하고 내용이 없으면 없음 문구를 반환한다. */
+export function existingEffectText(document: string | null | undefined) {
+  return cleanHtml(document) || FALLBACK_EFFECT_SUMMARY;
 }

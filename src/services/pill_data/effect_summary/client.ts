@@ -4,7 +4,7 @@ import axios from "axios";
 import logger from "../../../utils/logger";
 import { RESOURCE_DIRECTORY } from "../../../utils/paths";
 import { createEffectSummary, FALLBACK_EFFECT_SUMMARY } from "./summary";
-import { effectFilePath, readEffectDocument, writeEffectSummaryFailure } from "./storage";
+import { effectFilePath, readEffectDocument, removeEffectSummaryFailure, writeEffectSummaryFailure } from "./storage";
 
 const REQUEST_DELAY_MS = 1000;
 const RETRY_DELAY_MS = 2000;
@@ -60,7 +60,7 @@ function summarizeDocument(document: string) {
 }
 
 /**
- * 원문 캐시를 활용하고 일시적 HTTP·네트워크 오류만 지수 백오프로 재시도한다.
+ * 원문 캐시를 활용하고 HTTP 429만 지수 백오프로 재시도한다.
  */
 export async function fetchEffectSummaryResult(itemSeq: string, options: EffectSummaryOptions = {}): Promise<EffectSummaryResult> {
   const directory = options.directory ?? RESOURCE_DIRECTORY;
@@ -92,7 +92,7 @@ export async function fetchEffectSummaryResult(itemSeq: string, options: EffectS
     }
     catch (e) {
       const httpStatus = axios.isAxiosError(e) ? e.response?.status ?? null : null;
-      const retryable = httpStatus === null || httpStatus === 429 || httpStatus >= 500;
+      const retryable = httpStatus === 429;
       const message = e.message || String(e);
 
       logger.warn("[EE-SUMMARY] Failed ITEM_SEQ=%s attempt=%s status=%s: %s", itemSeq, attempt, httpStatus, message);
@@ -172,8 +172,12 @@ export async function fetchEffectSummaryMap(itemSeqList: string[], options: Effe
       ? { summary: FALLBACK_EFFECT_SUMMARY, reason: "rate_limit_deferred", httpStatus: null, attempts: 0, message: "이전 항목의 HTTP 429가 지속되어 조회를 다음 실행으로 연기했습니다." }
       : await fetchEffectSummaryResult(itemSeq, { ...options, fetchDocument: fetchPacedDocument });
 
-    if (result.reason) {
-      await writeEffectSummaryFailure({ ITEM_SEQ: itemSeq, reason: result.reason, httpStatus: result.httpStatus, attempts: result.attempts, message: result.message }, directory);
+    if (result.httpStatus === 429 || result.reason === "rate_limit_deferred") {
+      await writeEffectSummaryFailure({ ITEM_SEQ: itemSeq, reason: result.reason ?? "http_error", httpStatus: result.httpStatus, attempts: result.attempts, message: result.message }, directory);
+    }
+
+    else if (result.reason) {
+      await removeEffectSummaryFailure(itemSeq, directory);
     }
 
     if (result.httpStatus === 429) {

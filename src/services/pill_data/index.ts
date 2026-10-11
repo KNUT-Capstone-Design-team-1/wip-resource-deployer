@@ -38,7 +38,10 @@ export async function createPillDataResourceFile() {
 
   // 생성한 효능 요약을 각 알약 데이터에 반영한다.
   pillData.forEach((pill) => {
-    pill.EFFECT_SUMMARY = effectSummaryMap.get(pill.ITEM_SEQ) ?? null;
+    const summary = effectSummaryMap.get(pill.ITEM_SEQ);
+    if (summary && summary !== FALLBACK_EFFECT_SUMMARY) {
+      pill.EFFECT_SUMMARY = summary;
+    }
   });
   logger.info("[PILL-DATA] Complete fetch effect summaries");
 

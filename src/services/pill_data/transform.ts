@@ -1,6 +1,7 @@
 import { IDrugRecognition } from "./types/drug_recognition";
 import { IFinishedMedicinePermissionDetail } from "./types/finished_medicine_permission_detail";
 import { IPillData } from "./types/pill_data";
+import { existingEffectText } from "./effect_summary/summary";
 import { mergeDuplicateObjectArray } from "../../utils/collections";
 
 /**
@@ -68,7 +69,7 @@ function combinePill(drug: IDrugRecognition, permissions: Map<string, IFinishedM
     ...rest
   } = { ...finished, ...drug };
 
-  return [rest];
+  return [{ ...rest, EFFECT_SUMMARY: existingEffectText(EE_DOC_DATA) }];
 }
 
 /**
