@@ -10,3 +10,4 @@ tmp
 .DS_Store
 wrangler.toml
 resources
+/config.json

@@ -4,7 +4,9 @@
   "description": "wip resource deploy module",
   "main": "app.ts",
   "scripts": {
-    "start": "ts-node ./src/app.ts"
+    "start": "ts-node ./src/app.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test -r ts-node/register tests/refactoring.test.ts"
   },
   "repository": {
     "type": "git",

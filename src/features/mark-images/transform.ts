@@ -1,0 +1,78 @@
+import { IDrugRecognition } from "../pills/drug_recognition.types";
+import { IMarkImageData } from "./types";
+import { fetchImageBase64, isValidBase64 } from "./client";
+import logger from "../../shared/logging/logger";
+interface MarkEntry {
+  title: string;
+  code: string;
+  url: string;
+}
+function registerMark(entries: Map<string, MarkEntry>, entry: MarkEntry): void {
+  const shouldRegister = Boolean(entry.code) && !entries.has(entry.code);
+  if (!shouldRegister) {
+    return;
+  }
+  entries.set(entry.code, entry);
+}
+function collectMarks(drugs: IDrugRecognition[]): MarkEntry[] {
+  const entries = new Map<string, MarkEntry>();
+  for (const drug of drugs) {
+    registerMark(entries, {
+      title: drug.DRUG_SHAPE_FRONT,
+      code: drug.MARK_CODE_FRONT,
+      url: drug.MARK_IMAGE_FRONT,
+    });
+    registerMark(entries, {
+      title: drug.DRUG_SHAPE_BACK,
+      code: drug.MARK_CODE_BACK,
+      url: drug.MARK_IMAGE_BACK,
+    });
+  }
+  return [...entries.values()];
+}
+async function resolveImage(entry: MarkEntry): Promise<string> {
+  const isRemoteImage = entry.url?.startsWith("http");
+  if (!isRemoteImage) {
+    return entry.url;
+  }
+  try {
+    const image = await fetchImageBase64(entry.url);
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    return image;
+  }
+  catch (error) {
+    logger.error("[MARK-IMAGE] Failed image %s (%s): %s", entry.code, entry.url, error.message);
+    return entry.url;
+  }
+}
+async function createMark(entry: MarkEntry): Promise<IMarkImageData[]> {
+  const base64 = await resolveImage(entry);
+  const isEmpty = !base64;
+  if (isEmpty) {
+    logger.warn("[MARK-IMAGE] Empty image data for %s", entry.code);
+    return [];
+  }
+  const isDataUrl = base64.startsWith("data:image/");
+  const payload = isDataUrl ? (base64.split(";base64,")[1] ?? "") : base64;
+  const isValidImage = isValidBase64(payload);
+  if (!isValidImage) {
+    logger.warn("[MARK-IMAGE] Excluded invalid base64 data for %s", entry.code);
+    return [];
+  }
+  return [{ title: entry.title, code: entry.code, base64 }];
+}
+function logProgress(completed: number, total: number): void {
+  const shouldLog = completed % 50 === 0 || completed === total;
+  if (shouldLog) {
+    logger.info("[MARK-IMAGE] Progress: %s/%s", completed, total);
+  }
+}
+export async function createMarkImageData(drugs: IDrugRecognition[]): Promise<IMarkImageData[]> {
+  const entries = collectMarks(drugs);
+  const images: IMarkImageData[] = [];
+  for (let index = 0; index < entries.length; index += 1) {
+    images.push(...await createMark(entries[index]));
+    logProgress(index + 1, entries.length);
+  }
+  return images;
+}
