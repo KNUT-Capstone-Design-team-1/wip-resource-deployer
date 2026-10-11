@@ -32,11 +32,11 @@ export async function createPillDataResourceFile(createEffectSummary = true) {
 
   let effectSummaryMap = new Map<string, string>();
   if (createEffectSummary) {
-    // 품목별 최신 효능 원문을 조회하고 요약을 생성한다.
+    // 품목별 효능 원문 캐시를 우선 사용하고 필요하면 조회해 요약을 생성한다.
     logger.info("[PILL-DATA] Start fetch effect summaries");
   
     const itemSeqList = pillData.map(({ ITEM_SEQ }) => ITEM_SEQ);
-    effectSummaryMap = await fetchEffectSummaryMap(itemSeqList, { useCache: false });
+    effectSummaryMap = await fetchEffectSummaryMap(itemSeqList);
   
     // 생성한 효능 요약을 각 알약 데이터에 반영한다.
     pillData.forEach((pill) => {

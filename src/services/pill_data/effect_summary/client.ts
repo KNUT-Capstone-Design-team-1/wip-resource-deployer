@@ -4,7 +4,7 @@ import axios from "axios";
 import logger from "../../../utils/logger";
 import { RESOURCE_DIRECTORY } from "../../../utils/paths";
 import { createEffectSummary, FALLBACK_EFFECT_SUMMARY } from "./summary";
-import { effectFilePath, readEffectDocument, removeEffectSummaryFailure, writeEffectSummaryFailure } from "./storage";
+import { effectFilePath, readEffectDocument, writeEffectSummaryFailure } from "./storage";
 
 const REQUEST_DELAY_MS = 1000;
 const RETRY_DELAY_MS = 2000;
@@ -172,12 +172,8 @@ export async function fetchEffectSummaryMap(itemSeqList: string[], options: Effe
       ? { summary: FALLBACK_EFFECT_SUMMARY, reason: "rate_limit_deferred", httpStatus: null, attempts: 0, message: "이전 항목의 HTTP 429가 지속되어 조회를 다음 실행으로 연기했습니다." }
       : await fetchEffectSummaryResult(itemSeq, { ...options, fetchDocument: fetchPacedDocument });
 
-    if (result.httpStatus === 429 || result.reason === "rate_limit_deferred") {
-      await writeEffectSummaryFailure({ ITEM_SEQ: itemSeq, reason: result.reason ?? "http_error", httpStatus: result.httpStatus, attempts: result.attempts, message: result.message }, directory);
-    }
-
-    else if (result.reason) {
-      await removeEffectSummaryFailure(itemSeq, directory);
+    if (result.reason) {
+      await writeEffectSummaryFailure({ ITEM_SEQ: itemSeq, reason: result.reason, httpStatus: result.httpStatus, attempts: result.attempts, message: result.message }, directory);
     }
 
     if (result.httpStatus === 429) {

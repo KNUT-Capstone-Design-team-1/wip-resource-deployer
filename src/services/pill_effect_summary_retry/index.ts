@@ -50,10 +50,7 @@ export async function retryFailedPillEffectSummaries(options: EffectRetryOptions
   const failedItemSeqs = new Set<string>();
   for (const entry of entries) {
     if (!entry.isFile() || !/^\d+\.json$/.test(entry.name)) continue;
-    const failure = JSON.parse(await fs.promises.readFile(path.join(failedDirectory, entry.name), "utf8"));
-    if (failure.httpStatus === 429 || failure.reason === "rate_limit_deferred") {
-      failedItemSeqs.add(entry.name.slice(0, -5));
-    }
+    failedItemSeqs.add(entry.name.slice(0, -5));
   }
   const byId = new Map<string, IPillData[]>();
 
@@ -106,14 +103,6 @@ export async function retryFailedPillEffectSummaries(options: EffectRetryOptions
           recovered += 1;
         }
 
-        else if (result.httpStatus !== 429 && result.reason !== "rate_limit_deferred") {
-          for (const pill of byId.get(itemSeq)!) {
-            if (!pill.EFFECT_SUMMARY?.trim() || pill.EFFECT_SUMMARY === "효능·효과 정보를 확인할 수 없습니다.") {
-              pill.EFFECT_SUMMARY = FALLBACK_EFFECT_SUMMARY;
-            }
-          }
-          pendingSuccesses.add(itemSeq);
-        }
 
         await options.onResult?.(itemSeq, result);
 

@@ -4,7 +4,6 @@ import { createNarcoticsResource } from "./services/narcotics";
 import { createPsychotropicsResource } from "./services/psychotropics";
 import { createProhibitedListResource } from "./services/prohibited_list";
 import { createFunctionalFoodNutrientsResource } from "./services/functional_food_nutrients";
-import { removeEffectDocuments } from "./services/pill_data/effect_summary/storage";
 import { createPillDataResourceFile } from "./services/pill_data";
 import { retryFailedPillEffectSummaries } from "./services/pill_effect_summary_retry";
 import { createNearbyPharmaciesResource } from "./services/nearby_pharmacies";
@@ -21,16 +20,7 @@ export function createResourceTasks(config: AppConfig) {
   return [
     {
       name: "pill_data",
-      execute: async () => {
-        await createPillDataResourceFile(config.pillData?.createEffectSummary ?? true);
-
-        const retryEnabled = config.pillData?.createEffectSummary !== false
-          && config.common.targetResource.includes("pill_effect_summary_retry");
-
-        if (!retryEnabled) {
-          await removeEffectDocuments();
-        }
-      },
+      execute: () => createPillDataResourceFile(config.pillData?.createEffectSummary ?? true),
     },
     { name: "pill_effect_summary_retry", execute: () => config.pillData?.createEffectSummary === false ? Promise.resolve() : retryFailedPillEffectSummaries() },
     { name: "nearby_pharmacies", execute: () => createNearbyPharmaciesResource(config.nearbyPharmacies?.apiUrl) },
