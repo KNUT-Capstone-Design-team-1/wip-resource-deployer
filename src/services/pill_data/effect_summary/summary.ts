@@ -558,7 +558,7 @@ function scoreEffectExpression(expression: string) {
   );
 
   // 짧고 독립적인 적응증을 긴 설명·적용 조건보다 우선한다.
-  const isIndicationHeading = expression.length <= 45 &&
+  const isIndicationHeading = expression.length <= 65 &&
     !/[,：:]|경우|환자|다음|임신|수유|발육기|노년기/.test(expression) &&
     /혈증|혈압|염|궤양|암|증|질환|장애|치료|예방|보급/.test(expression);
 
