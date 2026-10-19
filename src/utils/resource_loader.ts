@@ -13,9 +13,11 @@ import {
   readPDFContents,
 } from "./resource_readers";
 import { ORIGIN_DATA_DIRECTORY } from "./paths";
+import { normalizeChemicalValue } from "./resource_text";
+import { normalizeProhibitedListText } from "../services/prohibited_list/normalize";
 
 /**
- * 리소스 이름의 밑줄 표기를 camelCase 속성명으로 변환한다.
+ * 리소스 이름의 snake_case를 camelCase로 변환
  */
 function snakeToCamel(value: string) {
   return value.replace(/_([a-z])/g, (_, character: string) =>
@@ -23,48 +25,76 @@ function snakeToCamel(value: string) {
   );
 }
 
+const RESOURCE_NORMALIZERS: Partial<
+  Record<TResourceDirectoryName, (value: unknown) => string>
+> = {
+  cannabis: normalizeChemicalValue,
+  narcotics: normalizeChemicalValue,
+  psychotropics: normalizeChemicalValue,
+  prohibited_list: normalizeProhibitedListText,
+};
+
 /**
- * 확장자에 맞는 리더로 원본 파일을 읽고 리소스 속성명을 매핑한다.
+ * 확장자별 원본 파일 로드
+ */
+async function readSourceFile(filePath: string): Promise<unknown[]> {
+  const extension = path.extname(filePath).toLowerCase();
+
+  switch (extension) {
+    case ".xlsx":
+    case ".xls":
+      return readExcelContents(filePath);
+    case ".csv":
+      return readCSVContents(filePath);
+    case ".pdf":
+      return readPDFContents(filePath);
+    default:
+      throw new Error("Invalid file extension " + extension);
+  }
+}
+
+/**
+ * 원본 로드 및 리소스별 속성·값 정규화
  */
 async function readResourceFile(
   filePath: string,
   name: TResourceDirectoryName,
 ) {
-  const extension = path.extname(filePath).toLowerCase();
-  let rows: unknown[];
+  const rows = await readSourceFile(filePath);
 
-  switch (extension) {
-    case ".xlsx":
-    case ".xls":
-      rows = await readExcelContents(filePath);
-      break;
-    case ".csv":
-      rows = await readCSVContents(filePath);
-      break;
-    case ".pdf":
-      rows = await readPDFContents(filePath);
-      break;
-    default:
-      throw new Error("Invalid file extension " + extension);
-  }
-
-  return mappingProperty(rows, RESOURCE_PROPERTY_MAP[name]);
+  return mappingProperty(
+    rows,
+    RESOURCE_PROPERTY_MAP[name],
+    RESOURCE_NORMALIZERS[name],
+  );
 }
 
 /**
- * 지정한 원본 디렉터리의 파일을 순차적으로 읽어 모든 행을 합친다.
+ * 일반 파일 여부 확인 및 숨김·임시 파일 제외
+ */
+function isResourceFile(entry: fs.Dirent): boolean {
+  const isFile = entry.isFile();
+  const isHidden = entry.name.startsWith(".");
+  const isTemporary = entry.name.startsWith("~$");
+
+  return isFile && !isHidden && !isTemporary;
+}
+
+/**
+ * 원본 디렉터리 파일 순차 로드 및 행 병합
  */
 async function readResourceDirectory(name: TResourceDirectoryName) {
   const directory = path.join(ORIGIN_DATA_DIRECTORY, name);
-  const exists = fs.existsSync(directory);
+  const isMissingDirectory = !fs.existsSync(directory);
 
-  if (!exists) {
+  if (isMissingDirectory) {
     return [];
   }
 
   const files = fs
     .readdirSync(directory, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && !entry.name.startsWith("."));
+    .filter(isResourceFile);
+
   const rows: TResource[] = [];
 
   for (const file of files) {
@@ -80,16 +110,16 @@ async function readResourceDirectory(name: TResourceDirectoryName) {
 }
 
 /**
- * 대상 디렉터리 수집만 담당하며 읽기와 속성 매핑은 별도 모듈에 위임한다.
+ * 리소스별 원본 수집 및 변환 위임
  */
 export class ResourceLoader {
   /**
-   * 불러올 리소스 목록을 보관한다.
+   * 로드 대상 리소스 목록 보관
    */
   constructor(private readonly targetResources: TResourceDirectoryName[]) {}
 
   /**
-   * 선택한 리소스의 원본을 읽어 종류별 배열로 반환한다.
+   * 선택한 리소스 로드 및 종류별 배열 반환
    */
   public async loadResource() {
     const resource: TLoadedResource = {

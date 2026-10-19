@@ -3,43 +3,59 @@ import * as XLSX from "xlsx";
 import iconvLite from "iconv-lite";
 import { Converter } from "csvtojson/v2/Converter";
 
+import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
+
 /**
- * 각 시트의 실제 셀 범위를 계산하고 모든 시트의 행을 JSON 배열로 합친다.
+ * 실제 셀 기준 시트 범위 재계산
+ */
+function updateWorksheetRange(worksheet: XLSX.WorkSheet) {
+  const range = { s: { c: 0, r: 0 }, e: { c: 0, r: 0 } };
+
+  for (const address of Object.keys(worksheet)) {
+    const isMetadata = address.startsWith("!");
+
+    if (isMetadata) {
+      continue;
+    }
+
+    const cell = XLSX.utils.decode_cell(address);
+
+    range.e.r = Math.max(range.e.r, cell.r);
+    range.e.c = Math.max(range.e.c, cell.c);
+  }
+
+  worksheet["!ref"] = XLSX.utils.encode_range(range);
+}
+
+/**
+ * 시트 범위 보정 및 행 추출
+ */
+function readWorksheet(worksheet: XLSX.WorkSheet) {
+  updateWorksheetRange(worksheet);
+
+  return XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+}
+
+/**
+ * 전체 시트의 행 순차 병합
  */
 export async function readExcelContents(fileName: string) {
   const workbook = XLSX.readFile(fileName);
-  const allData: any[] = [];
+  const allData: unknown[] = [];
 
-  // 모든 시트의 데이터를 합침
-  workbook.SheetNames.forEach((sheetName) => {
-    const worksheet = workbook.Sheets[sheetName];
+  for (const sheetName of workbook.SheetNames) {
+    const rows = readWorksheet(workbook.Sheets[sheetName]);
 
-    // !ref가 실제 데이터보다 작게 잡혀있는 경우를 대비해 범위 재계산
-    const range = {
-      s: { c: 0, r: 0 },
-      e: { c: 0, r: 0 },
-    };
-
-    Object.keys(worksheet)
-      .filter((cell) => !cell.startsWith("!"))
-      .map((cell) => XLSX.utils.decode_cell(cell))
-      .forEach((cell) => {
-        range.e.r = Math.max(range.e.r, cell.r);
-        range.e.c = Math.max(range.e.c, cell.c);
-      });
-    worksheet["!ref"] = XLSX.utils.encode_range(range);
-
-    // 첫 줄을 헤더로 인식하여 JSON 배열로 변환
-    const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
-
-    allData.push(...jsonData);
-  });
+    for (const row of rows) {
+      allData.push(row);
+    }
+  }
 
   return allData;
 }
 
 /**
- * CSV 파일의 인코딩을 처리한 뒤 헤더 기반 객체 배열로 파싱한다.
+ * CSV 인코딩 처리 및 행 파싱
  */
 export async function readCSVContents(fileName: string) {
   const buffer = fs.readFileSync(fileName);
@@ -50,7 +66,7 @@ export async function readCSVContents(fileName: string) {
 }
 
 /**
- * UTF-8 BOM을 제거하고 UTF-8 디코딩 실패 시 EUC-KR로 읽는다.
+ * UTF-8 BOM 제거 및 EUC-KR 폴백 처리
  */
 export function decodeCSVBuffer(buffer: Buffer) {
   const isUtf8Bom =
@@ -71,23 +87,57 @@ export function decodeCSVBuffer(buffer: Buffer) {
 }
 
 /**
- * PDF의 각 페이지에서 텍스트를 추출해 페이지 순서대로 반환한다.
+ * PDF 페이지 텍스트 추출 및 메모리 해제
  */
-export async function readPDFContents(filePath: string) {
-  const data = new Uint8Array(fs.readFileSync(filePath));
+async function readPDFPageText(page: PDFPageProxy): Promise<string> {
+  try {
+    const content = await page.getTextContent();
+    const strings: string[] = [];
 
-  // TS가 require()로 변환하는 것을 방지하기 위해 eval 사용
-  const pdfjsLib = await eval('import("pdfjs-dist/legacy/build/pdf.mjs")');
-  const pdf = await pdfjsLib.getDocument({ data }).promise;
+    for (const item of content.items) {
+      const isTextItem = "str" in item;
+
+      if (isTextItem) {
+        strings.push(item.str);
+      }
+    }
+
+    return strings.join(" ");
+  } finally {
+    page.cleanup();
+  }
+}
+
+/**
+ * PDF 페이지 순서별 텍스트 수집
+ */
+async function readPDFPages(pdf: PDFDocumentProxy): Promise<string[]> {
   const pagesText: string[] = [];
 
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    const strings = content.items.map((item: any) => item.str);
+  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+    const page = await pdf.getPage(pageNumber);
+    const text = await readPDFPageText(page);
 
-    pagesText.push(strings.join(" ") + "\n");
+    pagesText.push(text);
   }
 
   return pagesText;
+}
+
+/**
+ * PDF 로드 및 종료 시 메모리 해제
+ */
+export async function readPDFContents(filePath: string) {
+  const data = new Uint8Array(await fs.promises.readFile(filePath));
+  // CommonJS 컴파일 시 ESM import 유지
+  const pdfjsLib = await eval('import("pdfjs-dist/legacy/build/pdf.mjs")');
+  const task = pdfjsLib.getDocument({ data });
+
+  try {
+    const pdf: PDFDocumentProxy = await task.promise;
+
+    return await readPDFPages(pdf);
+  } finally {
+    await task.destroy();
+  }
 }
