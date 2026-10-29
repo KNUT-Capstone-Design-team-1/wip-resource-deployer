@@ -1,5 +1,5 @@
-import type { EffectScoreRule } from "../types/effect_summary";
-import type { SplitState, SummaryState } from "../types/effect_summary";
+import type { SplitState } from "../types/effect_summary";
+import { extractEffectKeywords } from "./keywords";
 export const FALLBACK_EFFECT_SUMMARY = "효능·효과 정보가 없습니다.";
 const DEFAULT_MAX_LENGTH = 80;
 
@@ -639,103 +639,13 @@ function removeDuplicateExpressions(expressions: string[]) {
 }
 
 /**
- * 각 효능 표현의 중요도를 점수화하여 반환한다.
+ * 키워드를 자르지 않고 길이 제한 안에서 원문 순서대로 쉼표로 연결한다.
  */
-const EFFECT_SCORE_RULES: EffectScoreRule[] = [
-  {
-    pattern: /치료|개선|완화|억제|예방|감소|제거|보조치료|조절|보급/,
-    score: 4,
-  },
-  {
-    pattern: /질환|질병|증상|장애|염|통|고혈압|당뇨|비염|두통|기침|빈혈/,
-    score: 2,
-  },
-  { pattern: /^\(?정제\)?$|^유효균종$/, score: -10 },
-  { pattern: /예:|예\)|임상적|유효성|재평가|추가제출/, score: -5 },
-  { pattern: /투여한다|사용한다|복용한다|처방한다/, score: -2 },
-  { pattern: /환자의|환자에서/, score: 1 },
-];
-
-/**
- * 효능 표현에 점수 규칙과 짧은 표현의 감점을 적용한다.
- */
-function scoreEffectExpression(expression: string) {
-  const score = EFFECT_SCORE_RULES.reduce(
-    (total, rule) => total + (rule.pattern.test(expression) ? rule.score : 0),
-    0,
-  );
-
-  // 짧고 독립적인 적응증을 긴 설명·적용 조건보다 우선한다.
-  const isIndicationHeading =
-    expression.length <= 65 &&
-    !/[,：:]|경우|환자|다음|임신|수유|발육기|노년기/.test(expression) &&
-    /혈증|혈압|염|궤양|암|증|질환|장애|치료|예방|보급/.test(expression);
-
-  return (
-    score + (isIndicationHeading ? 6 : 0) + (expression.length < 4 ? -3 : 0)
-  );
-}
-
-/**
- * 효능 표현 목록을 중요도 점수 기준 내림차순으로 정렬한다.
- */
-function rankEffectExpressions(expressions: string[]) {
-  return expressions
-    .map((expression) => ({
-      expression,
-      score: scoreEffectExpression(expression),
-    }))
-    .sort((left, right) => right.score - left.score)
-    .map(({ expression }) => expression);
-}
-
-/**
- * 단일 적응증이 길어도 수식어와 적용 조건을 보존한다.
- */
-function compressLongExpression(expression: string, _maxLength: number) {
-  // 조건을 임의로 잘라 의미를 바꾸지 않고, 긴 단일 적응증은 완전한 문장으로 유지한다.
-  return expression;
-}
-
-/**
- * 길이 안에 들어오는 후보를 추가하고, 긴 단일 적응증의 의미는 보존한다.
- */
-function appendSummary(
-  state: SummaryState,
-  expression: string,
-  maxLength: number,
-) {
-  if (state.stopped) {
-    return state;
-  }
-
-  const candidate = state.value ? state.value + ", " + expression : expression;
-  const fits = candidate.length <= maxLength;
-
-  if (fits) {
-    return { value: candidate, stopped: false };
-  }
-
-  // 이미 선택한 효능이 있으면 긴 후보를 건너뛰고 뒤의 짧은 적응증도 검토한다.
-  return {
-    value: state.value || compressLongExpression(expression, maxLength),
-    stopped: false,
-  };
-}
-
-/**
- * 점수가 높은 효능 표현부터 길이 제한에 맞춰 요약 문자열을 만든다.
- */
-function compressEffect(expressions: string[], maxLength: number) {
-  const result = rankEffectExpressions(expressions).reduce(
-    (state, expression) => appendSummary(state, expression, maxLength),
-    {
-      value: "",
-      stopped: false,
-    },
-  );
-
-  return result.value || expressions[0] || "";
+function compressEffect(keywords: string[], maxLength: number) {
+  return keywords.reduce((summary, keyword) => {
+    const candidate = summary ? summary + "," + keyword : keyword;
+    return !summary || candidate.length <= maxLength ? candidate : summary;
+  }, "");
 }
 
 /**
@@ -760,7 +670,7 @@ function isGuidanceExpression(expression: string) {
 }
 
 /**
- * EE_DOC_DATA XML 원문을 파싱 및 정제하여 사용자용 한 줄 요약으로 생성한다.
+ * EE_DOC_DATA XML에서 명사형 키워드를 추출해 쉼표로 구분한 문자열을 생성한다.
  */
 export function createEffectSummary(
   eeDocData: string | null | undefined,
@@ -781,7 +691,9 @@ export function createEffectSummary(
     .map(removeTrailingBoilerplate)
     .map(trimDanglingEnding)
     .filter(isUsefulEffectExpression);
-  const uniqueCandidates = removeDuplicateExpressions(candidates);
+  const uniqueCandidates = removeDuplicateExpressions(
+    candidates.flatMap(extractEffectKeywords),
+  );
 
   return compressEffect(uniqueCandidates, maxLength) || FALLBACK_EFFECT_SUMMARY;
 }

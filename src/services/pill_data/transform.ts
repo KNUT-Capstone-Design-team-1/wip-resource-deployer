@@ -1,7 +1,7 @@
 import { IDrugRecognition } from "./types/drug_recognition";
 import { IFinishedMedicinePermissionDetail } from "./types/finished_medicine_permission_detail";
 import { IPillData } from "./types/pill_data";
-import { FALLBACK_EFFECT_SUMMARY } from "./effect_summary/summary";
+import { createEffectSummary } from "./effect_summary/summary";
 import { mergeDuplicateObjectArray } from "../../utils/collections";
 
 /**
@@ -77,7 +77,7 @@ function combinePill(
   return [
     {
       ...rest,
-      EFFECT_SUMMARY: rest.CLASS_NAME?.trim() || FALLBACK_EFFECT_SUMMARY,
+      EFFECT_SUMMARY: createEffectSummary(rest.CLASS_NAME),
     },
   ];
 }

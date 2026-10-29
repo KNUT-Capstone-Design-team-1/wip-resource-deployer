@@ -50,19 +50,3 @@ export interface SplitState {
   depth: number;
   parts: string[];
 }
-
-/**
- * 여러 효능 후보를 최대 길이에 맞추어 하나의 문자열로 압축·결합한다.
- */
-export interface SummaryState {
-  value: string;
-  stopped: boolean;
-}
-
-/**
- * 효능 표현의 중요도를 계산하는 정규식과 점수.
- */
-export interface EffectScoreRule {
-  pattern: RegExp;
-  score: number;
-}
