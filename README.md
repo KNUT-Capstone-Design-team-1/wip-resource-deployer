@@ -11,8 +11,8 @@
 
 #### 데이터베이스 및 오픈 API
 
-- [의약품 낱알식별](https://nedrug.mfds.go.kr/pbp/CCBGA01/getItem?totalPages=8&limit=10&page=2&&openDataInfoSeq=11)
-- [의약품 제품허가 상세정보](https://nedrug.mfds.go.kr/pbp/CCBGA01/getItem?totalPages=8&limit=10&page=2&&openDataInfoSeq=12)
+- [의약품 낱알식별 정보 데이터](https://data.mfds.go.kr/OPCAC01F05?srchSrvcKorNm=%EC%9D%98%EC%95%BD%ED%92%88%20%EB%82%B1%EC%95%8C%EC%8B%9D%EB%B3%84%EC%A0%95%EB%B3%B4%20%EB%8D%B0%EC%9D%B4%ED%84%B0)
+- [의약품 제품허가 상세정보](https://data.mfds.go.kr/OPCAC01F04?page=1&limit=10&totalCnt=2&sort=null&sortOrder=null&allChk=Y&taskDivsCd=&srchSrvcKorNm=%EC%99%84%EC%A0%9C+%EC%9D%98%EC%95%BD%ED%92%88+%ED%97%88%EA%B0%80+%EC%83%81%EC%84%B8+%EB%8D%B0%EC%9D%B4%ED%84%B0&srchRlatSrvcNm=&startYear=&endYear=&opdataSeq=88)
 - [약국 오픈 API Data (생활안전정보)](https://www.safemap.go.kr/opna/data/dataViewRenew.do?objtId=127)
 - [마약정보데이터베이스](https://www.nifds.go.kr/toxinfo/kind/kr/index.do)
 - [도핑 금지 목록](https://www.kada-ad.or.kr/kada?where=drug/drug_info_method)
