@@ -15,8 +15,6 @@ import {
   readPdfContents,
 } from "./resource_readers";
 import { ORIGIN_DATA_DIRECTORY } from "./paths";
-import { mapPillResourceRows } from "../services/pill_data/resource_adapter";
-import { selectPillResourceFiles } from "../services/pill_data/resource_sources";
 import { normalizeChemicalValue } from "./resource_text";
 import { normalizeProhibitedListText } from "../services/prohibited_list/normalize";
 
@@ -75,14 +73,6 @@ async function readResourceFile(
     rows.length,
   );
 
-  const isPillResource =
-    name === "drug_recognition" ||
-    name === "finished_medicine_permission_detail";
-
-  if (isPillResource) {
-    return mapPillResourceRows(rows, name) as unknown as TResource[];
-  }
-
   return mapResourceProperties(
     rows,
     RESOURCE_PROPERTY_MAP[name],
@@ -102,19 +92,10 @@ function isResourceFile(entry: fs.Dirent): boolean {
 }
 
 /**
- * 리소스 디렉터리의 유효 파일 수집·필수 디렉터리 검증
+ * 리소스 디렉터리의 유효 파일 수집
  */
-function readResourceDirectoryEntries(
-  directory: string,
-  isPillResource: boolean,
-): fs.Dirent[] {
+function readResourceDirectoryEntries(directory: string): fs.Dirent[] {
   const isMissingDirectory = !fs.existsSync(directory);
-
-  const shouldRejectMissingDirectory = isPillResource && isMissingDirectory;
-
-  if (shouldRejectMissingDirectory) {
-    throw new Error("[PILL-DATA] 원본 디렉터리가 없습니다: " + directory);
-  }
 
   if (isMissingDirectory) {
     return [];
@@ -129,33 +110,14 @@ function readResourceDirectoryEntries(
  * 원본 디렉터리 파일 순차 로드 및 행 병합
  */
 async function readResourceDirectory(name: TResourceDirectoryName) {
-  const isPillResource =
-    name === "drug_recognition" ||
-    name === "finished_medicine_permission_detail";
   const directory = path.join(ORIGIN_DATA_DIRECTORY, name);
-  const files = readResourceDirectoryEntries(directory, isPillResource);
-
-  const availableFiles = files.map((file) => file.name);
-  const selectedFiles = isPillResource
-    ? selectPillResourceFiles(name, availableFiles)
-    : availableFiles;
-  const hasNoPillSourceFiles = isPillResource && selectedFiles.length === 0;
-
-  if (hasNoPillSourceFiles) {
-    throw new Error("[PILL-DATA] 사용할 원본 파일이 없습니다: " + directory);
-  }
-
-  if (isPillResource) {
-    logger.info(
-      "[PILL-DATA] " + name + " sources: " + selectedFiles.join(", "),
-    );
-  }
+  const files = readResourceDirectoryEntries(directory);
 
   const rows: TResource[] = [];
 
-  for (const fileName of selectedFiles) {
+  for (const file of files) {
     const contents = await readResourceFile(
-      path.join(directory, fileName),
+      path.join(directory, file.name),
       name,
     );
 

@@ -1,6 +1,6 @@
 /**
- * 효능 문구에서 연결 표현과 조사를 제거하고 명사형 키워드를 원문 순서로 추출
- * 질환명 내부의 공백(예: 만성 간염)은 유지
+ * 효능 문구에서 연결 표현과 조사를 제거하고 명사형 키워드를 원문 순서로 추출한다.
+ * 질환명 내부의 공백(예: 만성 간염)은 유지한다.
  */
 export function extractEffectKeywords(expression: string): string[] {
   const text = expression
@@ -25,7 +25,6 @@ export function extractEffectKeywords(expression: string): string[] {
       /([가-힣]+)(과|와)\s+/g,
       (match, noun: string, particle: string) => {
         const hasFinal = (noun.charCodeAt(noun.length - 1) - 0xac00) % 28 !== 0;
-
         return hasFinal === (particle === "과") ? noun + "," : match;
       },
     )
@@ -48,7 +47,7 @@ export function extractEffectKeywords(expression: string): string[] {
 }
 
 /**
- * 치료 지시와 독립적인 설명 문구를 제외 명사구 안의 수식어는 보존
+ * 치료 지시와 독립적인 설명 문구를 제외한다. 명사구 안의 수식어는 보존한다.
  */
 function normalizeKeyword(value: string): string {
   let keyword = value
@@ -77,16 +76,15 @@ function normalizeKeyword(value: string): string {
     .trim();
 
   // 괄호 안의 해설이나 환자 조건을 별도 효능으로 노출하지 않는다.
-  const isRejectedKeyword =
+  if (
     !/[가-힣a-z]/i.test(keyword) ||
     /(?:한다|된다|있다|없는|있는|않는|않은|위하여|위해|경우|환자|이상|미만|이하|초과)$/.test(
       keyword,
     ) ||
     /^(?:효능|효과|질환|질병|증상|보조제|보조치료|치료|예방|개선|완화|억제|감소|조절|보급|등|포함|본태성|신성|급성|만성|정제|경구|주사제|예|intolerant)$|^(?:NYHA|type|class)\b/i.test(
       keyword,
-    );
-
-  if (isRejectedKeyword) {
+    )
+  ) {
     return "";
   }
 

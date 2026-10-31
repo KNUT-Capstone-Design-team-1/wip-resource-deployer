@@ -7,13 +7,13 @@ import { mergeDuplicateObjectArray } from "../../utils/collections";
 /**
  * 의약품 낱알식별정보 데이터 전처리
  * @param drugRecognition 의약품 낱알식별정보 데이터
-
+ * @returns
  */
 function preprocessingDrugRecognition(
   drugRecognition: Array<IDrugRecognition>,
 ) {
   /**
-   * 각인 문자열의 공백과 기호를 정리하고 분할선을 세로 막대로 표기
+   * 각인 문자열의 공백과 기호를 정리하고 분할선을 세로 막대로 표기한다.
    */
   const replacePrint = (print: string) =>
     print
@@ -36,7 +36,7 @@ function preprocessingDrugRecognition(
 }
 
 /**
- * 허가 정보가 있는 의약품만 결합하고 리소스에서 제외할 속성을 제거
+ * 허가 정보가 있는 의약품만 결합하고 리소스에서 제외할 속성을 제거한다.
  */
 function combinePill(
   drug: IDrugRecognition,
@@ -83,7 +83,7 @@ function combinePill(
 }
 
 /**
- * 허가 정보는 한 번 인덱싱하고 첫 번째 일치 행을 사용
+ * 허가 정보는 한 번 인덱싱하고 첫 번째 일치 행을 사용한다.
  */
 export function createPillData(
   drugRecognition: IDrugRecognition[],

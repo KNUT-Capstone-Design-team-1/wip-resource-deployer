@@ -34,8 +34,6 @@ export interface IPillData
   extends
     Omit<IDrugRecognition, OmitPillDataProps>,
     Omit<IFinishedMedicinePermissionDetail, OmitPillDataProps> {
-  /**
-   * 명사형 효능 키워드를 공백 없는 쉼표로 연결한 문자열
-   */
+  /** 명사형 효능 키워드를 공백 없는 쉼표로 연결한 문자열 */
   EFFECT_SUMMARY?: string | null;
 }

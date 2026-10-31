@@ -43,7 +43,7 @@ export interface EffectSummaryFailure {
 }
 
 /**
- * 최상위 괄호 바깥의 문장 종결 부호(;, 。, .)를 기준으로 문장을 분리
+ * 최상위 괄호 바깥의 문장 종결 부호(;, 。, .)를 기준으로 문장을 분리한다.
  */
 export interface SplitState {
   start: number;

@@ -1,11 +1,10 @@
-import fs from "node:fs";
-import path from "node:path";
-
 import { writeAtomicFile } from "../../utils/atomic_file";
 import type {
   PillResourceFile,
   EffectRetryOptions,
 } from "./types/pill_effect_summary_retry";
+import fs from "fs";
+import path from "path";
 import logger from "../../utils/logger";
 import { RESOURCE_DIRECTORY } from "../../utils/paths";
 import { IPillData } from "../pill_data/types/pill_data";
@@ -21,15 +20,13 @@ async function readPillResource(directory: string): Promise<PillResourceFile> {
     await fs.promises.readFile(path.join(directory, "pill_data.json"), "utf8"),
   );
 
-  const isInvalidResource = !!(
+  if (
     !parsed ||
     !Array.isArray(parsed.resources) ||
     parsed.resources.some(
       (pill: IPillData) => !pill || !/^\d+$/.test(pill.ITEM_SEQ),
     )
-  );
-
-  if (isInvalidResource) {
+  ) {
     throw new Error("Invalid pill_data.json resource structure");
   }
 
@@ -37,70 +34,62 @@ async function readPillResource(directory: string): Promise<PillResourceFile> {
 }
 
 /**
- * 실패 기록이 없으면 빈 목록을 반환
+ * 실패 기록이 없으면 빈 목록을 반환한다.
  */
 async function readFailedItemSeqs(directory: string): Promise<Set<string>> {
   try {
     const entries = await fs.promises.readdir(directory, {
       withFileTypes: true,
     });
-
     return new Set(
       entries
         .filter((entry) => entry.isFile() && /^\d+\.json$/.test(entry.name))
         .map((entry) => entry.name.slice(0, -5)),
     );
-  } catch (error) {
-    const hasUnexpectedFileError = error.code !== "ENOENT";
-
-    if (hasUnexpectedFileError) {
-      throw error;
+  } catch (e) {
+    if (e.code !== "ENOENT") {
+      throw e;
     }
-
     return new Set();
   }
 }
 
 /**
- * 동일한 품목의 모든 리소스에 요약을 반영할 수 있도록 그룹화
+ * 동일한 품목의 모든 리소스에 요약을 반영할 수 있도록 묶는다.
  */
 function indexPills(pills: IPillData[]) {
   const byId = new Map<string, IPillData[]>();
-
   for (const pill of pills) {
     const group = byId.get(pill.ITEM_SEQ) ?? [];
-
     group.push(pill);
     byId.set(pill.ITEM_SEQ, group);
   }
-
   return byId;
 }
 
 /**
- * 실패 항목만 재조회하고 체크포인트 저장을 마친 성공 항목만 실패 파일에서 제거
+ * 실패 항목만 재조회하고 체크포인트 저장을 마친 성공 항목만 실패 파일에서 제거한다.
  */
 export async function retryFailedPillEffectSummaries(
   options: EffectRetryOptions = {},
 ) {
   logger.info("[EE-SUMMARY-RETRY] Start retry failed effect summaries");
 
-  // 리소스 경로와 체크포인트 간격을 준비
+  // 리소스 경로와 체크포인트 간격을 준비한다.
   const directory = options.directory ?? RESOURCE_DIRECTORY;
   const checkpointSize = options.checkpointSize ?? 50;
 
-  // 처리 건수와 저장 간격이 유효한 값인지 확인
-  const hasInvalidRetryOptions =
+  // 처리 건수와 저장 간격이 유효한 값인지 확인한다.
+  if (
     !Number.isInteger(checkpointSize) ||
     checkpointSize <= 0 ||
     (options.limit !== undefined &&
-      (!Number.isInteger(options.limit) || options.limit <= 0));
-
-  if (hasInvalidRetryOptions) {
+      (!Number.isInteger(options.limit) || options.limit <= 0))
+  ) {
     throw new Error("limit and checkpointSize must be positive integers");
   }
 
-  // 기존 알약 리소스를 읽고 품목별로 조회할 수 있도록 그룹화
+  // 기존 알약 리소스를 읽고 품목별로 조회할 수 있도록 묶는다.
   const resource = await readPillResource(directory);
 
   // 기존 실패 파일 목록을 한 번 읽어 품목마다 존재 여부를 다시 확인하지 않는다.
@@ -108,7 +97,7 @@ export async function retryFailedPillEffectSummaries(
   const failedItemSeqs = await readFailedItemSeqs(failedDirectory);
   const byId = indexPills(resource.resources);
 
-  // 실패 목록에서 현재 리소스에 있는 항목만 정렬하고 처리 건수 제한을 적용
+  // 실패 목록에서 현재 리소스에 있는 항목만 정렬하고 처리 건수 제한을 적용한다.
   const targets = [...failedItemSeqs]
     .filter((itemSeq) => byId.has(itemSeq))
     .sort()
@@ -118,22 +107,20 @@ export async function retryFailedPillEffectSummaries(
   let recovered = 0;
 
   /**
-   * 리소스 교체가 성공한 후에만 해당 실패 파일을 삭제
+   * 리소스 교체가 성공한 후에만 해당 실패 파일을 삭제한다.
    */
   async function checkpoint() {
-    const hasNoPendingSuccesses = pendingSuccesses.size === 0;
-
-    if (hasNoPendingSuccesses) {
+    if (pendingSuccesses.size === 0) {
       return;
     }
 
-    // 복구한 요약을 리소스 파일에 먼저 저장
+    // 복구한 요약을 리소스 파일에 먼저 저장한다.
     await writeAtomicFile(
       path.join(directory, "pill_data.json"),
       JSON.stringify(resource, null, 2),
     );
 
-    // 저장이 완료된 항목의 실패 파일만 제거
+    // 저장이 완료된 항목의 실패 파일만 제거한다.
     for (const itemSeq of pendingSuccesses) {
       await removeEffectSummaryFailure(itemSeq, directory);
     }
@@ -142,15 +129,13 @@ export async function retryFailedPillEffectSummaries(
   }
 
   try {
-    // 실패 항목을 재조회하고 성공 결과를 반영하면서 주기적으로 저장
+    // 실패 항목을 재조회하고 성공 결과를 반영하면서 주기적으로 저장한다.
     await fetchEffectSummaryMap(targets, {
       ...options,
       onResult: async (itemSeq, result) => {
         processed += 1;
 
-        const hasFailure = !!result.reason;
-
-        if (hasFailure) {
+        if (result.reason) {
           logger.warn(
             "[EE-SUMMARY-RETRY] Failed ITEM_SEQ=%s reason=%s status=%s attempts=%s: %s",
             itemSeq,
@@ -161,11 +146,10 @@ export async function retryFailedPillEffectSummaries(
           );
         }
 
-        const hasRecoveredSummary =
-          !result.reason && result.summary !== FALLBACK_EFFECT_SUMMARY;
-
-        if (hasRecoveredSummary) {
-          applyRecoveredSummary(byId.get(itemSeq)!, result.summary);
+        if (!result.reason && result.summary !== FALLBACK_EFFECT_SUMMARY) {
+          for (const pill of byId.get(itemSeq)!) {
+            pill.EFFECT_SUMMARY = result.summary;
+          }
 
           pendingSuccesses.add(itemSeq);
           recovered += 1;
@@ -173,19 +157,17 @@ export async function retryFailedPillEffectSummaries(
 
         await options.onResult?.(itemSeq, result);
 
-        const shouldSaveCheckpoint = processed % checkpointSize === 0;
-
-        if (shouldSaveCheckpoint) {
+        if (processed % checkpointSize === 0) {
           await checkpoint();
         }
       },
     });
   } finally {
-    // 예상치 못한 중단에서도 지금까지 복구한 요약을 저장
+    // 예상치 못한 중단에서도 지금까지 복구한 요약을 저장한다.
     await checkpoint();
   }
 
-  // 남아 있는 실패 항목 수를 집계해 재처리 결과를 반환
+  // 남아 있는 실패 항목 수를 집계해 재처리 결과를 반환한다.
   const remainingItemSeqs = await readFailedItemSeqs(failedDirectory);
   const remaining = [...remainingItemSeqs].filter((itemSeq) =>
     failedItemSeqs.has(itemSeq),
@@ -199,13 +181,4 @@ export async function retryFailedPillEffectSummaries(
   );
 
   return { processed, recovered, remaining };
-}
-
-/**
- * 복구한 요약의 동일 품목 전체 반영
- */
-function applyRecoveredSummary(pills: IPillData[], summary: string) {
-  for (const pill of pills) {
-    pill.EFFECT_SUMMARY = summary;
-  }
 }
