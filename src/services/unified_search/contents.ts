@@ -1,7 +1,7 @@
 /**
  * XML / HTML 섞인 문자열을 순수 텍스트로 정제
  * @param input 대상 텍스트
- * @returns
+
  */
 export function normalizeText(input: string) {
   const isEmptyInput = !input;
@@ -10,11 +10,12 @@ export function normalizeText(input: string) {
     return "";
   }
 
-  // XML 문서의 ARTICLE/SECTION title에 담긴 내용도 검색 텍스트에 포함한다.
+  // XML 문서의 ARTICLE/SECTION title에 담긴 내용도 검색 텍스트에 포함
   let text = input.replace(
     /<(?:article|section)\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi,
     (tag) => {
       const title = /\btitle\s*=\s*(?:"([^"]*)"|'([^']*)')/i.exec(tag);
+
       return title ? ` ${title[1] ?? title[2]} ` : " ";
     },
   );

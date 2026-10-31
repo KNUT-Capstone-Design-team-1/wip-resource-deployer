@@ -1,9 +1,10 @@
 import axios from "axios";
+
 import logger from "../../utils/logger";
 import { normalizeText } from "./contents";
 
 /**
- * 효능·용법·주의사항 문서를 조회하고 정규화하며 실패하면 빈 문서 값을 반환한다.
+ * 효능·용법·주의사항 문서를 조회하고 정규화하며 실패하면 빈 문서 값을 반환
  */
 export async function getDocData(itemSeq: string) {
   const baseUrl = `https://nedrug.mfds.go.kr/pbp/cmn/xml/drb/${itemSeq}`;
@@ -21,11 +22,11 @@ export async function getDocData(itemSeq: string) {
     logger.info("get data (%s)", itemSeq);
 
     return nedrugData;
-  } catch (e) {
+  } catch (error) {
     logger.error(
       "Failed to get doc data. item_seq: %s. %s",
       itemSeq,
-      e.stack || e,
+      error.stack || error,
     );
 
     return { EE_DOC_DATA: "", UD_DOC_DATA: "", NB_DOC_DATA: "" };

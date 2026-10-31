@@ -1,16 +1,14 @@
 /**
- * ID가 같은 행을 입력 순서대로 병합한다.
+ * ID가 같은 행을 입력 순서대로 병합
  */
 function mergeProperties(
   existing: Record<string, any>,
   incoming: Record<string, any>,
   idColumn: string,
 ) {
-  for (const key of Object.keys(incoming)) {
-    if (key === idColumn) {
-      continue;
-    }
+  const propertyKeys = Object.keys(incoming).filter((key) => key !== idColumn);
 
+  for (const key of propertyKeys) {
     const previous = existing[key] ? existing[key].split(",") : [];
     const next = incoming[key] ? incoming[key].split(",") : [];
 
@@ -19,7 +17,7 @@ function mergeProperties(
 }
 
 /**
- * 같은 ID의 객체를 합치고 각 속성의 쉼표 구분 값을 중복 없이 병합한다.
+ * 같은 ID의 객체를 합치고 각 속성의 쉼표 구분 값을 중복 없이 병합
  */
 export function mergeDuplicateObjectArray<T extends Record<string, any>>(
   idColumn: keyof T & string,

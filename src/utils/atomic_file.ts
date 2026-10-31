@@ -1,8 +1,8 @@
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 
 /**
- * 임시 파일을 완전히 쓴 뒤 교체하여 중단 시에도 기존 파일을 보존한다.
+ * 임시 파일을 완전히 쓴 뒤 교체하여 중단 시에도 기존 파일을 보존
  */
 export async function writeAtomicFile(filePath: string, contents: string) {
   await fs.promises.mkdir(path.dirname(filePath), { recursive: true });

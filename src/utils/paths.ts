@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 
 export const PROJECT_ROOT = path.resolve(__dirname, "../..");
 export const RESOURCE_DIRECTORY = path.join(PROJECT_ROOT, "resources");

@@ -122,7 +122,7 @@ function shouldIncludeRow(row: ResourceRow, excludeEmpty: boolean): boolean {
 /**
  * 리소스 속성 매핑 및 빈 행 필터링
  */
-export function mappingProperty(
+export function mapResourceProperties(
   rows: unknown[],
   propertyMap: Record<string, string>,
   normalizeValue?: (value: unknown) => string,
@@ -137,7 +137,9 @@ export function mappingProperty(
     const row = mapRow(value, targets, resolveHeader, normalize);
     const includeRow = shouldIncludeRow(row, excludeEmpty);
 
-    if (includeRow) {
+    const shouldIncludeCurrentRow = includeRow;
+
+    if (shouldIncludeCurrentRow) {
       results.push(row);
     }
   }

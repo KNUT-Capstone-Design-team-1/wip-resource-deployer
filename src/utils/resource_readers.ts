@@ -1,8 +1,8 @@
-import fs from "fs";
+import fs from "node:fs";
+
 import * as XLSX from "xlsx";
 import iconvLite from "iconv-lite";
 import { Converter } from "csvtojson/v2/Converter";
-
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
 
 /**
@@ -57,9 +57,9 @@ export async function readExcelContents(fileName: string) {
 /**
  * CSV 인코딩 처리 및 행 파싱
  */
-export async function readCSVContents(fileName: string) {
+export async function readCsvContents(fileName: string) {
   const buffer = fs.readFileSync(fileName);
-  const csvString = decodeCSVBuffer(buffer);
+  const csvString = decodeCsvBuffer(buffer);
   const fileContents = (await new Converter().fromString(csvString)) as any[];
 
   return fileContents;
@@ -68,7 +68,7 @@ export async function readCSVContents(fileName: string) {
 /**
  * UTF-8 BOM 제거 및 EUC-KR 폴백 처리
  */
-export function decodeCSVBuffer(buffer: Buffer) {
+export function decodeCsvBuffer(buffer: Buffer) {
   const isUtf8Bom =
     buffer[0] === 0xef && buffer[1] === 0xbb && buffer[2] === 0xbf;
 
@@ -89,7 +89,7 @@ export function decodeCSVBuffer(buffer: Buffer) {
 /**
  * PDF 페이지 텍스트 추출 및 메모리 해제
  */
-async function readPDFPageText(page: PDFPageProxy): Promise<string> {
+async function readPdfPageText(page: PDFPageProxy): Promise<string> {
   try {
     const content = await page.getTextContent();
     const strings: string[] = [];
@@ -111,12 +111,12 @@ async function readPDFPageText(page: PDFPageProxy): Promise<string> {
 /**
  * PDF 페이지 순서별 텍스트 수집
  */
-async function readPDFPages(pdf: PDFDocumentProxy): Promise<string[]> {
+async function readPdfPages(pdf: PDFDocumentProxy): Promise<string[]> {
   const pagesText: string[] = [];
 
   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
     const page = await pdf.getPage(pageNumber);
-    const text = await readPDFPageText(page);
+    const text = await readPdfPageText(page);
 
     pagesText.push(text);
   }
@@ -127,7 +127,7 @@ async function readPDFPages(pdf: PDFDocumentProxy): Promise<string[]> {
 /**
  * PDF 로드 및 종료 시 메모리 해제
  */
-export async function readPDFContents(filePath: string) {
+export async function readPdfContents(filePath: string) {
   const data = new Uint8Array(await fs.promises.readFile(filePath));
   // CommonJS 컴파일 시 ESM import 유지
   const pdfjsLib = await eval('import("pdfjs-dist/legacy/build/pdf.mjs")');
@@ -136,7 +136,7 @@ export async function readPDFContents(filePath: string) {
   try {
     const pdf: PDFDocumentProxy = await task.promise;
 
-    return await readPDFPages(pdf);
+    return await readPdfPages(pdf);
   } finally {
     await task.destroy();
   }

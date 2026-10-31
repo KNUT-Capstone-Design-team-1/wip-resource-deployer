@@ -52,8 +52,8 @@ NEARBY_PHARMACIES_API_KEY=your_service_key_here
 }
 ```
 
-- `true` (기본값): 효능 XML을 조회해 요약을 생성한다.
-- `false`: XML 조회와 `pill_effect_summary_retry`를 실행하지 않고 원본 효능·효과를 사용한다. 원본도 없으면 “효능·효과 정보가 없습니다.”를 넣는다.
+- `true` (기본값): 보존할 기존 요약이 없는 품목의 효능 XML을 조회해 요약을 생성한다.
+- `false`: XML 조회와 `pill_effect_summary_retry`를 실행하지 않는다. 원본 값이 같은 품목의 기존 효능 요약을 보존하고, 보존할 요약이 없으면 변환 로직에서 생성한 기본 요약을 사용한다.
 - 설정을 생략하면 기존 동작대로 요약을 생성한다.
 - `pill_data` 생성이 성공하면, `pill_effect_summary_retry`가 실행 대상에 없거나 `createEffectSummary`가 `false`인 경우 `resources/pill_effect_documents` 캐시 폴더를 삭제한다.
 

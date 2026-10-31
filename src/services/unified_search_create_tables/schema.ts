@@ -18,7 +18,7 @@ export function createUnifiedSearchTable() {
 /**
  * FTS5 가상 테이블 생성
  */
-export function createUnifiedSearchFTSTable() {
+export function createUnifiedSearchFtsTable() {
   const createFTS5Query = `
     CREATE VIRTUAL TABLE IF NOT EXISTS unified_search_fts
     USING fts5 (
@@ -34,7 +34,7 @@ export function createUnifiedSearchFTSTable() {
 /**
  * INSERT Trigger 생성
  */
-export function createUnifiedSearchFTSInsertTrigger() {
+export function createUnifiedSearchFtsInsertTrigger() {
   const createTriggerQuery = `
     CREATE TRIGGER IF NOT EXISTS unified_search_ai
     AFTER INSERT ON unified_search
@@ -49,7 +49,7 @@ export function createUnifiedSearchFTSInsertTrigger() {
 /**
  * UPDATE Trigger 생성 (OLD rowid delete & NEW rowid insert)
  */
-export function createUnifiedSearchFTSUpdateTrigger() {
+export function createUnifiedSearchFtsUpdateTrigger() {
   const createTriggerQuery = `
     CREATE TRIGGER IF NOT EXISTS unified_search_au
     AFTER UPDATE ON unified_search
@@ -66,7 +66,7 @@ export function createUnifiedSearchFTSUpdateTrigger() {
 /**
  * DELETE Trigger 생성 (OLD rowid delete)
  */
-export function createUnifiedSearchFTSDeleteTrigger() {
+export function createUnifiedSearchFtsDeleteTrigger() {
   const createTriggerQuery = `
     CREATE TRIGGER IF NOT EXISTS unified_search_ad
     AFTER DELETE ON unified_search

@@ -1,11 +1,12 @@
+import fs from "node:fs";
+import path from "node:path";
+
 import type { AppConfig } from "./types/resource_tasks";
-import fs from "fs";
-import path from "path";
 import defaultConfig from "../config.example.json";
 import { PROJECT_ROOT } from "./utils/paths";
 
 /**
- * 기존 설정을 보존하고, 최초 실행에만 기본 설정을 생성한다.
+ * 기존 설정을 보존하고, 최초 실행에만 기본 설정을 생성
  */
 export function loadConfig(filePath = path.join(PROJECT_ROOT, "config.json")) {
   const hasConfig = fs.existsSync(filePath);

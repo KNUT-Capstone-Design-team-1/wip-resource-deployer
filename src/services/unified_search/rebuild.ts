@@ -2,10 +2,10 @@ import type { IStatsResult } from "./types/unified_search";
 import logger from "../../utils/logger";
 import { runQuery, runQueryWithOutput } from "./database/wrangler";
 import {
-  createUnifiedSearchFTSTable,
-  createUnifiedSearchFTSInsertTrigger,
-  createUnifiedSearchFTSUpdateTrigger,
-  createUnifiedSearchFTSDeleteTrigger,
+  createUnifiedSearchFtsTable,
+  createUnifiedSearchFtsInsertTrigger,
+  createUnifiedSearchFtsUpdateTrigger,
+  createUnifiedSearchFtsDeleteTrigger,
 } from "../unified_search_create_tables/schema";
 import { TARGET_DB } from "./repository";
 
@@ -17,7 +17,7 @@ const CHUNK_SIZE = 1000;
 const EMPTY_STATS: IStatsResult = { minRowId: 1, maxRowId: 0, totalCount: 0 };
 
 /**
- * D1 응답의 첫 결과 행에서 rowid 범위와 전체 건수를 읽는다.
+ * D1 응답의 첫 결과 행에서 rowid 범위와 전체 건수를 읽기
  */
 function parseStatsRow(parsed: any) {
   const hasResults = Array.isArray(parsed) && Boolean(parsed[0]?.results?.[0]);
@@ -36,7 +36,7 @@ function parseStatsRow(parsed: any) {
 }
 
 /**
- * Wrangler 출력에서 JSON 통계를 추출하고 파싱 실패 시 빈 통계를 반환한다.
+ * Wrangler 출력에서 JSON 통계를 추출하고 파싱 실패 시 빈 통계를 반환
  */
 function parseStatsOutput(output: string) {
   const jsonMatch = output.match(/\[\s*\{[\s\S]*\}\s*\]/);
@@ -48,7 +48,7 @@ function parseStatsOutput(output: string) {
 
   try {
     return parseStatsRow(JSON.parse(jsonMatch[0]));
-  } catch (e) {
+  } catch (error) {
     logger.warn("[UNIFIED-SEARCH-FTS-REBUILD] Failed to parse JSON stats");
 
     return EMPTY_STATS;
@@ -58,7 +58,7 @@ function parseStatsOutput(output: string) {
 /**
  * 기존 unified_search 데이터를 보존한 채 FTS5 인덱스를 청크 단위로 안전하게 재구축(Rebuild)
  */
-export async function rebuildFTS5() {
+export async function rebuildFts5() {
   logger.info("[UNIFIED-SEARCH-FTS-REBUILD] Start chunked FTS5 rebuild");
 
   // 1. 기존 FTS 테이블 및 동기화 트리거 삭제
@@ -77,7 +77,7 @@ export async function rebuildFTS5() {
 
   // 2. 신규 FTS5 가상 테이블 생성 (트리거는 데이터 적재 후 생성)
   logger.info("[UNIFIED-SEARCH-FTS-REBUILD] Creating fresh FTS5 virtual table");
-  createUnifiedSearchFTSTable();
+  createUnifiedSearchFtsTable();
 
   // 3. unified_search 테이블의 min/max rowid 및 총 row 수 확인 (stdout 캡처)
   const statsOutput = runQueryWithOutput(
@@ -91,24 +91,24 @@ export async function rebuildFTS5() {
   );
 
   // 원본 rowid 범위의 데이터를 청크 단위로 인덱스에 적재
-  populateFTS(minRowId, maxRowId);
+  populateFts(minRowId, maxRowId);
 
   // 4. 트리거 등록 (이후 INSERT/UPDATE/DELETE 실시간 동기화)
   logger.info(
     "[UNIFIED-SEARCH-FTS-REBUILD] Creating sync triggers (INSERT, UPDATE, DELETE)",
   );
-  createUnifiedSearchFTSInsertTrigger();
-  createUnifiedSearchFTSUpdateTrigger();
-  createUnifiedSearchFTSDeleteTrigger();
+  createUnifiedSearchFtsInsertTrigger();
+  createUnifiedSearchFtsUpdateTrigger();
+  createUnifiedSearchFtsDeleteTrigger();
   logger.info(
     "[UNIFIED-SEARCH-FTS-REBUILD] Complete chunked FTS5 rebuild successfully",
   );
 }
 
 /**
- * 지정한 rowid 범위를 청크 단위로 나누어 FTS5 인덱스에 적재한다.
+ * 지정한 rowid 범위를 청크 단위로 나누어 FTS5 인덱스에 적재
  */
-function populateFTS(minRowId: number, maxRowId: number) {
+function populateFts(minRowId: number, maxRowId: number) {
   for (let startId = minRowId; startId <= maxRowId; startId += CHUNK_SIZE) {
     const endId = startId + CHUNK_SIZE - 1;
 

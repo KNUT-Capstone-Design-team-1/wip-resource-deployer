@@ -5,7 +5,7 @@ import { fetchImageBase64, isValidBase64 } from "./client";
 import logger from "../../utils/logger";
 
 /**
- * 코드가 존재하고 아직 등록되지 않은 마크만 수집 목록에 추가한다.
+ * 코드가 존재하고 아직 등록되지 않은 마크만 수집 목록에 추가
  */
 function registerMark(entries: Map<string, MarkEntry>, entry: MarkEntry) {
   const shouldRegister = Boolean(entry.code) && !entries.has(entry.code);
@@ -18,7 +18,7 @@ function registerMark(entries: Map<string, MarkEntry>, entry: MarkEntry) {
 }
 
 /**
- * 의약품 앞면과 뒷면의 마크를 코드 기준으로 중복 없이 수집한다.
+ * 의약품 앞면과 뒷면의 마크를 코드 기준으로 중복 없이 수집
  */
 function collectMarks(drugs: IDrugRecognition[]) {
   const entries = new Map<string, MarkEntry>();
@@ -40,7 +40,7 @@ function collectMarks(drugs: IDrugRecognition[]) {
 }
 
 /**
- * 원격 이미지를 다운로드하며 실패하거나 원격 주소가 아니면 원래 값을 반환한다.
+ * 원격 이미지를 다운로드하며 실패하거나 원격 주소가 아니면 원래 값을 반환
  */
 async function resolveImage(entry: MarkEntry) {
   const isRemoteImage = entry.url?.startsWith("http");
@@ -55,12 +55,12 @@ async function resolveImage(entry: MarkEntry) {
     await new Promise((resolve) => setTimeout(resolve, 150));
 
     return image;
-  } catch (e) {
+  } catch (error) {
     logger.error(
       "[MARK-IMAGE] Failed image %s (%s): %s",
       entry.code,
       entry.url,
-      e.message,
+      error.message,
     );
 
     return entry.url;
@@ -68,7 +68,7 @@ async function resolveImage(entry: MarkEntry) {
 }
 
 /**
- * 이미지의 Base64 형식을 검증하고 유효한 마크만 리소스로 변환한다.
+ * 이미지의 Base64 형식을 검증하고 유효한 마크만 리소스로 변환
  */
 async function createMark(entry: MarkEntry) {
   const base64 = await resolveImage(entry);
@@ -94,7 +94,7 @@ async function createMark(entry: MarkEntry) {
 }
 
 /**
- * 마크 처리 50건마다 또는 마지막 항목 처리 후 진행 상황을 기록한다.
+ * 마크 처리 50건마다 또는 마지막 항목 처리 후 진행 상황을 기록
  */
 function logProgress(completed: number, total: number) {
   const shouldLog = completed % 50 === 0 || completed === total;
@@ -105,7 +105,7 @@ function logProgress(completed: number, total: number) {
 }
 
 /**
- * 중복을 제거한 마크를 순차적으로 처리해 유효한 이미지 리소스 배열을 만든다.
+ * 중복을 제거한 마크를 순차적으로 처리해 유효한 이미지 리소스 배열을 생성
  */
 export async function createMarkImageData(drugs: IDrugRecognition[]) {
   const entries = collectMarks(drugs);

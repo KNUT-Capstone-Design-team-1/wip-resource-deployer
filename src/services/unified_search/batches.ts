@@ -10,7 +10,7 @@ import { writeFailedData } from "./failed_records";
 const BATCH_SIZE = 5;
 
 /**
- * 의약품 기본 정보와 문서 내용을 모아 통합 검색 레코드를 만든다.
+ * 의약품 기본 정보와 문서 내용을 모아 통합 검색 레코드를 생성
  */
 async function createSearchRecord(pill: IPillData) {
   const documents = await getDocData(pill.ITEM_SEQ);
@@ -33,8 +33,11 @@ async function createSearchRecord(pill: IPillData) {
 async function saveBatch(records: IUnifiedSearchData[]) {
   try {
     await upsert(records);
-  } catch (e) {
-    logger.error("[UNIFIED-SEARCH] Failed to upsert batch. %s", e.stack || e);
+  } catch (error) {
+    logger.error(
+      "[UNIFIED-SEARCH] Failed to upsert batch. %s",
+      error.stack || error,
+    );
 
     for (const record of records) {
       await writeFailedData(record);
@@ -43,7 +46,7 @@ async function saveBatch(records: IUnifiedSearchData[]) {
 }
 
 /**
- * 배치의 의약품을 검색 레코드로 변환한 뒤 일괄 저장한다.
+ * 배치의 의약품을 검색 레코드로 변환한 뒤 일괄 저장
  */
 async function processBatch(pills: IPillData[]) {
   const records: IUnifiedSearchData[] = [];
@@ -56,7 +59,7 @@ async function processBatch(pills: IPillData[]) {
 }
 
 /**
- * 의약품 목록을 정해진 배치 크기로 나누어 순차적으로 검색 DB에 반영한다.
+ * 의약품 목록을 정해진 배치 크기로 나누어 순차적으로 검색 DB에 반영
  */
 export async function upsertAll(pills: IPillData[]) {
   for (let start = 0; start < pills.length; start += BATCH_SIZE) {

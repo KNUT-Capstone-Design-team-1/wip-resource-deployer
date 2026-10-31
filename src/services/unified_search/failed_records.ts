@@ -1,10 +1,11 @@
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
+
 import { RESOURCE_DIRECTORY } from "../../utils/paths";
 import { IUnifiedSearchData } from "./types/unified_search";
 
 /**
- * 배치 실패 복구에 필요한 레코드는 저장 오류를 호출자에게 전달한다.
+ * 배치 실패 복구에 필요한 레코드는 저장 오류를 호출자에게 전달
  */
 export async function writeFailedData(record: IUnifiedSearchData) {
   const directory = path.join(

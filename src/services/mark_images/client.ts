@@ -1,9 +1,10 @@
 import axios from "axios";
 import { encode } from "base64-arraybuffer";
+
 import logger from "../../utils/logger";
 
 /**
- * 지정한 밀리초만큼 대기하여 요청 간격을 조절한다.
+ * 지정한 밀리초만큼 대기하여 요청 간격을 조절
  */
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -22,7 +23,7 @@ function getLatestUserAgent() {
 /**
  * Base64 문자열 유효성 검증
  *
- * 디코딩을 수행하지 않고 Base64 형식 자체만 검사한다.
+ * 디코딩을 수행하지 않고 Base64 형식 자체만 검사
  * Buffer / Uint8Array 등의 애플리케이션 레벨 바이너리 변환을 사용하지 않는다.
  */
 export function isValidBase64(base64Payload: string) {
@@ -46,7 +47,7 @@ export function isValidBase64(base64Payload: string) {
 /**
  * 원격 이미지 URL을 요청하여 Base64 Data URL 문자열로 변환
  *
- * Base64 변환은 base64-arraybuffer 라이브러리를 사용한다.
+ * Base64 변환은 base64-arraybuffer 라이브러리를 사용
  */
 async function downloadImage(url: string) {
   const response = await axios.get<ArrayBuffer>(url, {
@@ -73,7 +74,7 @@ async function downloadImage(url: string) {
 }
 
 /**
- * 이미지 다운로드 실패 시 응답 상태와 시도 횟수에 따라 대기한 뒤 재시도한다.
+ * 이미지 다운로드 실패 시 응답 상태와 시도 횟수에 따라 대기한 뒤 재시도
  */
 async function downloadWithRetry(
   url: string,
@@ -82,8 +83,8 @@ async function downloadWithRetry(
 ): Promise<string> {
   try {
     return await downloadImage(url);
-  } catch (e) {
-    const status = e.response?.status ?? null;
+  } catch (error) {
+    const status = error.response?.status ?? null;
     const isLastAttempt = attempt === retries;
 
     if (isLastAttempt) {
@@ -91,7 +92,7 @@ async function downloadWithRetry(
         "Failed after " +
           retries +
           " attempts (" +
-          (status || e.message) +
+          (status || error.message) +
           "): " +
           url,
       );
@@ -103,7 +104,7 @@ async function downloadWithRetry(
       "[MARK-IMAGE] Retrying in %sms for %s: %s",
       delay,
       url,
-      status || e.message,
+      status || error.message,
     );
     await sleep(delay);
   }

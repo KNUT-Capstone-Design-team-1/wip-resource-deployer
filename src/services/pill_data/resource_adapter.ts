@@ -1,41 +1,12 @@
 import { DRUG_RECOGNITION_PROPERTY_MAP } from "./drug_recognition_property_map";
 import { FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP } from "./finished_medicine_permission_detail_property_map";
-import { mappingProperty } from "../../utils/resource_mapper";
+import { mapResourceProperties } from "../../utils/resource_mapper";
 
-type PillResourceName =
+export type PillResourceName =
   "drug_recognition" | "finished_medicine_permission_detail";
 
-const ALIASES: Record<PillResourceName, Record<string, string>> = {
-  drug_recognition: {
-    CHARTN: "CHART",
-    LENG_LONG: "LENGTH_LONG",
-    LENG_SHORT: "LENGTH_SHORT",
-    THICK: "LENGTH_THICK",
-    MARK_CODE_FRONT_ANAL: "DRUG_SHAPE_FRONT",
-    MARK_CODE_BACK_ANAL: "DRUG_SHAPE_BACK",
-    MARK_CODE_FRONT_IMG: "MARK_IMAGE_FRONT",
-    MARK_CODE_BACK_IMG: "MARK_IMAGE_BACK",
-    EDI_CODE: "COVERAGE_ENG_NAME",
-  },
-  finished_medicine_permission_detail: {
-    CNSGN_MANUF: "OEM_ENTP_NAME",
-    EE_DOC_ID: "EE_DOC_DATA",
-    UD_DOC_ID: "UD_DOC_DATA",
-    NB_DOC_ID: "NB_DOC_DATA",
-    INSERT_FILE: "ATT_DOC_DATA",
-    REEXAM_TARGET: "REEXAM_TARGET_YN",
-    REEXAM_DATE: "REEXAM_CONT",
-    EDI_CODE: "INSURANCE_CODE",
-    PERMIT_KIND: "APPROVAL_TYPE",
-    ENTP_NO: "ENTP_PERMIT_NO",
-    NARCOTIC_KIND: "DRUG_CLASS",
-    NEWDRUG_CLASS_NAME: "NEW_DRUG_YN",
-    INDUTY_TYPE: "INDUTY_CODE",
-  },
-};
-
 /**
- * 원본의 빈 값을 빈 문자열로 바꾸고 문자열의 앞뒤 공백을 정리한다.
+ * 원본의 빈 값과 숫자 셀을 문자열로 바꾸고 기존 문자열 내용은 그대로 보존
  */
 function normalizePillValue(value: unknown): string {
   const isEmptyValue = value === null || value === undefined;
@@ -44,57 +15,87 @@ function normalizePillValue(value: unknown): string {
     return "";
   }
 
-  return String(value).trim();
+  return String(value);
 }
 
 /**
- * 식별자가 있는 행의 전문·일반 코드와 허가일자를 정규화한다.
+ * 품목 행의 필수 컬럼·식별자·전문일반 명칭 검증
  */
-function normalizePillRow(row: Record<string, string>) {
-  const isMissingItemSeq = !row.ITEM_SEQ;
+function validatePillResourceRow(
+  row: unknown,
+  targets: string[],
+  name: PillResourceName,
+  index: number,
+) {
+  const fields = row as unknown as Record<string, string>;
+  const missingFields = targets.filter((target) => !(target in fields));
+  const hasMissingFields = missingFields.length > 0;
 
-  // 식별자가 없는 행끼리 병합하거나 서로 결합하지 않는다.
-  if (isMissingItemSeq) {
-    return [];
+  if (hasMissingFields) {
+    throw new Error(
+      "[PILL-DATA] " +
+        name +
+        " 행 " +
+        (index + 1) +
+        ": 필수 컬럼 누락 " +
+        missingFields.join(", ") +
+        ". 완전한 원본 파일을 pill_data_sources.json에 지정하세요.",
+    );
   }
 
-  const otcNames: Record<string, string> = {
-    "01": "일반의약품",
-    "02": "전문의약품",
-  };
+  const isMissingItemSeq = !fields.ITEM_SEQ.trim();
 
-  row.ETC_OTC_CODE = otcNames[row.ETC_OTC_CODE] ?? row.ETC_OTC_CODE;
-  row.ITEM_PERMIT_DATE = row.ITEM_PERMIT_DATE.replace(
-    /^(\d{4})-(\d{2})-(\d{2})$/,
-    "$1$2$3",
-  );
+  if (isMissingItemSeq) {
+    throw new Error(
+      "[PILL-DATA] " +
+        name +
+        " 행 " +
+        (index + 1) +
+        ": 품목일련번호가 없습니다.",
+    );
+  }
 
-  return [row];
+  const isCodedOtcValue = /^\d+$/.test(fields.ETC_OTC_CODE);
+
+  if (isCodedOtcValue) {
+    throw new Error(
+      "[PILL-DATA] " +
+        name +
+        " 행 " +
+        (index + 1) +
+        ": 전문일반 코드 대신 명칭을 제공하는 원본이 필요합니다.",
+    );
+  }
 }
 
 /**
- * 한글·영문 원본을 기존 내부 스키마로 변환하고 없는 항목은 빈 문자열로 유지한다.
+ * 기존 한글 헤더 또는 동일한 내부 필드명을 가진 완전한 원본만 변환
+ * 축약 원본의 누락 정보나 코드값을 이름 변경만으로 복원하지 않는다.
  */
 export function mapPillResourceRows(rows: unknown[], name: PillResourceName) {
   const isDrugRecognition = name === "drug_recognition";
   const legacyMap = isDrugRecognition
     ? DRUG_RECOGNITION_PROPERTY_MAP
     : FINISHED_MEDICINE_PERMISSION_PROPERTY_MAP;
-  const targets = Object.values(legacyMap);
-
+  const targets = [...new Set(Object.values(legacyMap))];
   const propertyMap = {
     ...legacyMap,
     ...Object.fromEntries(targets.map((target) => [target, target])),
-    ...ALIASES[name],
   };
-  const defaults = Object.fromEntries(targets.map((target) => [target, ""]));
+  const mapped = mapResourceProperties(rows, propertyMap, normalizePillValue);
+  const isEmptyResource = mapped.length === 0;
 
-  const mapped = mappingProperty(rows, propertyMap, normalizePillValue);
+  if (isEmptyResource) {
+    throw new Error(
+      "[PILL-DATA] " +
+        name +
+        ": 원본 데이터가 비어 있거나 지원하는 컬럼이 없습니다.",
+    );
+  }
 
-  // SHAPE_CODE는 코드이고 FORM_CODE는 제형명이므로 그대로 대입하지 않는다.
-  return mapped.flatMap((row) => {
-    const normalized = { ...defaults, ...row } as Record<string, string>;
+  mapped.forEach((row, index) =>
+    validatePillResourceRow(row, targets, name, index),
+  );
 
-    return normalizePillRow(normalized);
-  });
+  return mapped;
 }

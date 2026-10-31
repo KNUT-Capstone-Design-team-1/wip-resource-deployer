@@ -1,6 +1,8 @@
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
+
 import axios from "axios";
+
 import {
   INearbyPharmacies,
   ISafemapPharmacyResponse,
@@ -46,7 +48,7 @@ function getApiKey() {
 }
 
 /**
- * 약국 API의 한 페이지를 조회하고 변환된 약국 목록과 전체 건수를 반환한다.
+ * 약국 API의 한 페이지를 조회하고 변환된 약국 목록과 전체 건수를 반환
  */
 async function fetchPharmacyPage(
   url: string,
@@ -77,7 +79,7 @@ async function fetchPharmacyPage(
 }
 
 /**
- * 약국 API를 페이지 단위로 조회해 전체 약국 목록을 수집한다.
+ * 약국 API를 페이지 단위로 조회해 전체 약국 목록을 수집
  */
 export async function fetchAllNearbyPharmacies(
   url = "http://safemap.go.kr/openapi2/IF_0048",

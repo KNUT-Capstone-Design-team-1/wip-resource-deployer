@@ -1,19 +1,22 @@
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
+
+import logger from "./logger";
 import {
   TLoadedResource,
   TResource,
   TResourceDirectoryName,
 } from "./types/resources";
 import { RESOURCE_PROPERTY_MAP } from "./resource_property_maps";
-import { mappingProperty } from "./resource_mapper";
+import { mapResourceProperties } from "./resource_mapper";
 import {
   readExcelContents,
-  readCSVContents,
-  readPDFContents,
+  readCsvContents,
+  readPdfContents,
 } from "./resource_readers";
 import { ORIGIN_DATA_DIRECTORY } from "./paths";
 import { mapPillResourceRows } from "../services/pill_data/resource_adapter";
+import { selectPillResourceFiles } from "../services/pill_data/resource_sources";
 import { normalizeChemicalValue } from "./resource_text";
 import { normalizeProhibitedListText } from "../services/prohibited_list/normalize";
 
@@ -46,9 +49,9 @@ async function readSourceFile(filePath: string): Promise<unknown[]> {
     case ".xls":
       return readExcelContents(filePath);
     case ".csv":
-      return readCSVContents(filePath);
+      return readCsvContents(filePath);
     case ".pdf":
-      return readPDFContents(filePath);
+      return readPdfContents(filePath);
     default:
       throw new Error("Invalid file extension " + extension);
   }
@@ -61,7 +64,16 @@ async function readResourceFile(
   filePath: string,
   name: TResourceDirectoryName,
 ) {
+  logger.info("[RESOURCE-LOAD] Loading %s: %s", name, filePath);
+
   const rows = await readSourceFile(filePath);
+
+  logger.info(
+    "[RESOURCE-LOAD] Loaded %s: %s (%s rows)",
+    name,
+    filePath,
+    rows.length,
+  );
 
   const isPillResource =
     name === "drug_recognition" ||
@@ -71,7 +83,7 @@ async function readResourceFile(
     return mapPillResourceRows(rows, name) as unknown as TResource[];
   }
 
-  return mappingProperty(
+  return mapResourceProperties(
     rows,
     RESOURCE_PROPERTY_MAP[name],
     RESOURCE_NORMALIZERS[name],
@@ -90,25 +102,60 @@ function isResourceFile(entry: fs.Dirent): boolean {
 }
 
 /**
- * 원본 디렉터리 파일 순차 로드 및 행 병합
+ * 리소스 디렉터리의 유효 파일 수집·필수 디렉터리 검증
  */
-async function readResourceDirectory(name: TResourceDirectoryName) {
-  const directory = path.join(ORIGIN_DATA_DIRECTORY, name);
+function readResourceDirectoryEntries(
+  directory: string,
+  isPillResource: boolean,
+): fs.Dirent[] {
   const isMissingDirectory = !fs.existsSync(directory);
+
+  const shouldRejectMissingDirectory = isPillResource && isMissingDirectory;
+
+  if (shouldRejectMissingDirectory) {
+    throw new Error("[PILL-DATA] 원본 디렉터리가 없습니다: " + directory);
+  }
 
   if (isMissingDirectory) {
     return [];
   }
 
-  const files = fs
+  return fs
     .readdirSync(directory, { withFileTypes: true })
     .filter(isResourceFile);
+}
+
+/**
+ * 원본 디렉터리 파일 순차 로드 및 행 병합
+ */
+async function readResourceDirectory(name: TResourceDirectoryName) {
+  const isPillResource =
+    name === "drug_recognition" ||
+    name === "finished_medicine_permission_detail";
+  const directory = path.join(ORIGIN_DATA_DIRECTORY, name);
+  const files = readResourceDirectoryEntries(directory, isPillResource);
+
+  const availableFiles = files.map((file) => file.name);
+  const selectedFiles = isPillResource
+    ? selectPillResourceFiles(name, availableFiles)
+    : availableFiles;
+  const hasNoPillSourceFiles = isPillResource && selectedFiles.length === 0;
+
+  if (hasNoPillSourceFiles) {
+    throw new Error("[PILL-DATA] 사용할 원본 파일이 없습니다: " + directory);
+  }
+
+  if (isPillResource) {
+    logger.info(
+      "[PILL-DATA] " + name + " sources: " + selectedFiles.join(", "),
+    );
+  }
 
   const rows: TResource[] = [];
 
-  for (const file of files) {
+  for (const fileName of selectedFiles) {
     const contents = await readResourceFile(
-      path.join(directory, file.name),
+      path.join(directory, fileName),
       name,
     );
 
