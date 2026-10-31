@@ -13,6 +13,7 @@ import {
   readPDFContents,
 } from "./resource_readers";
 import { ORIGIN_DATA_DIRECTORY } from "./paths";
+import { mapPillResourceRows } from "../services/pill_data/resource_adapter";
 import { normalizeChemicalValue } from "./resource_text";
 import { normalizeProhibitedListText } from "../services/prohibited_list/normalize";
 
@@ -61,6 +62,14 @@ async function readResourceFile(
   name: TResourceDirectoryName,
 ) {
   const rows = await readSourceFile(filePath);
+
+  const isPillResource =
+    name === "drug_recognition" ||
+    name === "finished_medicine_permission_detail";
+
+  if (isPillResource) {
+    return mapPillResourceRows(rows, name) as unknown as TResource[];
+  }
 
   return mappingProperty(
     rows,

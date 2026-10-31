@@ -31,8 +31,8 @@ NEARBY_PHARMACIES_API_KEY=your_service_key_here
 
 2. `origin_data` 디렉터리에 아래 디렉터리 생성
 
-- `drug_recognition` (의약품 낱알식별 / xls)
-- `finished_medicine_permission_detail` (의약품 제품허가 상세정보 / xls)
+- `drug_recognition` (의약품 낱알식별 / xls, xlsx, csv)
+- `finished_medicine_permission_detail` (의약품 제품허가 상세정보 / xls, xlsx, csv)
 - `cannabis` (대마 데이터 / xlsx)
 - `narcotics` (마약류 데이터 / xlsx)
 - `psychotropics` (향정신성 약물 데이터 / xlsx)
