@@ -13,7 +13,7 @@ export function prepareMarkImages(
 ): Promise<IMarkImageData[] | undefined> {
   if (!enabled) {
     logger.info(
-      "[MARK-IMAGE] Skipped enabled=false sourceRecords=%s; keeping existing mark_image.json",
+      "[MARK-IMAGE] Skipped enabled=false sourceRecords=%s; keeping existing mark_images.json",
       drugs.length,
     );
 
@@ -37,11 +37,11 @@ export async function saveMarkImages(
   const hasNoValidImages = images.length === 0;
   if (hasNoValidImages) {
     logger.warn(
-      "[MARK-IMAGE] No valid images; keeping existing mark_image.json",
+      "[MARK-IMAGE] No valid images; keeping existing mark_images.json",
     );
 
     return;
   }
 
-  await createResourceFile("mark_image.json", images);
+  await createResourceFile("mark_images.json", images);
 }
