@@ -22,8 +22,8 @@
   },
   "pillData": {
     "createEffectSummary": true,
+    "createMarkImage": true,
     "drugRecognitionApiUrl": "https://apis.data.go.kr/1471000/MdcinGrnIdntfcInfoService03/getMdcinGrnIdntfcInfoList03",
-    "drugProductPermissionDetailApiUrl": "https://apis.data.go.kr/1471000/DrugPrdtPrmsnInfoService08/getDrugPrdtPrmsnDtlInq08",
-    "createMarkImage": true
+    "drugProductPermissionDetailApiUrl": "https://apis.data.go.kr/1471000/DrugPrdtPrmsnInfoService08/getDrugPrdtPrmsnDtlInq08"
   }
 }
