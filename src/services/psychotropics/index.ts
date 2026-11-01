@@ -3,7 +3,7 @@ import { createResourceFile } from "../../utils/resource_writer";
 import logger from "../../utils/logger";
 
 /**
- * 향정신성 약물 원본으로 psychotropics.json 리소스를 생성
+ * 향정신성 약물 리소스 생성
  */
 export async function createPsychotropicsResource() {
   // 향정신성 약물 원본 파일을 읽고 리소스 속성으로 변환

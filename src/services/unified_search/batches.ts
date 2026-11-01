@@ -1,6 +1,6 @@
 import { PILL_DATA_COLUMNS } from "./columns";
 import logger from "../../utils/logger";
-import { IPillData } from "../pill_data/types/pill_data";
+import type { SearchPill } from "./types/unified_search";
 import type { IUnifiedSearchData } from "./types/unified_search";
 import { getDocData } from "./documents";
 import { generateUniqueContents } from "./contents";
@@ -10,12 +10,12 @@ import { writeFailedData } from "./failed_records";
 const BATCH_SIZE = 5;
 
 /**
- * 의약품 기본 정보와 문서 내용을 모아 통합 검색 레코드를 생성
+ * 검색 레코드 생성
  */
-async function createSearchRecord(pill: IPillData) {
+async function createSearchRecord(pill: SearchPill) {
   const documents = await getDocData(pill.ITEM_SEQ);
   const values = [
-    ...PILL_DATA_COLUMNS.map((column) => pill[column as keyof IPillData]),
+    ...PILL_DATA_COLUMNS.map((column) => pill[column]),
     documents.EE_DOC_DATA,
     documents.UD_DOC_DATA,
     documents.NB_DOC_DATA,
@@ -28,7 +28,7 @@ async function createSearchRecord(pill: IPillData) {
 }
 
 /**
- * DB 배치 실패는 파일로 보존하여 이후 재시도할 수 있게 한다.
+ * 검색 배치 저장·실패 기록
  */
 async function saveBatch(records: IUnifiedSearchData[]) {
   try {
@@ -46,9 +46,9 @@ async function saveBatch(records: IUnifiedSearchData[]) {
 }
 
 /**
- * 배치의 의약품을 검색 레코드로 변환한 뒤 일괄 저장
+ * 검색 배치 변환·저장
  */
-async function processBatch(pills: IPillData[]) {
+async function processBatch(pills: SearchPill[]) {
   const records: IUnifiedSearchData[] = [];
 
   for (const pill of pills) {
@@ -59,9 +59,9 @@ async function processBatch(pills: IPillData[]) {
 }
 
 /**
- * 의약품 목록을 정해진 배치 크기로 나누어 순차적으로 검색 DB에 반영
+ * 전체 검색 데이터 저장
  */
-export async function upsertAll(pills: IPillData[]) {
+export async function upsertAll(pills: SearchPill[]) {
   for (let start = 0; start < pills.length; start += BATCH_SIZE) {
     await processBatch(pills.slice(start, start + BATCH_SIZE));
   }

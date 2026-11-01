@@ -19,7 +19,7 @@ import { normalizeChemicalValue } from "./resource_text";
 import { normalizeProhibitedListText } from "../services/prohibited_list/normalize";
 
 /**
- * 리소스 이름의 snake_case를 camelCase로 변환
+ * snake_case 키 변환
  */
 function snakeToCamel(value: string) {
   return value.replace(/_([a-z])/g, (_, character: string) =>
@@ -37,7 +37,7 @@ const RESOURCE_NORMALIZERS: Partial<
 };
 
 /**
- * 확장자별 원본 파일 로드
+ * 확장자별 원본 로드
  */
 async function readSourceFile(filePath: string): Promise<unknown[]> {
   const extension = path.extname(filePath).toLowerCase();
@@ -56,7 +56,7 @@ async function readSourceFile(filePath: string): Promise<unknown[]> {
 }
 
 /**
- * 원본 로드 및 리소스별 속성·값 정규화
+ * 원본 로드·속성 변환
  */
 async function readResourceFile(
   filePath: string,
@@ -81,7 +81,7 @@ async function readResourceFile(
 }
 
 /**
- * 일반 파일 여부 확인 및 숨김·임시 파일 제외
+ * 원본 파일 여부 확인
  */
 function isResourceFile(entry: fs.Dirent): boolean {
   const isFile = entry.isFile();
@@ -92,7 +92,7 @@ function isResourceFile(entry: fs.Dirent): boolean {
 }
 
 /**
- * 리소스 디렉터리의 유효 파일 수집
+ * 유효 원본 파일 수집
  */
 function readResourceDirectoryEntries(directory: string): fs.Dirent[] {
   const isMissingDirectory = !fs.existsSync(directory);
@@ -107,7 +107,7 @@ function readResourceDirectoryEntries(directory: string): fs.Dirent[] {
 }
 
 /**
- * 원본 디렉터리 파일 순차 로드 및 행 병합
+ * 원본 파일 통합 로드
  */
 async function readResourceDirectory(name: TResourceDirectoryName) {
   const directory = path.join(ORIGIN_DATA_DIRECTORY, name);
@@ -132,17 +132,15 @@ async function readResourceDirectory(name: TResourceDirectoryName) {
  */
 export class ResourceLoader {
   /**
-   * 로드 대상 리소스 목록 보관
+   * 리소스 로드 대상 설정
    */
   constructor(private readonly targetResources: TResourceDirectoryName[]) {}
 
   /**
-   * 선택한 리소스 로드 및 종류별 배열 반환
+   * 선택 리소스 로드
    */
   public async loadResource() {
     const resource: TLoadedResource = {
-      drugRecognition: [],
-      finishedMedicinePermissionDetail: [],
       cannabis: [],
       narcotics: [],
       psychotropics: [],

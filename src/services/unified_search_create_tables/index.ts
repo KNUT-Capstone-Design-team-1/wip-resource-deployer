@@ -8,7 +8,7 @@ import {
 } from "./schema";
 
 /**
- * 통합 검색 테이블, FTS5 가상 테이블 및 동기화 트리거 생성
+ * 검색 테이블·트리거 생성
  */
 export async function createTables() {
   logger.info("[UNIFIED-SEARCH-TABLES] Start creating tables and triggers");

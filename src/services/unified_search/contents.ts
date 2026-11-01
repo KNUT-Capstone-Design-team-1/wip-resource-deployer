@@ -1,7 +1,5 @@
 /**
- * XML / HTML 섞인 문자열을 순수 텍스트로 정제
- * @param input 대상 텍스트
-
+ * XML·HTML 텍스트 정리
  */
 export function normalizeText(input: string) {
   const isEmptyInput = !input;
@@ -45,9 +43,7 @@ export function normalizeText(input: string) {
 }
 
 /**
- * 중복 단어를 제거한 통합 검색 내용 문자열 생성
- * @param rawDataArr 원본 데이터 배열
- * @returns 중복 단어가 제거된 단일 문자열
+ * 검색 단어 중복 제거
  */
 export function generateUniqueContents(
   rawDataArr: (string | undefined | null)[],

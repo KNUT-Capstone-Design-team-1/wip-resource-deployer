@@ -4,28 +4,28 @@ export const FALLBACK_EFFECT_SUMMARY = "효능·효과 정보가 없습니다.";
 const DEFAULT_MAX_LENGTH = 80;
 
 /**
- * 연속된 공백 및 줄바꿈 문자를 단일 공백으로 치환하고 앞뒤 여백을 제거한다.
+ * 연속 공백 정리
  */
 function normalizeWhitespace(text: string) {
   return text.replace(/\s+/g, " ").trim();
 }
 
 /**
- * 문자가 여는 괄호 계열인지 확인한다.
+ * 여는 괄호 확인
  */
 function isOpeningBracket(char: string) {
   return "([{〈《「『【".includes(char);
 }
 
 /**
- * 문자가 닫는 괄호 계열인지 확인한다.
+ * 닫는 괄호 확인
  */
 function isClosingBracket(char: string) {
   return ")]}>〉》」』】".includes(char);
 }
 
 /**
- * 특정 인덱스의 마침표가 소수점(숫자 사이의 점)인지 여부를 판별한다.
+ * 소수점 여부 확인
  */
 function isDecimalPoint(text: string, index: number) {
   const previous = text[index - 1];
@@ -35,10 +35,11 @@ function isDecimalPoint(text: string, index: number) {
 }
 
 /**
- * 후보 문자열의 공백을 제거한 뒤 유효한 경우 결과 배열에 추가한다.
+ * 유효 후보 추가
  */
 function pushCandidate(result: string[], value: string) {
   const normalized = value.trim();
+
   const hasCandidate = Boolean(normalized);
 
   if (hasCandidate) {
@@ -47,7 +48,7 @@ function pushCandidate(result: string[], value: string) {
 }
 
 /**
- * HTML/XML 엔티티(명명 엔티티, 16진수/10진수 유니코드)를 일반 문자로 디코딩한다.
+ * HTML 엔티티 복원
  */
 function decodeHtmlEntities(text: string) {
   const namedEntities: Record<string, string> = {
@@ -94,7 +95,7 @@ function decodeHtmlEntities(text: string) {
 }
 
 /**
- * HTML/XML 태그, CDATA, HTML entity 및 글머리 기호(bullet)를 일반 텍스트로 정규화한다.
+ * 태그·문서 장식 제거
  */
 function cleanHtml(raw: string | null | undefined) {
   const isEmptyInput = typeof raw !== "string" || !raw.trim();
@@ -107,6 +108,7 @@ function cleanHtml(raw: string | null | undefined) {
     // 효능 XML은 본문 없이 ARTICLE/SECTION의 title 속성에 내용을 담기도 한다.
     .replace(/<(?:article|section)\b(?:[^>"']|"[^"]*"|'[^']*')*>/gi, (tag) => {
       const title = /\btitle\s*=\s*(?:"([^"]*)"|'([^']*)')/i.exec(tag);
+
       return title ? `\n${title[1] ?? title[2]}\n` : "\n";
     })
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, "$1")
@@ -135,7 +137,7 @@ function cleanHtml(raw: string | null | undefined) {
 }
 
 /**
- * 텍스트 라인이 효능·효과가 아닌 섹션(용법/용량, 주의사항 등)인지 확인한다.
+ * 효능 외 항목 확인
  */
 function isNonEffectLine(line: string) {
   const isEmptyLine = !line;
@@ -168,6 +170,7 @@ function isNonEffectLine(line: string) {
     /^포장단위/,
     /^보험/,
   ];
+
   const isSectionHeading = sectionHeadingPatterns.some((pattern) =>
     pattern.test(line),
   );
@@ -185,7 +188,7 @@ function isNonEffectLine(line: string) {
 }
 
 /**
- * 효능·효과와 명백히 무관한 섹션 라인을 제거한다.
+ * 효능 외 항목 제거
  */
 function removeNonEffectLines(text: string) {
   let isOrganismSection = false;
@@ -198,11 +201,13 @@ function removeNonEffectLines(text: string) {
 
       if (/^유효균종/.test(line)) {
         isOrganismSection = true;
+
         return false;
       }
 
       if (/^적응증(?:\s*[:：]|$)/.test(heading)) {
         isOrganismSection = false;
+
         return !/^적응증\s*[:：]?$/.test(heading);
       }
 
@@ -212,7 +217,7 @@ function removeNonEffectLines(text: string) {
 }
 
 /**
- * 번호 매기기나 '효능·효과' 같은 제목성 머리말을 제거한다.
+ * 효능 제목 제거
  */
 function removeEffectHeading(text: string) {
   return text
@@ -224,7 +229,7 @@ function removeEffectHeading(text: string) {
 }
 
 /**
- * 괄호 깊이를 갱신하고 괄호 밖의 구분자에서 후보 문자열을 분리한다.
+ * 괄호 밖 구문 분리
  */
 function collectBoundary(
   text: string,
@@ -250,7 +255,7 @@ function collectBoundary(
 }
 
 /**
- * 괄호 안의 구분자를 보존하면서 최상위 구분자를 기준으로 문자열을 나눈다.
+ * 최상위 구분자 분리
  */
 function splitAtTopLevel(
   text: string,
@@ -268,7 +273,7 @@ function splitAtTopLevel(
 }
 
 /**
- * 소수점을 보존하면서 괄호 밖의 문장 구분자를 기준으로 문장을 나눈다.
+ * 괄호 밖 문장 분리
  */
 function splitTopLevelSentences(text: string) {
   return splitAtTopLevel(
@@ -281,17 +286,18 @@ function splitTopLevelSentences(text: string) {
 }
 
 /**
- * 최상위 괄호 바깥의 쉼표(,)를 기준으로 절을 분리한다.
+ * 괄호 밖 쉼표 분리
  */
 function splitTopLevelCommaClauses(text: string) {
   return splitAtTopLevel(text, (value, index) => value[index] === ",");
 }
 
 /**
- * 줄/문장 단위는 유지하되 쉼표는 최상위 괄호 깊이를 고려하여 후보 구문을 추출한다.
+ * 문장별 효능 후보 추출
  */
 function extractLineCandidates(line: string) {
   const content = removeEffectHeading(normalizeWhitespace(line));
+
   const isEmpty = content.length === 0;
 
   if (isEmpty) {
@@ -318,7 +324,7 @@ function extractLineCandidates(line: string) {
 }
 
 /**
- * 효능 문서를 줄 단위로 분석해 요약 후보 표현을 수집한다.
+ * 효능 후보 수집
  */
 function extractEffectCandidates(text: string) {
   let effectContext = "";
@@ -326,6 +332,7 @@ function extractEffectCandidates(text: string) {
 
   for (const line of text.split("\n")) {
     const heading = removeEffectHeading(line);
+
     const context =
       /^다음\s*(?:질환|질병)(?:\s*및\s*증상)?의?\s*(보조\s*치료|증상\s*완화|증상\s*개선)$/.exec(
         heading,
@@ -349,7 +356,7 @@ function extractEffectCandidates(text: string) {
 }
 
 /**
- * 특수문자, 조사 및 불필요한 안내성 상투 표현을 정리한다.
+ * 효능 표현 정리
  */
 function normalizeEffectExpression(expression: string) {
   let result = normalizeWhitespace(expression)
@@ -371,7 +378,7 @@ function normalizeEffectExpression(expression: string) {
 }
 
 /**
- * 식약처 원문의 문어체/투여 지시형 표현을 사용자 친화적 효능 표현으로 재구성한다.
+ * 효능 표현 재구성
  */
 function rewriteEffectExpression(expression: string) {
   let result = normalizeWhitespace(expression).replace(
@@ -460,7 +467,7 @@ function rewriteEffectExpression(expression: string) {
 }
 
 /**
- * 문장 끝에 붙은 각주 번호나 불필요한 메타 정보 문구를 제거한다.
+ * 후행 각주·안내 제거
  */
 function removeTrailingBoilerplate(expression: string) {
   return expression
@@ -473,15 +480,7 @@ function removeTrailingBoilerplate(expression: string) {
 }
 
 /**
- * 문장이 조사/연결 표현으로 어색하게 끝나는 경우 마지막 미완성 표현을 제거한다.
- *
- * 예:
- * - "심혈관 질환의" -> "심혈관 질환"
- * - "질환의 치료로서" -> "질환의 치료"
- * - "증상의 개선을 위해" -> "증상의 개선"
- *
- * 효능·효과 자체에 포함될 수 있는 "치료", "개선", "완화", "감소" 등의
- * 명사형 표현은 유지하고, 문장을 끝내지 못하는 조사/연결어미만 제거한다.
+ * 미완성 조사·연결어 제거
  */
 function trimDanglingEnding(expression: string) {
   let result = normalizeWhitespace(expression);
@@ -529,7 +528,7 @@ function trimDanglingEnding(expression: string) {
 }
 
 /**
- * 유의미한 효능·효과 표현인지 여부를 판별한다(제목, 무의미한 문구 배제).
+ * 유효 효능 표현 확인
  */
 function isUsefulEffectExpression(expression: string) {
   const isEmptyExpression = !expression;
@@ -580,6 +579,7 @@ function isUsefulEffectExpression(expression: string) {
     "주효능효과",
     "주효능ㆍ효과",
   ]);
+
   const isRejectedHeading = rejectedExact.has(compact);
 
   if (isRejectedHeading) {
@@ -619,13 +619,14 @@ function isUsefulEffectExpression(expression: string) {
 }
 
 /**
- * 정규화된 키를 기반으로 중복되는 효능 표현을 제거한다.
+ * 중복 효능 표현 제거
  */
 function removeDuplicateExpressions(expressions: string[]) {
   const seen = new Set<string>();
 
   return expressions.filter((expression) => {
     const key = expression.replace(/[\s·ㆍ\-–—]/g, "").toLowerCase();
+
     const isDuplicate = !key || seen.has(key);
 
     if (isDuplicate) {
@@ -639,17 +640,18 @@ function removeDuplicateExpressions(expressions: string[]) {
 }
 
 /**
- * 키워드를 자르지 않고 길이 제한 안에서 원문 순서대로 쉼표로 연결한다.
+ * 효능 키워드 길이 제한
  */
 function compressEffect(keywords: string[], maxLength: number) {
   return keywords.reduce((summary, keyword) => {
     const candidate = summary ? summary + "," + keyword : keyword;
+
     return !summary || candidate.length <= maxLength ? candidate : summary;
   }, "");
 }
 
 /**
- * 효능이 아닌 위험 평가, 계산식, 사용 조건만 설명하는 안내 구문을 구별한다.
+ * 안내 문구 여부 확인
  */
 function isGuidanceExpression(expression: string) {
   if (
@@ -670,13 +672,14 @@ function isGuidanceExpression(expression: string) {
 }
 
 /**
- * EE_DOC_DATA XML에서 명사형 키워드를 추출해 쉼표로 구분한 문자열을 생성한다.
+ * 효능 키워드 요약 생성
  */
 export function createEffectSummary(
   eeDocData: string | null | undefined,
   maxLength = DEFAULT_MAX_LENGTH,
 ) {
   const cleaned = cleanHtml(eeDocData);
+
   const isEmptyText = !cleaned;
 
   if (isEmptyText) {
@@ -699,7 +702,7 @@ export function createEffectSummary(
 }
 
 /**
- * 기존 효능·효과 원문을 유지하고 내용이 없으면 없음 문구를 반환한다.
+ * 기존 효능 원문 보존
  */
 export function existingEffectText(document: string | null | undefined) {
   return cleanHtml(document) || FALLBACK_EFFECT_SUMMARY;

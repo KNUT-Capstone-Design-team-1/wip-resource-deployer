@@ -3,7 +3,7 @@ import { createResourceTasks } from "./tasks";
 import { runTasks } from "./runner";
 
 /**
- * 설정을 읽고 선택한 리소스 작업을 실행한 뒤 성공 여부를 종료 코드에 반영
+ * 리소스 작업 실행
  */
 async function main() {
   // 설정 파일을 읽어 실행할 리소스 목록을 가져온다.

@@ -1,7 +1,7 @@
 import { ISafemapPharmacyItem } from "./types/nearby_pharmacies";
 
 /**
- * API 약국 정보를 리소스 구조로 변환하고 요일별 영업 시간을 JSON 문자열로 저장
+ * 약국 API 응답 변환
  */
 export function toPharmacy(item: ISafemapPharmacyItem) {
   // 인덱스 기준: 0은 월요일(dutytime1s), 7은 공휴일(dutytime8s)
@@ -32,7 +32,7 @@ export function toPharmacy(item: ISafemapPharmacyItem) {
 }
 
 /**
- * 약국 기본 정보와 영업 시간 레코드 생성
+ * 약국 레코드 생성
  */
 function createPharmacyRecord(
   item: ISafemapPharmacyItem,
@@ -56,7 +56,7 @@ function createPharmacyRecord(
 }
 
 /**
- * null·undefined를 제외한 값의 존재 여부 확인
+ * 값 존재 여부 확인
  */
 function hasValue(value: unknown): boolean {
   return value !== undefined && value !== null;

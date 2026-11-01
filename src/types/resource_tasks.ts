@@ -1,10 +1,15 @@
+export interface PillDataOptions {
+  createEffectSummary?: boolean;
+  createMarkImage?: boolean;
+  drugRecognitionApiUrl?: string;
+  drugProductPermissionDetailApiUrl?: string;
+}
+
 export interface AppConfig {
   common: {
     targetResource: string[];
   };
-  pillData?: {
-    createEffectSummary?: boolean;
-  };
+  pillData?: PillDataOptions;
   unifiedSearch?: {
     dbInitialize?: boolean;
   };

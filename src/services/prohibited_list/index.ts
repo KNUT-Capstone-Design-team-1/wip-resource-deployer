@@ -3,7 +3,7 @@ import { createResourceFile } from "../../utils/resource_writer";
 import logger from "../../utils/logger";
 
 /**
- * 도핑 금지 목록 원본으로 prohibited_list.json 리소스를 생성
+ * 도핑 금지 목록 생성
  */
 export async function createProhibitedListResource() {
   // 도핑 금지 목록 원본 파일을 읽고 리소스 속성으로 변환

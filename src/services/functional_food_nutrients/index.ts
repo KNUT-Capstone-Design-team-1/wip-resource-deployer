@@ -3,7 +3,7 @@ import { createResourceFile } from "../../utils/resource_writer";
 import logger from "../../utils/logger";
 
 /**
- * 건강기능식품 영양 성분 원본으로 functional_food_nutrients.json 리소스를 생성
+ * 영양 성분 리소스 생성
  */
 export async function createFunctionalFoodNutrientsResource() {
   // 건강기능식품 영양 성분 원본 파일을 읽고 리소스 속성으로 변환

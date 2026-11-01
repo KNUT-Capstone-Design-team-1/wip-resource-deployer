@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 /**
- * 임시 파일을 완전히 쓴 뒤 교체하여 중단 시에도 기존 파일을 보존
+ * 임시 파일 작성·원자적 교체
  */
 export async function writeAtomicFile(filePath: string, contents: string) {
   await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
@@ -17,6 +17,7 @@ export async function writeAtomicFile(filePath: string, contents: string) {
 
   try {
     await fs.promises.writeFile(temporaryPath, contents, "utf8");
+
     await fs.promises.rename(temporaryPath, filePath);
   } finally {
     await fs.promises.rm(temporaryPath, { force: true });

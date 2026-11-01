@@ -1,11 +1,13 @@
 import { TResource } from "./types/resources";
 
 type ResourceRow = Record<string, unknown>;
+
 type ValueNormalizer = (value: unknown) => unknown;
+
 type HeaderResolver = (header: string) => string | undefined;
 
 /**
- * 헤더 정규화 및 매핑 결과 캐시
+ * 헤더 매핑·캐시 생성
  */
 function createHeaderResolver(
   propertyMap: Record<string, string>,
@@ -34,7 +36,7 @@ function createHeaderResolver(
 }
 
 /**
- * 문자열 행 정규화 및 대상 속성 매핑
+ * 문자열 행 속성 매핑
  */
 function mapTextRow(
   value: string,
@@ -52,7 +54,7 @@ function mapTextRow(
 }
 
 /**
- * 객체 행의 등록된 속성 매핑 및 값 정규화
+ * 객체 행 속성 매핑
  */
 function mapObjectRow(
   value: object,
@@ -63,6 +65,7 @@ function mapObjectRow(
 
   for (const [header, contents] of Object.entries(value)) {
     const target = resolveHeader(header);
+
     const isUnknownHeader = target === undefined;
 
     if (isUnknownHeader) {
@@ -76,7 +79,7 @@ function mapObjectRow(
 }
 
 /**
- * 원본 타입별 행 매핑
+ * 타입별 행 변환
  */
 function mapRow(
   value: unknown,
@@ -100,14 +103,14 @@ function mapRow(
 }
 
 /**
- * 빈 문자열·null·undefined 제외 여부 확인
+ * 내용 존재 여부 확인
  */
 function hasContents(value: unknown): boolean {
   return value !== "" && value !== null && value !== undefined;
 }
 
 /**
- * 빈 행 제외 정책에 따른 포함 여부 판단
+ * 행 포함 여부 판단
  */
 function shouldIncludeRow(row: ResourceRow, excludeEmpty: boolean): boolean {
   const isEmptyRow = Object.keys(row).length === 0;
@@ -120,7 +123,7 @@ function shouldIncludeRow(row: ResourceRow, excludeEmpty: boolean): boolean {
 }
 
 /**
- * 리소스 속성 매핑 및 빈 행 필터링
+ * 속성 변환·빈 행 제거
  */
 export function mapResourceProperties(
   rows: unknown[],

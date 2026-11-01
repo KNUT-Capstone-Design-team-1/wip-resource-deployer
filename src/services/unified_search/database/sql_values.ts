@@ -1,5 +1,5 @@
 /**
- * 빈 값을 SQL NULL로 변환하고 문자열의 작은따옴표를 이스케이프
+ * SQL 값 이스케이프
  */
 export function getSafeValue(val: any) {
   const isNullValue = val === undefined || val === null;

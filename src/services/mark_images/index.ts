@@ -1,29 +1,32 @@
-import logger from "../../utils/logger";
-import { ResourceLoader } from "../../utils/resource_loader";
-import { createResourceFile } from "../../utils/resource_writer";
+import { IDrugRecognition } from "../pill_data/types/drug_recognition";
+import { IMarkImageData } from "./types/mark_images";
 import { createMarkImageData } from "./transform";
+import { createResourceFile } from "../../utils/resource_writer";
 
 /**
- * 마크 이미지 리소스 파일 생성
+ * 마크 이미지 준비
  */
-export async function createMarkImageResource() {
-  // 마크가 포함된 의약품 낱알식별 원본을 읽기
-  logger.info("[MARK-IMAGE] Start load resource");
+export function prepareMarkImages(
+  drugs: IDrugRecognition[],
+  enabled: boolean,
+): Promise<IMarkImageData[] | undefined> {
+  if (!enabled) {
+    return Promise.resolve(undefined);
+  }
 
-  const resourceLoader = new ResourceLoader(["drug_recognition"]);
-  const resource = await resourceLoader.loadResource();
+  return createMarkImageData(drugs);
+}
 
-  logger.info("[MARK-IMAGE] Complete load resource");
+/**
+ * 마크 이미지 저장
+ */
+export async function saveMarkImages(
+  images: IMarkImageData[] | undefined,
+): Promise<void> {
+  const isDisabled = images === undefined;
+  if (isDisabled) {
+    return;
+  }
 
-  // 중복 마크를 제거하고 이미지 데이터를 변환
-  logger.info("[MARK-IMAGE] Start create mark image data");
-
-  const markImageData = await createMarkImageData(resource.drugRecognition);
-
-  logger.info("[MARK-IMAGE] Complete create mark image data");
-
-  // 변환된 마크 이미지 목록을 JSON 리소스로 저장
-  logger.info("[MARK-IMAGE] Start create mark image resource file");
-  await createResourceFile("mark_images.json", markImageData);
-  logger.info("[MARK-IMAGE] Complete create mark image resource file");
+  await createResourceFile("mark_image.json", images);
 }

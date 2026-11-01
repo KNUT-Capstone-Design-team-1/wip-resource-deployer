@@ -3,12 +3,12 @@ import { createSqlFile } from "./database/sql_file";
 import { getSafeValue } from "./database/sql_values";
 import logger from "../../utils/logger";
 import { IUnifiedSearchData } from "./types/unified_search";
-import { IPillData } from "../pill_data/types/pill_data";
+import type { SearchPill } from "./types/unified_search";
 
 export const TARGET_DB = "wip_unified_search";
 
 /**
- * 검색 레코드의 INSERT 및 충돌 시 갱신 SQL을 생성해 D1에 실행
+ * 검색 데이터 UPSERT
  */
 export async function upsert(unifiedSearchDataList: IUnifiedSearchData[]) {
   const isEmptyBatch = unifiedSearchDataList.length === 0;
@@ -37,9 +37,9 @@ export async function upsert(unifiedSearchDataList: IUnifiedSearchData[]) {
 }
 
 /**
- * 현재 의약품 목록에 없는 항목을 통합 검색 DB에서 삭제
+ * 삭제 품목 검색 데이터 제거
  */
-export async function deleteRemovedItems(pillDataList: IPillData[]) {
+export async function deleteRemovedItems(pillDataList: SearchPill[]) {
   const isEmptyPillList = !pillDataList?.length;
 
   if (isEmptyPillList) {

@@ -18,14 +18,14 @@ const RETRY_DELAY_MS = 2000;
 const MAX_ATTEMPTS = 5;
 
 /**
- * 지정한 시간 동안 대기하여 요청 간격과 서버의 재시도 지시를 지킨다.
+ * 요청 간격 대기
  */
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
- * 효능 XML 조회 오류를 호출자에게 전달해 실패 원인과 HTTP 상태를 보존한다.
+ * 효능 XML 조회
  */
 async function fetchEeDocData(itemSeq: string) {
   const response = await axios.get<string>(
@@ -44,7 +44,7 @@ async function fetchEeDocData(itemSeq: string) {
 }
 
 /**
- * Retry-After의 초 단위 또는 HTTP 날짜를 밀리초 단위의 대기 시간으로 변환한다.
+ * 재시도 대기 시간 계산
  */
 export function getRetryAfterMs(value: unknown, now = Date.now()) {
   if (value === undefined || value === null || String(value).trim() === "") {
@@ -63,7 +63,7 @@ export function getRetryAfterMs(value: unknown, now = Date.now()) {
 }
 
 /**
- * 조회 결과가 아닌 오류 페이지를 문서로 오인하지 않고 비어 있는 응답도 실패로 구분한다.
+ * 효능 문서 검증·요약
  */
 function summarizeDocument(document: string) {
   if (
@@ -78,7 +78,7 @@ function summarizeDocument(document: string) {
 }
 
 /**
- * 원문 캐시를 활용하고 HTTP 429만 지수 백오프로 재시도한다.
+ * 효능 요약 조회·재시도
  */
 export async function fetchEffectSummaryResult(
   itemSeq: string,
@@ -103,6 +103,7 @@ export async function fetchEffectSummaryResult(
 
   if (options.useCache !== false) {
     const cached = await readEffectDocument(itemSeq, directory);
+
     const summary =
       cached === null ? FALLBACK_EFFECT_SUMMARY : summarizeDocument(cached);
 
@@ -119,6 +120,7 @@ export async function fetchEffectSummaryResult(
     try {
       const response = await fetchDocument(itemSeq);
       document = typeof response === "string" ? response : response.document;
+
       if (typeof response !== "string") {
         httpStatus = response.httpStatus;
         contentType = response.contentType;
@@ -161,6 +163,7 @@ export async function fetchEffectSummaryResult(
       const delay = Math.max(retryDelayMs * 2 ** (attempt - 1), retryAfter);
 
       logger.warn("[EE-SUMMARY] Retry ITEM_SEQ=%s after %sms", itemSeq, delay);
+
       await wait(delay);
       continue;
     }
@@ -187,6 +190,7 @@ export async function fetchEffectSummaryResult(
         httpStatus,
         message,
       );
+
       return {
         summary,
         reason: empty ? "empty_document" : "empty_summary",
@@ -209,7 +213,7 @@ export async function fetchEffectSummaryResult(
 }
 
 /**
- * 실패를 항목별 파일에 기록하고 지속적인 429 발생 시 나머지 요청을 다음 실행으로 미룬다.
+ * 품목별 효능 요약 수집
  */
 export async function fetchEffectSummaryMap(
   itemSeqList: string[],
@@ -230,7 +234,7 @@ export async function fetchEffectSummaryMap(
   let rateLimited = false;
 
   /**
-   * 캐시를 제외한 실제 HTTP 요청에만 최소 호출 간격을 적용한다.
+   * 호출 간격 적용·조회
    */
   async function fetchPacedDocument(itemSeq: string) {
     if (lastRequestedAt !== null) {
@@ -284,6 +288,7 @@ export async function fetchEffectSummaryMap(
     }
 
     summaryMap.set(itemSeq, result.summary);
+
     await options.onResult?.(itemSeq, result);
 
     const completed = index + 1;

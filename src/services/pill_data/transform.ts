@@ -1,107 +1,124 @@
 import { IDrugRecognition } from "./types/drug_recognition";
-import { IFinishedMedicinePermissionDetail } from "./types/finished_medicine_permission_detail";
+import { IDrugProductPermissionDetail } from "./types/drug_product_permission_detail";
 import { IPillData } from "./types/pill_data";
 import { createEffectSummary } from "./effect_summary/summary";
 import { mergeDuplicateObjectArray } from "../../utils/collections";
 
 /**
- * 의약품 낱알식별정보 데이터 전처리
- * @param drugRecognition 의약품 낱알식별정보 데이터
- * @returns
+ * 누락 값 문자열 변환
  */
-function preprocessingDrugRecognition(
-  drugRecognition: Array<IDrugRecognition>,
-) {
-  /**
-   * 각인 문자열의 공백과 기호를 정리하고 분할선을 세로 막대로 표기한다.
-   */
-  const replacePrint = (print: string) =>
-    print
-      .replace(/\u3000+|=+|\s{2, }/g, " ")
-      .replace(/-{2,}|분할선/g, (match) => (match === "분할선" ? "|" : ""));
-  const processed: Array<IDrugRecognition> = drugRecognition.map((item) => {
-    const { PRINT_FRONT, PRINT_BACK, ITEM_NAME } = item;
-    const printFront = replacePrint(PRINT_FRONT);
-    const printBack = replacePrint(PRINT_BACK);
-
-    return {
-      ...item,
-      ITEM_NAME: ITEM_NAME.trim().replace(/\s{2, }/g, " "),
-      PRINT_FRONT: printFront,
-      PRINT_BACK: printBack,
-    };
-  });
-
-  return processed;
+function text(value: string | number | null | undefined): string {
+  return value == null ? "" : String(value);
 }
 
 /**
- * 허가 정보가 있는 의약품만 결합하고 리소스에서 제외할 속성을 제거한다.
+ * 낱알식별 필드 변환
  */
-function combinePill(
-  drug: IDrugRecognition,
-  permissions: Map<string, IFinishedMedicinePermissionDetail>,
-) {
-  const finished = permissions.get(drug.ITEM_SEQ);
-  const hasPermission = finished !== undefined;
+function toDrugRecognition(item: IDrugRecognition) {
+  return {
+    ITEM_SEQ: text(item.ITEM_SEQ),
+    ITEM_NAME: text(item.ITEM_NAME),
+    ITEM_ENG_NAME: text(item.ITEM_ENG_NAME),
+    ENTP_NAME: text(item.ENTP_NAME),
+    ITEM_PERMIT_DATE: text(item.ITEM_PERMIT_DATE),
+    ETC_OTC_CODE: text(item.ETC_OTC_NAME),
+    CHART: text(item.CHART),
+    ITEM_IMAGE: text(item.ITEM_IMAGE),
+    PRINT_FRONT: text(item.PRINT_FRONT),
+    PRINT_BACK: text(item.PRINT_BACK),
+    DRUG_SHAPE: text(item.DRUG_SHAPE),
+    COLOR_CLASS1: text(item.COLOR_CLASS1),
+    COLOR_CLASS2: text(item.COLOR_CLASS2),
+    LINE_FRONT: text(item.LINE_FRONT),
+    LINE_BACK: text(item.LINE_BACK),
+    LENGTH_LONG: text(item.LENG_LONG),
+    LENGTH_SHORT: text(item.LENG_SHORT),
+    LENGTH_THICK: text(item.THICK),
+    CLASS_NO: text(item.CLASS_NO),
+    CLASS_NAME: text(item.CLASS_NAME),
+    FORM_CODE: text(item.FORM_CODE_NAME),
+    MARK_CODE_FRONT: text(item.MARK_CODE_FRONT),
+    MARK_CODE_BACK: text(item.MARK_CODE_BACK),
+    CHANGE_DATE: text(item.CHANGE_DATE),
+    COVERAGE_ENG_NAME: text(item.EDI_CODE),
+  };
+}
 
-  if (!hasPermission) {
-    return [];
+/**
+ * 각인 문자열 정리
+ */
+function replacePrint(print: string): string {
+  return print
+    .replace(/\u3000+|=+|\s{2, }/g, " ")
+    .replace(/-{2,}|분할선/g, (match) => (match === "분할선" ? "|" : ""));
+}
+
+/**
+ * 품목별 허가 정보 색인
+ */
+function indexPermissions(
+  drugProductPermissionDetails: IDrugProductPermissionDetail[],
+) {
+  const permissions = new Map<string, IDrugProductPermissionDetail>();
+
+  for (const permission of drugProductPermissionDetails) {
+    const itemSeq = text(permission.ITEM_SEQ);
+
+    const shouldIndex = Boolean(itemSeq) && !permissions.has(itemSeq);
+    if (shouldIndex) {
+      permissions.set(itemSeq, permission);
+    }
   }
 
-  const {
-    APPROVAL_TYPE,
-    CANCEL_STATUS,
-    CANCEL_DATE,
-    ENTP_PERMIT_NO,
-    BAR_CODE,
-    EE_DOC_DATA,
-    UD_DOC_DATA,
-    NB_DOC_DATA,
-    ATT_DOC_DATA,
-    REEXAM_TARGET_YN,
-    REEXAM_CONT,
-    ENTP_BIZ_NO,
-    ENTP_SEQ,
-    IMG_REGIST_TS,
-    BUSINESS_LICENCE_NUMBER,
-    DRUG_SHAPE_FRONT,
-    DRUG_SHAPE_BACK,
-    MARK_IMAGE_FRONT,
-    MARK_IMAGE_BACK,
-    FINISH_MATERIAL_YN,
-    INDUTY_CODE,
-    ...rest
-  } = { ...finished, ...drug };
-
-  return [
-    {
-      ...rest,
-      EFFECT_SUMMARY: createEffectSummary(rest.CLASS_NAME),
-    },
-  ];
+  return permissions;
 }
 
 /**
- * 허가 정보는 한 번 인덱싱하고 첫 번째 일치 행을 사용한다.
+ * 알약 정보 병합·변환
  */
 export function createPillData(
   drugRecognition: IDrugRecognition[],
-  finishedMedicinePermission: IFinishedMedicinePermissionDetail[],
+  drugProductPermissionDetails: IDrugProductPermissionDetail[],
 ): IPillData[] {
-  const permissions = new Map<string, IFinishedMedicinePermissionDetail>();
-
-  finishedMedicinePermission.forEach((permission) => {
-    const isFirstPermission = !permissions.has(permission.ITEM_SEQ);
-
-    if (isFirstPermission) {
-      permissions.set(permission.ITEM_SEQ, permission);
-    }
-  });
-
-  const merged = mergeDuplicateObjectArray("ITEM_SEQ", drugRecognition);
-
-  return preprocessingDrugRecognition(merged).flatMap((drug) =>
-    combinePill(drug, permissions),
+  const permissions = indexPermissions(drugProductPermissionDetails);
+  const drugs = mergeDuplicateObjectArray(
+    "ITEM_SEQ",
+    drugRecognition.map(toDrugRecognition),
   );
+
+  return drugs.flatMap((drug): IPillData[] => {
+    const permission = permissions.get(drug.ITEM_SEQ);
+
+    const hasPermission = permission !== undefined;
+    if (!hasPermission) {
+      return [];
+    }
+
+    return [
+      {
+        ...drug,
+        ENTP_ENG_NAME: text(permission.ENTP_ENG_NAME),
+        MATERIAL_NAME: text(permission.MATERIAL_NAME),
+        MATERIAL_ENG_NAME: text(permission.MAIN_INGR_ENG),
+        STORAGE_METHOD: text(permission.STORAGE_METHOD),
+        VALID_TERM: text(permission.VALID_TERM),
+        PACK_UNIT: text(permission.PACK_UNIT),
+        INSURANCE_CODE: text(permission.EDI_CODE),
+        DRUG_CLASS: text(permission.NARCOTIC_KIND_CODE),
+        NEW_DRUG_YN: text(permission.NEWDRUG_CLASS_NAME),
+        // 제품 허가 API에는 기존 파일 원본의 변경내용 필드가 없다.
+        CHANGE_CONTENT: "",
+        TOTAL_CONTENT: text(permission.TOTAL_CONTENT),
+        MAIN_ITEM_INGR: text(permission.MAIN_ITEM_INGR),
+        INGR_NAME: text(permission.INGR_NAME),
+        ATC_CODE: text(permission.ATC_CODE),
+        RARE_DRUG_YN: text(permission.RARE_DRUG_YN),
+        OEM_ENTP_NAME: text(permission.CNSGN_MANUF),
+        ITEM_NAME: drug.ITEM_NAME.trim().replace(/\s{2, }/g, " "),
+        PRINT_FRONT: replacePrint(drug.PRINT_FRONT),
+        PRINT_BACK: replacePrint(drug.PRINT_BACK),
+        EFFECT_SUMMARY: createEffectSummary(drug.CLASS_NAME),
+      },
+    ];
+  });
 }

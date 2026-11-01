@@ -2,7 +2,7 @@ import type { ResourceTask } from "./types/resource_tasks";
 import logger from "./utils/logger";
 
 /**
- * 단일 작업을 실행하고, 실패 시 오류를 기록한 뒤 성공 여부를 반환
+ * 단일 작업 실행
  */
 async function runTask(task: ResourceTask) {
   try {
@@ -19,7 +19,7 @@ async function runTask(task: ResourceTask) {
 }
 
 /**
- * 선택된 작업을 등록 순서대로 실행하고 모든 작업의 성공 여부를 반환
+ * 선택 작업 순차 실행
  */
 export async function runTasks(targets: string[], tasks: ResourceTask[]) {
   // 설정에 지정된 이름으로 실행할 작업을 선택

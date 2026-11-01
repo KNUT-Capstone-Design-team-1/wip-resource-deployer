@@ -1,7 +1,7 @@
 import { retryFailedPillEffectSummaries } from "./index";
 
 /**
- * 실패 요약 재조회 명령을 실행한다.
+ * 실패 요약 재조회 실행
  */
 async function main() {
   // 실행 명령과 처리 건수 제한 옵션을 읽는다.

@@ -17,7 +17,7 @@ const CHUNK_SIZE = 1000;
 const EMPTY_STATS: IStatsResult = { minRowId: 1, maxRowId: 0, totalCount: 0 };
 
 /**
- * D1 응답의 첫 결과 행에서 rowid 범위와 전체 건수를 읽기
+ * DB 통계 행 변환
  */
 function parseStatsRow(parsed: any) {
   const hasResults = Array.isArray(parsed) && Boolean(parsed[0]?.results?.[0]);
@@ -36,10 +36,11 @@ function parseStatsRow(parsed: any) {
 }
 
 /**
- * Wrangler 출력에서 JSON 통계를 추출하고 파싱 실패 시 빈 통계를 반환
+ * Wrangler 통계 추출
  */
 function parseStatsOutput(output: string) {
   const jsonMatch = output.match(/\[\s*\{[\s\S]*\}\s*\]/);
+
   const hasJson = jsonMatch !== null;
 
   if (!hasJson) {
@@ -56,7 +57,7 @@ function parseStatsOutput(output: string) {
 }
 
 /**
- * 기존 unified_search 데이터를 보존한 채 FTS5 인덱스를 청크 단위로 안전하게 재구축(Rebuild)
+ * FTS5 인덱스 재구축
  */
 export async function rebuildFts5() {
   logger.info("[UNIFIED-SEARCH-FTS-REBUILD] Start chunked FTS5 rebuild");
@@ -106,7 +107,7 @@ export async function rebuildFts5() {
 }
 
 /**
- * 지정한 rowid 범위를 청크 단위로 나누어 FTS5 인덱스에 적재
+ * FTS5 청크 적재
  */
 function populateFts(minRowId: number, maxRowId: number) {
   for (let startId = minRowId; startId <= maxRowId; startId += CHUNK_SIZE) {

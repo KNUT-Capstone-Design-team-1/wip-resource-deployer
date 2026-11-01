@@ -6,7 +6,7 @@ import { Converter } from "csvtojson/v2/Converter";
 import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
 
 /**
- * 실제 셀 기준 시트 범위 재계산
+ * 시트 범위 보정
  */
 function updateWorksheetRange(worksheet: XLSX.WorkSheet) {
   const range = { s: { c: 0, r: 0 }, e: { c: 0, r: 0 } };
@@ -28,7 +28,7 @@ function updateWorksheetRange(worksheet: XLSX.WorkSheet) {
 }
 
 /**
- * 시트 범위 보정 및 행 추출
+ * 시트 행 추출
  */
 function readWorksheet(worksheet: XLSX.WorkSheet) {
   updateWorksheetRange(worksheet);
@@ -37,7 +37,7 @@ function readWorksheet(worksheet: XLSX.WorkSheet) {
 }
 
 /**
- * 전체 시트의 행 순차 병합
+ * 전체 Excel 시트 로드
  */
 export async function readExcelContents(fileName: string) {
   const workbook = XLSX.readFile(fileName);
@@ -55,7 +55,7 @@ export async function readExcelContents(fileName: string) {
 }
 
 /**
- * CSV 인코딩 처리 및 행 파싱
+ * CSV 디코딩·로드
  */
 export async function readCsvContents(fileName: string) {
   const buffer = fs.readFileSync(fileName);
@@ -66,7 +66,7 @@ export async function readCsvContents(fileName: string) {
 }
 
 /**
- * UTF-8 BOM 제거 및 EUC-KR 폴백 처리
+ * CSV 문자 인코딩 변환
  */
 export function decodeCsvBuffer(buffer: Buffer) {
   const isUtf8Bom =
@@ -77,6 +77,7 @@ export function decodeCsvBuffer(buffer: Buffer) {
   }
 
   const utf8String = iconvLite.decode(buffer, "utf-8");
+
   const isValidUtf8 = !utf8String.includes("\uFFFD");
 
   if (isValidUtf8) {
@@ -87,7 +88,7 @@ export function decodeCsvBuffer(buffer: Buffer) {
 }
 
 /**
- * PDF 페이지 텍스트 추출 및 메모리 해제
+ * PDF 페이지 텍스트 추출
  */
 async function readPdfPageText(page: PDFPageProxy): Promise<string> {
   try {
@@ -109,13 +110,14 @@ async function readPdfPageText(page: PDFPageProxy): Promise<string> {
 }
 
 /**
- * PDF 페이지 순서별 텍스트 수집
+ * 전체 PDF 텍스트 수집
  */
 async function readPdfPages(pdf: PDFDocumentProxy): Promise<string[]> {
   const pagesText: string[] = [];
 
   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
     const page = await pdf.getPage(pageNumber);
+
     const text = await readPdfPageText(page);
 
     pagesText.push(text);
@@ -125,10 +127,11 @@ async function readPdfPages(pdf: PDFDocumentProxy): Promise<string[]> {
 }
 
 /**
- * PDF 로드 및 종료 시 메모리 해제
+ * PDF 로드·메모리 해제
  */
 export async function readPdfContents(filePath: string) {
   const data = new Uint8Array(await fs.promises.readFile(filePath));
+
   // CommonJS 컴파일 시 ESM import 유지
   const pdfjsLib = await eval('import("pdfjs-dist/legacy/build/pdf.mjs")');
   const task = pdfjsLib.getDocument({ data });

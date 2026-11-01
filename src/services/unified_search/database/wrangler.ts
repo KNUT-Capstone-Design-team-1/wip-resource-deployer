@@ -4,10 +4,7 @@ import path from "node:path";
 import { RESOURCE_DIRECTORY } from "../../../utils/paths";
 
 /**
- * wrangler에 쿼리 실행 (콘솔에 출력)
- * @param query 실행할 쿼리
- * @param dbName 대상 DB 이름
-
+ * Wrangler 쿼리 실행
  */
 export function runQuery(query: string, dbName: string) {
   const safeQuery = query.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
@@ -17,10 +14,7 @@ export function runQuery(query: string, dbName: string) {
 }
 
 /**
- * wrangler에 쿼리 실행하고 stdout 문자열 반환
- * @param query 실행할 쿼리
- * @param dbName 대상 DB 이름
-
+ * 쿼리 실행 결과 반환
  */
 export function runQueryWithOutput(query: string, dbName: string) {
   const safeQuery = query.replace(/\n/g, " ").replace(/\s+/g, " ").trim();
@@ -30,10 +24,7 @@ export function runQueryWithOutput(query: string, dbName: string) {
 }
 
 /**
- * wrangler에 SQL 파일 쿼리 실행
- * @param resourceFileName 파일명
- * @param dbName 대상 DB 이름
-
+ * SQL 파일 실행
  */
 export function runQueryForSqlFile(resourceFileName: string, dbName: string) {
   const filePath = path.join(RESOURCE_DIRECTORY, resourceFileName);

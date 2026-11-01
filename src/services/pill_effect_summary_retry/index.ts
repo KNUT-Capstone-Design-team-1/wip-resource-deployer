@@ -13,7 +13,7 @@ import { FALLBACK_EFFECT_SUMMARY } from "../pill_data/effect_summary/summary";
 import { removeEffectSummaryFailure } from "../pill_data/effect_summary/storage";
 
 /**
- * 기존 리소스 구조를 검증하여 잘못된 입력 파일을 덮어쓰지 않는다.
+ * 알약 리소스 로드·검증
  */
 async function readPillResource(directory: string): Promise<PillResourceFile> {
   const parsed = JSON.parse(
@@ -34,13 +34,14 @@ async function readPillResource(directory: string): Promise<PillResourceFile> {
 }
 
 /**
- * 실패 기록이 없으면 빈 목록을 반환한다.
+ * 실패 품목 ID 조회
  */
 async function readFailedItemSeqs(directory: string): Promise<Set<string>> {
   try {
     const entries = await fs.promises.readdir(directory, {
       withFileTypes: true,
     });
+
     return new Set(
       entries
         .filter((entry) => entry.isFile() && /^\d+\.json$/.test(entry.name))
@@ -50,25 +51,28 @@ async function readFailedItemSeqs(directory: string): Promise<Set<string>> {
     if (e.code !== "ENOENT") {
       throw e;
     }
+
     return new Set();
   }
 }
 
 /**
- * 동일한 품목의 모든 리소스에 요약을 반영할 수 있도록 묶는다.
+ * 동일 품목별 그룹 생성
  */
 function indexPills(pills: IPillData[]) {
   const byId = new Map<string, IPillData[]>();
+
   for (const pill of pills) {
     const group = byId.get(pill.ITEM_SEQ) ?? [];
     group.push(pill);
     byId.set(pill.ITEM_SEQ, group);
   }
+
   return byId;
 }
 
 /**
- * 실패 항목만 재조회하고 체크포인트 저장을 마친 성공 항목만 실패 파일에서 제거한다.
+ * 실패 효능 요약 재조회
  */
 export async function retryFailedPillEffectSummaries(
   options: EffectRetryOptions = {},
@@ -77,6 +81,7 @@ export async function retryFailedPillEffectSummaries(
 
   // 리소스 경로와 체크포인트 간격을 준비한다.
   const directory = options.directory ?? RESOURCE_DIRECTORY;
+
   const checkpointSize = options.checkpointSize ?? 50;
 
   // 처리 건수와 저장 간격이 유효한 값인지 확인한다.
@@ -94,6 +99,7 @@ export async function retryFailedPillEffectSummaries(
 
   // 기존 실패 파일 목록을 한 번 읽어 품목마다 존재 여부를 다시 확인하지 않는다.
   const failedDirectory = path.join(directory, "pill_effect_summary_failed");
+
   const failedItemSeqs = await readFailedItemSeqs(failedDirectory);
   const byId = indexPills(resource.resources);
 
@@ -107,7 +113,7 @@ export async function retryFailedPillEffectSummaries(
   let recovered = 0;
 
   /**
-   * 리소스 교체가 성공한 후에만 해당 실패 파일을 삭제한다.
+   * 복구 요약 저장·실패 정리
    */
   async function checkpoint() {
     if (pendingSuccesses.size === 0) {

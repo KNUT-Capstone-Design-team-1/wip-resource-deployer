@@ -3,7 +3,7 @@ import { createResourceFile } from "../../utils/resource_writer";
 import logger from "../../utils/logger";
 
 /**
- * 마약류 원본으로 narcotics.json 리소스를 생성
+ * 마약류 리소스 생성
  */
 export async function createNarcoticsResource() {
   // 마약류 원본 파일을 읽고 리소스 속성으로 변환

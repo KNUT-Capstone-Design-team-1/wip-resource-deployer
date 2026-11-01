@@ -1,10 +1,11 @@
 import { normalizeResourceText } from "../../utils/resource_text";
 
 /**
- * 중복 머리말 번호 및 동일한 꼬리말 페이지 번호 제거
+ * 페이지 번호 제거
  */
 function removePageNumbers(text: string): string {
   const header = /^(\d{1,3})\s+\1\s+\d{1,3}(?=\s|$)\s*/.exec(text);
+
   const hasPageHeader = header !== null;
 
   if (!hasPageHeader) {
@@ -19,7 +20,7 @@ function removePageNumbers(text: string): string {
 }
 
 /**
- * 목차 점선 및 연결된 페이지 번호 제거
+ * 목차 점선·번호 제거
  */
 function removeContentsLeaders(text: string): string {
   return text
@@ -28,7 +29,7 @@ function removeContentsLeaders(text: string): string {
 }
 
 /**
- * 목록·모니터링 제목의 발행 연도 제거
+ * 제목 발행 연도 제거
  */
 function removeTitleYears(text: string): string {
   return text.replace(
@@ -38,7 +39,7 @@ function removeTitleYears(text: string): string {
 }
 
 /**
- * 표지·페이지 장식 제거 및 금지 목록 본문 정리
+ * 도핑 금지 본문 정리
  */
 export function normalizeProhibitedListText(value: unknown): string {
   const text = normalizeResourceText(value);
@@ -47,6 +48,7 @@ export function normalizeProhibitedListText(value: unknown): string {
       text,
     );
   const isYearOnly = /^(?:19|20)\d{2}$/.test(text);
+
   const isDisposablePage = isCover || isYearOnly;
 
   if (isDisposablePage) {

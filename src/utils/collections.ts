@@ -1,5 +1,5 @@
 /**
- * ID가 같은 행을 입력 순서대로 병합
+ * 중복 행 속성 병합
  */
 function mergeProperties(
   existing: Record<string, any>,
@@ -17,7 +17,7 @@ function mergeProperties(
 }
 
 /**
- * 같은 ID의 객체를 합치고 각 속성의 쉼표 구분 값을 중복 없이 병합
+ * 동일 ID 속성 중복 병합
  */
 export function mergeDuplicateObjectArray<T extends Record<string, any>>(
   idColumn: keyof T & string,
@@ -28,6 +28,7 @@ export function mergeDuplicateObjectArray<T extends Record<string, any>>(
   objects.forEach((object) => {
     const id = object[idColumn];
     const existing = merged.get(id);
+
     const isFirstOccurrence = existing === undefined;
 
     if (isFirstOccurrence) {

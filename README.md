@@ -11,17 +11,19 @@
 
 #### 데이터베이스 및 오픈 API
 
-- [의약품 낱알식별 정보 데이터](https://data.mfds.go.kr/OPCAC01F05?srchSrvcKorNm=%EC%9D%98%EC%95%BD%ED%92%88%20%EB%82%B1%EC%95%8C%EC%8B%9D%EB%B3%84%EC%A0%95%EB%B3%B4%20%EB%8D%B0%EC%9D%B4%ED%84%B0)
-- [의약품 제품허가 상세정보](https://data.mfds.go.kr/OPCAC01F04?page=1&limit=10&totalCnt=2&sort=null&sortOrder=null&allChk=Y&taskDivsCd=&srchSrvcKorNm=%EC%99%84%EC%A0%9C+%EC%9D%98%EC%95%BD%ED%92%88+%ED%97%88%EA%B0%80+%EC%83%81%EC%84%B8+%EB%8D%B0%EC%9D%B4%ED%84%B0&srchRlatSrvcNm=&startYear=&endYear=&opdataSeq=88)
+- [식품의약품안전처_의약품 낱알식별 정보](https://www.data.go.kr/data/15057639/openapi.do)
+- [식품의약품안전처_의약품 제품 허가정보](https://www.data.go.kr/data/15095677/openapi.do)
 - [약국 오픈 API Data (생활안전정보)](https://www.safemap.go.kr/opna/data/dataViewRenew.do?objtId=127)
 - [마약정보데이터베이스](https://www.nifds.go.kr/toxinfo/kind/kr/index.do)
 - [도핑 금지 목록](https://www.kada-ad.or.kr/kada?where=drug/drug_info_method)
 
 #### 환경 변수 (.env)
 
-`nearby_pharmacies` 리소스 생성 시 프로젝트 루트에 `.env` 파일을 생성하고 생활안전지도 API 키 설정 필요
+`pill_data`, `nearby_pharmacies` 실행 시 사용하는 API 키를 환경 변수 또는 프로젝트 루트 `.env`에 설정한다. 환경 변수를 우선 사용한다.
 
 ```env
+DRUG_RECOGNITION_API_KEY=your_drug_recognition_key_here
+DRUG_PRODUCT_PERMISSION_DETAIL_API_KEY=your_drug_product_permission_detail_key_here
 NEARBY_PHARMACIES_API_KEY=your_service_key_here
 ```
 
@@ -31,8 +33,6 @@ NEARBY_PHARMACIES_API_KEY=your_service_key_here
 
 2. `origin_data` 디렉터리에 아래 디렉터리 생성
 
-- `drug_recognition` (의약품 낱알식별 / xls)
-- `finished_medicine_permission_detail` (의약품 제품허가 상세정보 / xls)
 - `cannabis` (대마 데이터 / xlsx)
 - `narcotics` (마약류 데이터 / xlsx)
 - `psychotropics` (향정신성 약물 데이터 / xlsx)
@@ -44,18 +44,12 @@ NEARBY_PHARMACIES_API_KEY=your_service_key_here
 
 - common > targetResource
 
-효능·효과 요약 생성 여부는 `pillData.createEffectSummary`로 설정한다.
-
 ```json
 "pillData": {
-  "createEffectSummary": false
+  "createEffectSummary": true,
+  "createMarkImage": true
 }
 ```
-
-- `true` (기본값): 효능 XML을 조회해 요약을 생성한다.
-- `false`: XML 조회와 `pill_effect_summary_retry`를 실행하지 않고 원본 효능·효과를 사용한다. 원본도 없으면 “효능·효과 정보가 없습니다.”를 넣는다.
-- 설정을 생략하면 기존 동작대로 요약을 생성한다.
-- `pill_data` 생성이 성공하면, `pill_effect_summary_retry`가 실행 대상에 없거나 `createEffectSummary`가 `false`인 경우 `resources/pill_effect_documents` 캐시 폴더를 삭제한다.
 
 4. 실행
 

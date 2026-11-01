@@ -11,12 +11,11 @@ import { toPharmacy } from "./transform";
 import logger from "../../utils/logger";
 
 /**
- * 환경 변수 또는 .env 파일에서 생활안전지도 약국 API 인증키 조회
- *
- * @returns OpenAPI 서비스 키 문자열
+ * API 인증키 조회
  */
 function getApiKey() {
   const environmentKey = process.env.NEARBY_PHARMACIES_API_KEY?.trim();
+
   const hasEnvironmentKey = Boolean(environmentKey);
 
   if (hasEnvironmentKey) {
@@ -24,6 +23,7 @@ function getApiKey() {
   }
 
   const envPath = path.resolve(process.cwd(), ".env");
+
   const hasEnvFile = fs.existsSync(envPath);
 
   if (!hasEnvFile) {
@@ -36,6 +36,7 @@ function getApiKey() {
     .readFileSync(envPath, "utf8")
     .match(/NEARBY_PHARMACIES_API_KEY\s*=\s*(.+)/);
   const fileKey = match?.[1]?.trim();
+
   const hasFileKey = Boolean(fileKey);
 
   if (hasFileKey) {
@@ -48,7 +49,7 @@ function getApiKey() {
 }
 
 /**
- * 약국 API의 한 페이지를 조회하고 변환된 약국 목록과 전체 건수를 반환
+ * 약국 API 페이지 조회
  */
 async function fetchPharmacyPage(
   url: string,
@@ -61,6 +62,7 @@ async function fetchPharmacyPage(
     params: { serviceKey, pageNo, numOfRows: 1000, returnType: "json" },
   });
   const body = response.data?.body;
+
   const hasBody = body !== undefined && body !== null;
 
   if (!hasBody) {
@@ -79,7 +81,7 @@ async function fetchPharmacyPage(
 }
 
 /**
- * 약국 API를 페이지 단위로 조회해 전체 약국 목록을 수집
+ * 전체 약국 수집
  */
 export async function fetchAllNearbyPharmacies(
   url = "http://safemap.go.kr/openapi2/IF_0048",

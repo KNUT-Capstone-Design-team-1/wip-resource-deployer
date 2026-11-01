@@ -6,7 +6,7 @@ import defaultConfig from "../config.example.json";
 import { PROJECT_ROOT } from "./utils/paths";
 
 /**
- * 기존 설정을 보존하고, 최초 실행에만 기본 설정을 생성
+ * 설정 로드·기본값 생성
  */
 export function loadConfig(filePath = path.join(PROJECT_ROOT, "config.json")) {
   const hasConfig = fs.existsSync(filePath);

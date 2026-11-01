@@ -1,0 +1,47 @@
+/** 의약품 제품 허가 상세정보 API 응답 항목 (getDrugPrdtPrmsnDtlInq08). */
+export interface IDrugProductPermissionDetail {
+  ITEM_SEQ: string | number;
+  ITEM_NAME?: string | null;
+  ITEM_ENG_NAME?: string | null;
+  ENTP_NAME?: string | null;
+  ENTP_ENG_NAME?: string | null;
+  ITEM_PERMIT_DATE?: string | null;
+  ETC_OTC_CODE?: string | null;
+  CHART?: string | null;
+  BAR_CODE?: string | null;
+  MATERIAL_NAME?: string | null;
+  MAIN_INGR_ENG?: string | null;
+  EE_DOC_ID?: string | null;
+  UD_DOC_ID?: string | null;
+  NB_DOC_ID?: string | null;
+  EE_DOC_DATA?: string | null;
+  UD_DOC_DATA?: string | null;
+  NB_DOC_DATA?: string | null;
+  PN_DOC_DATA?: string | null;
+  STORAGE_METHOD?: string | null;
+  VALID_TERM?: string | null;
+  REEXAM_TARGET?: string | null;
+  REEXAM_DATE?: string | null;
+  PACK_UNIT?: string | null;
+  EDI_CODE?: string | null;
+  INSERT_FILE?: string | null;
+  PERMIT_KIND_NAME?: string | null;
+  ENTP_NO?: string | null;
+  MAKE_MATERIAL_FLAG?: string | null;
+  NEWDRUG_CLASS_NAME?: string | null;
+  INDUTY_TYPE?: string | null;
+  CANCEL_DATE?: string | null;
+  CANCEL_NAME?: string | null;
+  CHANGE_DATE?: string | null;
+  NARCOTIC_KIND_CODE?: string | null;
+  GBN_NAME?: string | null;
+  TOTAL_CONTENT?: string | null;
+  MAIN_ITEM_INGR?: string | null;
+  INGR_NAME?: string | null;
+  ATC_CODE?: string | null;
+  BIZRNO?: string | null;
+  RARE_DRUG_YN?: string | null;
+  CNSGN_MANUF?: string | null;
+  DATA_PROTECT_START_DATE?: string | null;
+  DATA_PROTECT_END_DATE?: string | null;
+}

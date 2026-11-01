@@ -7,8 +7,7 @@ import { RESOURCE_DIRECTORY } from "../../utils/paths";
 import logger from "../../utils/logger";
 
 /**
- * 통합 검색 DB에 UPSERT 하는데 실패한 데이터를 UPSERT
- * @param filePath 통합 검색 DB에 UPSERT 하는데 실패한 데이터 json 파일 위치
+ * 검색 저장 실패 재시도
  */
 async function upsertFailedRetry(filePath: string) {
   try {
@@ -34,7 +33,7 @@ async function upsertFailedRetry(filePath: string) {
 }
 
 /**
- * 통합 검색 DB에 저장하지 못한 데이터들 UPSERT 시도
+ * 전체 검색 실패 재시도
  */
 export async function upsertFailedRetryAll() {
   // 검색 DB 저장에 실패한 레코드 디렉터리를 확인
@@ -42,6 +41,7 @@ export async function upsertFailedRetryAll() {
     RESOURCE_DIRECTORY,
     "unified_search_insert_failed",
   );
+
   const exists = fs.existsSync(directory);
 
   if (!exists) {
@@ -60,6 +60,7 @@ export async function upsertFailedRetryAll() {
 
   for (const file of files) {
     const filePath = path.join(directory, file.name);
+
     const succeeded = await upsertFailedRetry(filePath);
 
     if (succeeded) {
@@ -81,7 +82,7 @@ export async function upsertFailedRetryAll() {
 }
 
 /**
- * 저장·인덱스 재구축을 마친 실패 파일 제거
+ * 복구 완료 파일 제거
  */
 function removeRecoveredFiles(filePaths: string[]) {
   for (const filePath of filePaths) {

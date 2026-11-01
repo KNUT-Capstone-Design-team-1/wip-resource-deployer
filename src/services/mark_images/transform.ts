@@ -1,16 +1,25 @@
-import type { MarkEntry } from "./types/mark_images";
+import { MarkEntry, IMarkImageData } from "./types/mark_images";
 import { IDrugRecognition } from "../pill_data/types/drug_recognition";
-import { IMarkImageData } from "./types/mark_images";
 import { fetchImageBase64, isValidBase64 } from "./client";
+import { mapConcurrent } from "../../utils/concurrent";
 import logger from "../../utils/logger";
 
-/**
- * 코드가 존재하고 아직 등록되지 않은 마크만 수집 목록에 추가
- */
-function registerMark(entries: Map<string, MarkEntry>, entry: MarkEntry) {
-  const shouldRegister = Boolean(entry.code) && !entries.has(entry.code);
+export interface MarkImageOptions {
+  concurrency?: number;
+  fetchImage?: (url: string) => Promise<string>;
+}
 
-  if (!shouldRegister) {
+/**
+ * 유효 마크 중복 제거
+ */
+function registerMark(entries: Map<string, MarkEntry>, entry: MarkEntry): void {
+  const hasUsableMark = Boolean(entry.code.trim()) && Boolean(entry.url.trim());
+  if (!hasUsableMark) {
+    return;
+  }
+
+  const isDuplicate = entries.has(entry.code);
+  if (isDuplicate) {
     return;
   }
 
@@ -18,21 +27,21 @@ function registerMark(entries: Map<string, MarkEntry>, entry: MarkEntry) {
 }
 
 /**
- * 의약품 앞면과 뒷면의 마크를 코드 기준으로 중복 없이 수집
+ * 앞뒤 마크 수집
  */
-function collectMarks(drugs: IDrugRecognition[]) {
+function collectMarks(drugs: IDrugRecognition[]): MarkEntry[] {
   const entries = new Map<string, MarkEntry>();
 
   for (const drug of drugs) {
     registerMark(entries, {
-      title: drug.DRUG_SHAPE_FRONT,
-      code: drug.MARK_CODE_FRONT,
-      url: drug.MARK_IMAGE_FRONT,
+      title: drug.MARK_CODE_FRONT_ANAL ?? "",
+      code: drug.MARK_CODE_FRONT ?? "",
+      url: drug.MARK_CODE_FRONT_IMG ?? "",
     });
     registerMark(entries, {
-      title: drug.DRUG_SHAPE_BACK,
-      code: drug.MARK_CODE_BACK,
-      url: drug.MARK_IMAGE_BACK,
+      title: drug.MARK_CODE_BACK_ANAL ?? "",
+      code: drug.MARK_CODE_BACK ?? "",
+      url: drug.MARK_CODE_BACK_IMG ?? "",
     });
   }
 
@@ -40,50 +49,26 @@ function collectMarks(drugs: IDrugRecognition[]) {
 }
 
 /**
- * 원격 이미지를 다운로드하며 실패하거나 원격 주소가 아니면 원래 값을 반환
+ * 이미지 데이터 검증
  */
-async function resolveImage(entry: MarkEntry) {
-  const isRemoteImage = entry.url?.startsWith("http");
+function isImageData(base64: string): boolean {
+  const isDataUrl = base64.startsWith("data:image/");
+  const payload = isDataUrl ? (base64.split(";base64,")[1] ?? "") : base64;
 
-  if (!isRemoteImage) {
-    return entry.url;
-  }
-
-  try {
-    const image = await fetchImageBase64(entry.url);
-
-    await new Promise((resolve) => setTimeout(resolve, 150));
-
-    return image;
-  } catch (error) {
-    logger.error(
-      "[MARK-IMAGE] Failed image %s (%s): %s",
-      entry.code,
-      entry.url,
-      error.message,
-    );
-
-    return entry.url;
-  }
+  return isValidBase64(payload);
 }
 
 /**
- * 이미지의 Base64 형식을 검증하고 유효한 마크만 리소스로 변환
+ * 마크 이미지 변환
  */
-async function createMark(entry: MarkEntry) {
-  const base64 = await resolveImage(entry);
-  const isEmpty = !base64;
+async function createMark(
+  entry: MarkEntry,
+  fetchImage: (url: string) => Promise<string>,
+): Promise<IMarkImageData[]> {
+  const isRemoteImage = /^https?:\/\//i.test(entry.url);
+  const base64 = isRemoteImage ? await fetchImage(entry.url) : entry.url;
 
-  if (isEmpty) {
-    logger.warn("[MARK-IMAGE] Empty image data for %s", entry.code);
-
-    return [];
-  }
-
-  const isDataUrl = base64.startsWith("data:image/");
-  const payload = isDataUrl ? (base64.split(";base64,")[1] ?? "") : base64;
-  const isValidImage = isValidBase64(payload);
-
+  const isValidImage = isImageData(base64);
   if (!isValidImage) {
     logger.warn("[MARK-IMAGE] Excluded invalid base64 data for %s", entry.code);
 
@@ -94,27 +79,31 @@ async function createMark(entry: MarkEntry) {
 }
 
 /**
- * 마크 처리 50건마다 또는 마지막 항목 처리 후 진행 상황을 기록
+ * 마크 병렬 변환
  */
-function logProgress(completed: number, total: number) {
-  const shouldLog = completed % 50 === 0 || completed === total;
-
-  if (shouldLog) {
-    logger.info("[MARK-IMAGE] Progress: %s/%s", completed, total);
-  }
-}
-
-/**
- * 중복을 제거한 마크를 순차적으로 처리해 유효한 이미지 리소스 배열을 생성
- */
-export async function createMarkImageData(drugs: IDrugRecognition[]) {
+export async function createMarkImageData(
+  drugs: IDrugRecognition[],
+  options: MarkImageOptions = {},
+): Promise<IMarkImageData[]> {
   const entries = collectMarks(drugs);
-  const images: IMarkImageData[] = [];
+  const fetchImage = options.fetchImage ?? fetchImageBase64;
+  // 같은 URL을 쓰는 다른 마크 코드도 한 번만 다운로드한다. 캐시는 실행 중에만 유지한다.
+  const downloads = new Map<string, Promise<string>>();
+  /**
+   * 이미지 URL 캐시 조회
+   */
+  const cachedFetch = (url: string): Promise<string> => {
+    const download = downloads.get(url) ?? fetchImage(url);
+    downloads.set(url, download);
 
-  for (let index = 0; index < entries.length; index += 1) {
-    images.push(...(await createMark(entries[index])));
-    logProgress(index + 1, entries.length);
-  }
+    return download;
+  };
 
-  return images;
+  const images = await mapConcurrent(
+    entries,
+    options.concurrency ?? 3,
+    (entry) => createMark(entry, cachedFetch),
+  );
+
+  return images.flat();
 }

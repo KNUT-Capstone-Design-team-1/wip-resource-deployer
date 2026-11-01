@@ -2,7 +2,7 @@ import { runQuery } from "../unified_search/database/wrangler";
 import { TARGET_DB } from "../unified_search/repository";
 
 /**
- * 메인 통합 검색 테이블 생성
+ * 검색 테이블 생성
  */
 export function createUnifiedSearchTable() {
   const createTableQuery = `
@@ -16,7 +16,7 @@ export function createUnifiedSearchTable() {
 }
 
 /**
- * FTS5 가상 테이블 생성
+ * FTS5 테이블 생성
  */
 export function createUnifiedSearchFtsTable() {
   const createFTS5Query = `
@@ -32,7 +32,7 @@ export function createUnifiedSearchFtsTable() {
 }
 
 /**
- * INSERT Trigger 생성
+ * FTS5 삽입 트리거 생성
  */
 export function createUnifiedSearchFtsInsertTrigger() {
   const createTriggerQuery = `
@@ -47,7 +47,7 @@ export function createUnifiedSearchFtsInsertTrigger() {
 }
 
 /**
- * UPDATE Trigger 생성 (OLD rowid delete & NEW rowid insert)
+ * FTS5 갱신 트리거 생성
  */
 export function createUnifiedSearchFtsUpdateTrigger() {
   const createTriggerQuery = `
@@ -64,7 +64,7 @@ export function createUnifiedSearchFtsUpdateTrigger() {
 }
 
 /**
- * DELETE Trigger 생성 (OLD rowid delete)
+ * FTS5 삭제 트리거 생성
  */
 export function createUnifiedSearchFtsDeleteTrigger() {
   const createTriggerQuery = `

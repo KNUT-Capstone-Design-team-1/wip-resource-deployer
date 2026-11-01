@@ -5,7 +5,7 @@ import path from "path";
 import { RESOURCE_DIRECTORY } from "../../../utils/paths";
 
 /**
- * 항목 ID를 검증하고 효능 문서 캐시 또는 실패 파일의 경로를 반환한다.
+ * 효능 파일 경로 생성
  */
 export function effectFilePath(
   itemSeq: string,
@@ -27,7 +27,7 @@ export function effectFilePath(
 }
 
 /**
- * 아직 조회하지 않은 기존 누락 요약도 원인을 추정하지 않고 재처리 목록에 등록한다.
+ * 효능 요약 실패 기록
  */
 export async function writeEffectSummaryFailure(
   failure: Omit<EffectSummaryFailure, "firstFailedAt" | "lastFailedAt">,
@@ -62,7 +62,7 @@ export async function writeEffectSummaryFailure(
 }
 
 /**
- * 이미 보존된 실패 원인을 유지하며 기존 누락 항목만 추가한다.
+ * 누락 요약 재처리 등록
  */
 export async function collectMissingEffectSummary(
   itemSeq: string,
@@ -94,7 +94,7 @@ export async function collectMissingEffectSummary(
 }
 
 /**
- * 리소스 저장을 완료한 성공 항목만 실패 목록에서 제거한다.
+ * 복구 항목 실패 기록 제거
  */
 export async function removeEffectSummaryFailure(
   itemSeq: string,
@@ -106,7 +106,7 @@ export async function removeEffectSummaryFailure(
 }
 
 /**
- * 항목별 효능 원문 캐시를 읽고 아직 캐시가 없으면 null을 반환한다.
+ * 효능 원문 캐시 조회
  */
 export async function readEffectDocument(
   itemSeq: string,
@@ -127,10 +127,11 @@ export async function readEffectDocument(
 }
 
 /**
- * 효능 원문 캐시 폴더만 삭제한다.
+ * 효능 원문 캐시 제거
  */
 export async function removeEffectDocuments(directory = RESOURCE_DIRECTORY) {
   const resourceDirectory = path.resolve(directory);
+
   const documentsDirectory = path.resolve(
     resourceDirectory,
     "pill_effect_documents",
