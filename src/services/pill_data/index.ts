@@ -30,17 +30,20 @@ export async function createPillDataResourceFile(
     options.createEffectSummary ?? true,
   );
 
+  await createResourceFile("pill_data.json", pills);
+
+  logger.info("[PILL-DATA] Saved pill_data.json");
+
+  await mapConcurrent(successfulIds, 8, (itemSeq) =>
+    removeEffectSummaryFailure(itemSeq),
+  );
+
   const markImages = await prepareMarkImages(
     sources.drugRecognition,
     options.createMarkImage ?? true,
   );
 
-  await createResourceFile("pill_data.json", pills);
-
   await saveMarkImages(markImages);
 
-  await mapConcurrent(successfulIds, 8, (itemSeq) =>
-    removeEffectSummaryFailure(itemSeq),
-  );
   logger.info("[PILL-DATA] Complete create pill data resource files");
 }
