@@ -1,6 +1,8 @@
 import axios from "axios";
+import logger from "./logger";
 
 export interface RetryOptions {
+  context?: string;
   maxAttempts?: number;
   delayMs?: number;
   wait?: (milliseconds: number) => Promise<void>;
@@ -81,7 +83,12 @@ export async function retryRequest<T>(
   operation: () => Promise<T>,
   options: RetryOptions = {},
 ): Promise<T> {
-  const { maxAttempts = 3, delayMs = 1000, wait: pause = wait } = options;
+  const {
+    maxAttempts = 3,
+    delayMs = 1000,
+    wait: pause = wait,
+    context = "HTTP",
+  } = options;
   validateRetryOptions(maxAttempts, delayMs);
 
   for (let attempt = 1; ; attempt += 1) {
@@ -92,6 +99,17 @@ export async function retryRequest<T>(
       return result.value;
     }
 
-    await pause(Math.min(delayMs * 2 ** (attempt - 1), 10000));
+    const retryDelay = Math.min(delayMs * 2 ** (attempt - 1), 10000);
+
+    logger.warn(
+      "[HTTP] Retrying context=%s attempt=%s nextAttempt=%s maxAttempts=%s delayMs=%s",
+      context,
+      attempt,
+      attempt + 1,
+      maxAttempts,
+      retryDelay,
+    );
+
+    await pause(retryDelay);
   }
 }

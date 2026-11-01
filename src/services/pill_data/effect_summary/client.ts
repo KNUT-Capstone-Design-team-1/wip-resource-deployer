@@ -5,6 +5,8 @@ import type {
 } from "../types/effect_summary";
 import axios from "axios";
 import logger from "../../../utils/logger";
+import { describeError } from "../../../utils/error_details";
+import { tryAsyncItem } from "../../../utils/item_processing";
 import { RESOURCE_DIRECTORY } from "../../../utils/paths";
 import { createEffectSummary, FALLBACK_EFFECT_SUMMARY } from "./summary";
 import {
@@ -102,10 +104,13 @@ export async function fetchEffectSummaryResult(
   }
 
   if (options.useCache !== false) {
-    const cached = await readEffectDocument(itemSeq, directory);
+    const cached = await tryAsyncItem(
+      () => readEffectDocument(itemSeq, directory),
+      "effect cache read ITEM_SEQ=" + itemSeq,
+    );
 
     const summary =
-      cached === null ? FALLBACK_EFFECT_SUMMARY : summarizeDocument(cached);
+      cached == null ? FALLBACK_EFFECT_SUMMARY : summarizeDocument(cached);
 
     if (summary !== FALLBACK_EFFECT_SUMMARY) {
       return { summary, httpStatus: null, attempts: 0, message: "cached" };
@@ -128,10 +133,10 @@ export async function fetchEffectSummaryResult(
     } catch (e) {
       if (axios.isAxiosError(e)) {
         logger.warn(
-          "[EE-SUMMARY] Axios error ITEM_SEQ=%s attempt=%s: %O",
+          "[EE-SUMMARY] Axios error ITEM_SEQ=%s attempt=%s reason=%s",
           itemSeq,
           attempt,
-          e,
+          describeError(e),
         );
       }
 
@@ -200,16 +205,72 @@ export async function fetchEffectSummaryResult(
       };
     }
 
-    // 캐시 저장 오류는 조회 실패로 숨기지 않고 호출자에게 전달한다.
-    await writeAtomicFile(
-      effectFilePath(itemSeq, "documents", directory),
-      document,
+    await tryAsyncItem(
+      () =>
+        writeAtomicFile(
+          effectFilePath(itemSeq, "documents", directory),
+          document,
+        ),
+      "effect cache write ITEM_SEQ=" + itemSeq,
     );
 
     return { summary, httpStatus, attempts: attempt, message: "success" };
   }
 
   throw new Error("Unreachable effect summary retry state");
+}
+
+/**
+ * 단일 효능 요약 실패 격리
+ */
+async function fetchItemSummary(
+  itemSeq: string,
+  options: EffectSummaryOptions,
+): Promise<EffectSummaryResult> {
+  const result = await tryAsyncItem(
+    () => fetchEffectSummaryResult(itemSeq, options),
+    "effect summary ITEM_SEQ=" + itemSeq,
+  );
+
+  return (
+    result ?? {
+      summary: FALLBACK_EFFECT_SUMMARY,
+      reason: "network_error",
+      httpStatus: null,
+      attempts: 0,
+      message: "효능 처리에 실패하여 기존 요약을 유지합니다.",
+    }
+  );
+}
+
+/**
+ * 단일 요약 실패 기록
+ */
+async function recordSummaryFailure(
+  itemSeq: string,
+  result: EffectSummaryResult,
+  directory: string,
+): Promise<void> {
+  const reason = result.reason;
+  const hasFailure = reason !== undefined;
+  if (!hasFailure) {
+    return;
+  }
+
+  await tryAsyncItem(
+    () =>
+      writeEffectSummaryFailure(
+        {
+          ITEM_SEQ: itemSeq,
+          reason,
+          httpStatus: result.httpStatus,
+          attempts: result.attempts,
+          message: result.message,
+        },
+        directory,
+      ),
+    "effect failure record ITEM_SEQ=" + itemSeq,
+  );
 }
 
 /**
@@ -262,23 +323,12 @@ export async function fetchEffectSummaryMap(
           message:
             "이전 항목의 HTTP 429가 지속되어 조회를 다음 실행으로 연기했습니다.",
         }
-      : await fetchEffectSummaryResult(itemSeq, {
+      : await fetchItemSummary(itemSeq, {
           ...options,
           fetchDocument: fetchPacedDocument,
         });
 
-    if (result.reason) {
-      await writeEffectSummaryFailure(
-        {
-          ITEM_SEQ: itemSeq,
-          reason: result.reason,
-          httpStatus: result.httpStatus,
-          attempts: result.attempts,
-          message: result.message,
-        },
-        directory,
-      );
-    }
+    await recordSummaryFailure(itemSeq, result, directory);
 
     if (result.httpStatus === 429) {
       rateLimited = true;
@@ -289,7 +339,9 @@ export async function fetchEffectSummaryMap(
 
     summaryMap.set(itemSeq, result.summary);
 
-    await options.onResult?.(itemSeq, result);
+    await tryAsyncItem(async () => {
+      await options.onResult?.(itemSeq, result);
+    }, "effect callback ITEM_SEQ=" + itemSeq);
 
     const completed = index + 1;
 

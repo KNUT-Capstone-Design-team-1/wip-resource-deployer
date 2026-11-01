@@ -1,3 +1,4 @@
+import logger from "../../../utils/logger";
 import { IPillData } from "../types/pill_data";
 import { fetchEffectSummaryMap } from "./client";
 import { FALLBACK_EFFECT_SUMMARY } from "./summary";
@@ -36,12 +37,28 @@ export async function enrichEffectSummaries(
   enabled: boolean,
 ): Promise<string[]> {
   if (!enabled) {
+    logger.info("[EE-SUMMARY] Skipped enabled=false records=%s", pills.length);
+
     return [];
   }
+
+  const startedAt = Date.now();
+
+  logger.info("[EE-SUMMARY] Started records=%s", pills.length);
 
   const summaries = await fetchEffectSummaryMap(
     pills.map((pill) => pill.ITEM_SEQ),
   );
 
-  return pills.flatMap((pill) => applySummary(pill, summaries));
+  const updatedIds = pills.flatMap((pill) => applySummary(pill, summaries));
+
+  logger.info(
+    "[EE-SUMMARY] Completed records=%s updated=%s preserved=%s durationMs=%s",
+    pills.length,
+    updatedIds.length,
+    pills.length - updatedIds.length,
+    Date.now() - startedAt,
+  );
+
+  return updatedIds;
 }

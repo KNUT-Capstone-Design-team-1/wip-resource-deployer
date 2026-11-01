@@ -1,5 +1,7 @@
 import axios from "axios";
+import defaultConfig from "../../../config.example.json";
 import logger from "../../utils/logger";
+import { describeError } from "../../utils/error_details";
 import { getApiKey } from "../../utils/api_key";
 import { retryRequest, RetryOptions } from "../../utils/retry";
 import {
@@ -11,11 +13,6 @@ import {
 import { IMfdsApiResponse } from "./types/api";
 import { IDrugRecognition } from "./types/drug_recognition";
 import { IDrugProductPermissionDetail } from "./types/drug_product_permission_detail";
-
-export const DRUG_RECOGNITION_API_URL =
-  "https://apis.data.go.kr/1471000/MdcinGrnIdntfcInfoService03/getMdcinGrnIdntfcInfoList03";
-export const DRUG_PRODUCT_PERMISSION_DETAIL_API_URL =
-  "https://apis.data.go.kr/1471000/DrugPrdtPrmsnInfoService08/getDrugPrdtPrmsnDtlInq08";
 
 export interface ApiClientOptions {
   signal?: AbortSignal;
@@ -51,18 +48,46 @@ async function fetchPage<T extends ApiItem>(
   options: ApiClientOptions,
 ): Promise<ApiPage<T>> {
   let data: unknown;
+  const startedAt = Date.now();
+
+  logger.info(
+    "[PILL-DATA] Page request started source=%s page=%s rows=100",
+    label,
+    pageNo,
+  );
 
   try {
-    data = await retryRequest(
-      () => requestPage<T>(url, key, pageNo, options),
-      options.retry,
+    data = await retryRequest(() => requestPage<T>(url, key, pageNo, options), {
+      ...options.retry,
+      context: label + " page=" + pageNo,
+    });
+  } catch (error) {
+    logger.error(
+      "[PILL-DATA] Page request failed source=%s page=%s durationMs=%s reason=%s",
+      label,
+      pageNo,
+      Date.now() - startedAt,
+      describeError(error),
     );
-  } catch {
+
     // 인증키를 포함한 Axios 요청 설정과 원본 오류는 노출하지 않는다.
     throw new Error(label + " API request failed (page " + pageNo + ")");
   }
 
-  return parseApiPage<T>(data, pageNo);
+  const page = parseApiPage<T>(data, pageNo);
+
+  logger.info(
+    "[PILL-DATA] Page completed source=%s page=%s received=%s valid=%s skipped=%s total=%s durationMs=%s",
+    label,
+    pageNo,
+    page.receivedCount,
+    page.items.length,
+    page.receivedCount - page.items.length,
+    page.totalCount,
+    Date.now() - startedAt,
+  );
+
+  return page;
 }
 
 /**
@@ -76,21 +101,28 @@ async function fetchAllPages<T extends ApiItem>(
 ): Promise<T[]> {
   const items: T[] = [];
   let expectedTotal: number | undefined;
+  let receivedCount = 0;
 
   for (let pageNo = 1; ; pageNo += 1) {
     const page = await fetchPage<T>(url, key, pageNo, label, options);
+
     expectedTotal ??= page.totalCount;
-    validatePageProgress(page, items.length, expectedTotal);
+
+    validatePageProgress(page, receivedCount, expectedTotal);
+
+    receivedCount += page.receivedCount;
     page.items.forEach((item) => items.push(item));
+
     logger.info(
-      "[PILL-DATA] Fetched %s: %s / %s (page %s)",
+      "[PILL-DATA] Received %s: %s / %s (valid %s, page %s)",
       label,
-      items.length,
+      receivedCount,
       expectedTotal,
+      items.length,
       pageNo,
     );
 
-    const isComplete = items.length === expectedTotal;
+    const isComplete = receivedCount === expectedTotal;
     if (isComplete) {
       return items;
     }
@@ -101,7 +133,7 @@ async function fetchAllPages<T extends ApiItem>(
  * 전체 낱알식별 정보 수집
  */
 export function fetchAllDrugRecognition(
-  url = DRUG_RECOGNITION_API_URL,
+  url = defaultConfig.pillData.drugRecognitionApiUrl,
   options: ApiClientOptions = {},
 ) {
   return fetchAllPages<IDrugRecognition>(
@@ -116,7 +148,7 @@ export function fetchAllDrugRecognition(
  * 전체 제품 허가 상세 수집
  */
 export function fetchAllDrugProductPermissionDetails(
-  url = DRUG_PRODUCT_PERMISSION_DETAIL_API_URL,
+  url = defaultConfig.pillData.drugProductPermissionDetailApiUrl,
   options: ApiClientOptions = {},
 ) {
   return fetchAllPages<IDrugProductPermissionDetail>(

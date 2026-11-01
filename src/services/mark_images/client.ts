@@ -53,5 +53,8 @@ export function fetchImageBase64(
   url: string,
   options: RetryOptions = {},
 ): Promise<string> {
-  return retryRequest(() => downloadImage(url), options);
+  return retryRequest(() => downloadImage(url), {
+    ...options,
+    context: "mark image",
+  });
 }

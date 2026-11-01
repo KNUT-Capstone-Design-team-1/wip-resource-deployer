@@ -1,3 +1,5 @@
+import { tryItem } from "../../utils/item_processing";
+
 export interface ApiItem {
   ITEM_SEQ: string | number;
 }
@@ -5,6 +7,7 @@ export interface ApiItem {
 export interface ApiPage<T> {
   items: T[];
   totalCount: number;
+  receivedCount: number;
 }
 
 /**
@@ -98,12 +101,12 @@ function readItems(value: unknown): unknown[] {
 function isIdentifier(value: unknown): boolean {
   const isNumber = typeof value === "number";
   if (isNumber) {
-    return Number.isFinite(value);
+    return Number.isSafeInteger(value) && value >= 0;
   }
 
   const isString = typeof value === "string";
 
-  return isString && value.trim() !== "";
+  return isString && /^\d+$/.test(value);
 }
 
 /**
@@ -142,9 +145,20 @@ export function parseApiPage<T extends ApiItem>(
 
   const totalCount = readTotalCount(body.totalCount);
   const items = readItems(body.items);
-  items.forEach(validateItem);
+  const validItems = items.flatMap((item, index) => {
+    const validItem = tryItem(
+      () => {
+        validateItem(item);
 
-  return { items: items as T[], totalCount };
+        return item as T;
+      },
+      "API page=" + pageNo + " item=" + (index + 1),
+    );
+
+    return validItem === undefined ? [] : [validItem];
+  });
+
+  return { items: validItems, totalCount, receivedCount: items.length };
 }
 
 /**
@@ -162,12 +176,12 @@ export function validatePageProgress<T>(
     );
   }
 
-  const hasMissingItems = page.items.length === 0 && collected < expectedTotal;
+  const hasMissingItems = page.receivedCount === 0 && collected < expectedTotal;
   if (hasMissingItems) {
     throw new Error("API returned an empty page before all items were fetched");
   }
 
-  const hasExcessItems = collected + page.items.length > expectedTotal;
+  const hasExcessItems = collected + page.receivedCount > expectedTotal;
   if (hasExcessItems) {
     throw new Error("API returned more items than totalCount");
   }

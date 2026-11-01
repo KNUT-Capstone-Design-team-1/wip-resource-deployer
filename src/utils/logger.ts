@@ -3,6 +3,7 @@ import { createLogger, format, transports } from "winston";
 const logDirectoryName = "log";
 const { combine, timestamp, printf, splat } = format;
 const logger = createLogger({
+  level: process.env.LOG_LEVEL || "info",
   format: combine(
     splat(),
     timestamp({
