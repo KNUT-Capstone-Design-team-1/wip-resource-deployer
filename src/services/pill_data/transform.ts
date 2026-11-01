@@ -74,7 +74,7 @@ function indexPermissions(
 }
 
 /**
- * 알약 정보 병합·변환
+ * 낱알식별 기준 알약 병합
  */
 export function createPillData(
   drugRecognition: IDrugRecognition[],
@@ -86,39 +86,32 @@ export function createPillData(
     drugRecognition.map(toDrugRecognition),
   );
 
-  return drugs.flatMap((drug): IPillData[] => {
+  return drugs.map((drug): IPillData => {
     const permission = permissions.get(drug.ITEM_SEQ);
 
-    const hasPermission = permission !== undefined;
-    if (!hasPermission) {
-      return [];
-    }
-
-    return [
-      {
-        ...drug,
-        ENTP_ENG_NAME: text(permission.ENTP_ENG_NAME),
-        MATERIAL_NAME: text(permission.MATERIAL_NAME),
-        MATERIAL_ENG_NAME: text(permission.MAIN_INGR_ENG),
-        STORAGE_METHOD: text(permission.STORAGE_METHOD),
-        VALID_TERM: text(permission.VALID_TERM),
-        PACK_UNIT: text(permission.PACK_UNIT),
-        INSURANCE_CODE: text(permission.EDI_CODE),
-        DRUG_CLASS: text(permission.NARCOTIC_KIND_CODE),
-        NEW_DRUG_YN: text(permission.NEWDRUG_CLASS_NAME),
-        // 제품 허가 API에는 기존 파일 원본의 변경내용 필드가 없다.
-        CHANGE_CONTENT: "",
-        TOTAL_CONTENT: text(permission.TOTAL_CONTENT),
-        MAIN_ITEM_INGR: text(permission.MAIN_ITEM_INGR),
-        INGR_NAME: text(permission.INGR_NAME),
-        ATC_CODE: text(permission.ATC_CODE),
-        RARE_DRUG_YN: text(permission.RARE_DRUG_YN),
-        OEM_ENTP_NAME: text(permission.CNSGN_MANUF),
-        ITEM_NAME: drug.ITEM_NAME.trim().replace(/\s{2, }/g, " "),
-        PRINT_FRONT: replacePrint(drug.PRINT_FRONT),
-        PRINT_BACK: replacePrint(drug.PRINT_BACK),
-        EFFECT_SUMMARY: createEffectSummary(drug.CLASS_NAME),
-      },
-    ];
+    return {
+      ...drug,
+      ENTP_ENG_NAME: text(permission?.ENTP_ENG_NAME),
+      MATERIAL_NAME: text(permission?.MATERIAL_NAME),
+      MATERIAL_ENG_NAME: text(permission?.MAIN_INGR_ENG),
+      STORAGE_METHOD: text(permission?.STORAGE_METHOD),
+      VALID_TERM: text(permission?.VALID_TERM),
+      PACK_UNIT: text(permission?.PACK_UNIT),
+      INSURANCE_CODE: text(permission?.EDI_CODE),
+      DRUG_CLASS: text(permission?.NARCOTIC_KIND_CODE),
+      NEW_DRUG_YN: text(permission?.NEWDRUG_CLASS_NAME),
+      // 제품 허가 API에는 기존 파일 원본의 변경내용 필드가 없다.
+      CHANGE_CONTENT: "",
+      TOTAL_CONTENT: text(permission?.TOTAL_CONTENT),
+      MAIN_ITEM_INGR: text(permission?.MAIN_ITEM_INGR),
+      INGR_NAME: text(permission?.INGR_NAME),
+      ATC_CODE: text(permission?.ATC_CODE),
+      RARE_DRUG_YN: text(permission?.RARE_DRUG_YN),
+      OEM_ENTP_NAME: text(permission?.CNSGN_MANUF),
+      ITEM_NAME: drug.ITEM_NAME.trim().replace(/\s{2, }/g, " "),
+      PRINT_FRONT: replacePrint(drug.PRINT_FRONT),
+      PRINT_BACK: replacePrint(drug.PRINT_BACK),
+      EFFECT_SUMMARY: createEffectSummary(drug.CLASS_NAME),
+    };
   });
 }
