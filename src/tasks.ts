@@ -33,12 +33,6 @@ export function createResourceTasks(config: AppConfig) {
       execute: () =>
         createNearbyPharmaciesResource(config.nearbyPharmacies?.apiUrl),
     },
-    { name: "unified_search_create_tables", execute: createTables },
-    {
-      name: "unified_search",
-      execute: () => updateUnifiedSearchDb(config.unifiedSearch?.dbInitialize),
-    },
-    { name: "unified_search_insert_failed", execute: upsertFailedRetryAll },
     { name: "cannabis", execute: createCannabisResource },
     { name: "narcotics", execute: createNarcoticsResource },
     { name: "psychotropics", execute: createPsychotropicsResource },
@@ -47,5 +41,11 @@ export function createResourceTasks(config: AppConfig) {
       name: "functional_food_nutrients",
       execute: createFunctionalFoodNutrientsResource,
     },
+    { name: "unified_search_create_tables", execute: createTables },
+    {
+      name: "unified_search",
+      execute: () => updateUnifiedSearchDb(config.unifiedSearch?.dbInitialize),
+    },
+    { name: "unified_search_insert_failed", execute: upsertFailedRetryAll },
   ];
 }

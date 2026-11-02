@@ -4,14 +4,14 @@
       "_pill_data",
       "_pill_effect_summary_retry",
       "_nearby_pharmacies",
-      "_unified_search",
-      "_unified_search_create_tables",
-      "_unified_search_insert_failed",
       "_cannabis",
       "_narcotics",
       "_psychotropics",
       "_prohibited_list",
-      "_functional_food_nutrients"
+      "_functional_food_nutrients",
+      "_unified_search",
+      "_unified_search_create_tables",
+      "_unified_search_insert_failed"
     ]
   },
   "unifiedSearch": {
