@@ -8,7 +8,7 @@
       "_narcotics",
       "_psychotropics",
       "_prohibited_list",
-      "_functional_food_nutrients",
+      "_functional_food",
       "_unified_search",
       "_unified_search_create_tables",
       "_unified_search_insert_failed"
@@ -25,5 +25,10 @@
     "createMarkImage": true,
     "drugRecognitionApiUrl": "https://apis.data.go.kr/1471000/MdcinGrnIdntfcInfoService03/getMdcinGrnIdntfcInfoList03",
     "drugProductPermissionDetailApiUrl": "https://apis.data.go.kr/1471000/DrugPrdtPrmsnInfoService08/getDrugPrdtPrmsnDtlInq08"
+  },
+  "functional_food": {
+    "apiUrl": "http://openapi.foodsafetykorea.go.kr/api",
+    "pageSize": 1000,
+    "requestDelayMs": 1000
   }
 }

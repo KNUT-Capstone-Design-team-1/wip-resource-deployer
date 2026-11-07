@@ -3,7 +3,7 @@ import { createCannabisResource } from "./services/cannabis";
 import { createNarcoticsResource } from "./services/narcotics";
 import { createPsychotropicsResource } from "./services/psychotropics";
 import { createProhibitedListResource } from "./services/prohibited_list";
-import { createFunctionalFoodNutrientsResource } from "./services/functional_food_nutrients";
+import { createFunctionalFoodResources } from "./services/functional_food";
 import { createPillDataResourceFile } from "./services/pill_data";
 import { retryFailedPillEffectSummaries } from "./services/pill_effect_summary_retry";
 import { createNearbyPharmaciesResource } from "./services/nearby_pharmacies";
@@ -38,8 +38,8 @@ export function createResourceTasks(config: AppConfig) {
     { name: "psychotropics", execute: createPsychotropicsResource },
     { name: "prohibited_list", execute: createProhibitedListResource },
     {
-      name: "functional_food_nutrients",
-      execute: createFunctionalFoodNutrientsResource,
+      name: "functional_food",
+      execute: () => createFunctionalFoodResources(config.functional_food),
     },
     { name: "unified_search_create_tables", execute: createTables },
     {

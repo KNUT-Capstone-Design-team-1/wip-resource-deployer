@@ -13,18 +13,21 @@
 
 - [식품의약품안전처_의약품 낱알식별 정보](https://www.data.go.kr/data/15057639/openapi.do)
 - [식품의약품안전처_의약품 제품 허가정보](https://www.data.go.kr/data/15095677/openapi.do)
+- [건강기능식품 품목분류정보 (I2710)](https://www.foodsafetykorea.go.kr/api/openApiInfo.do?svc_no=I2710)
+- [건강기능식품 품목제조신고·원재료 (C003)](https://www.foodsafetykorea.go.kr/api/openApiInfo.do?svc_no=C003)
 - [약국 오픈 API Data (생활안전정보)](https://www.safemap.go.kr/opna/data/dataViewRenew.do?objtId=127)
 - [마약정보데이터베이스](https://www.nifds.go.kr/toxinfo/kind/kr/index.do)
 - [도핑 금지 목록](https://www.kada-ad.or.kr/kada?where=drug/drug_info_method)
 
 #### 환경 변수 (.env)
 
-`pill_data`, `nearby_pharmacies` 실행 시 사용하는 API 키를 환경 변수 또는 프로젝트 루트 `.env`에 설정한다. 환경 변수를 우선 사용한다.
+`pill_data`, `nearby_pharmacies`, `functional_food` 실행 시 사용하는 API 키를 환경 변수 또는 프로젝트 루트 `.env`에 설정한다. 환경 변수를 우선 사용한다.
 
 ```env
 DRUG_RECOGNITION_API_KEY=your_drug_recognition_key_here
 DRUG_PRODUCT_PERMISSION_DETAIL_API_KEY=your_drug_product_permission_detail_key_here
 NEARBY_PHARMACIES_API_KEY=your_service_key_here
+FOOD_SAFETY_KOREA_API_KEY=your_food_safety_korea_key_here
 ```
 
 # execute
@@ -70,3 +73,26 @@ yarn start
 ```bash
 wrangler login
 ```
+
+# 건강기능식품 API 리소스
+
+`common.targetResource`의 `_functional_food`를 `functional_food`로 바꾸면 두 API를 순서대로 전체 수집한다. 기존 파일 기반 영양성분 생성 작업은 제거했다.
+
+`functional_food` 설정의 `apiUrl`, `pageSize`(1~1000), `requestDelayMs`로 연결과 호출 간격을 조정한다. 두 API의 활용신청이 모두 승인되어 있어야 한다. 인증·호출제한·불완전 페이지 오류 시 수집을 중단하고 기존 결과를 유지한다. 실제 인증키는 Git에서 제외된 `.env`에만 저장한다.
+
+- `resources/functional_food_classification.json`: I2710 분류정보와 날짜 외 내용으로 생성한 안정적인 `id`
+- `resources/health_functional_food_raw_material.json`: C003 제품정보. `PRDLST_REPORT_NO`가 식별자이며 `CLASSIFICATION_IDS`는 분류 ID의 JSON 문자열 배열이다.
+
+원재료는 괄호 밖 쉼표로 분리한 후 분류명과 공백·대소문자를 정규화하여 정확히 일치할 때만 연결한다. 부분 일치나 추정한 동의어는 사용하지 않으며, 미분류 제품도 보존한다. 분류별 일일섭취량 기준은 제품별 권장 섭취량과 구분해야 한다. 두 파일은 같은 실행에서 생성한 쌍으로 배포한다.
+
+앱 SQLite JOIN 예시:
+
+```sql
+SELECT p.PRDLST_REPORT_NO, p.PRDLST_NM, c.*
+FROM health_functional_food_raw_material p
+JOIN json_each(p.CLASSIFICATION_IDS) link
+JOIN functional_food_classification c ON c.id = link.value
+WHERE p.PRDLST_REPORT_NO = ?;
+```
+
+검증: `node --test -r ts-node/register tests/functional_food.test.cjs`

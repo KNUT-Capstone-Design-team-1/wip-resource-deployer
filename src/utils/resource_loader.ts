@@ -145,7 +145,6 @@ export class ResourceLoader {
       narcotics: [],
       psychotropics: [],
       prohibitedList: [],
-      functionalFoodNutrients: [],
     };
 
     for (const name of this.targetResources) {

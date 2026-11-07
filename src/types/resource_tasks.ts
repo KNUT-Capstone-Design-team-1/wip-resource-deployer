@@ -1,3 +1,5 @@
+import type { FunctionalFoodOptions } from "../services/functional_food/types";
+
 export interface PillDataOptions {
   createEffectSummary?: boolean;
   createMarkImage?: boolean;
@@ -10,6 +12,7 @@ export interface AppConfig {
     targetResource: string[];
   };
   pillData?: PillDataOptions;
+  functional_food?: FunctionalFoodOptions;
   unifiedSearch?: {
     dbInitialize?: boolean;
   };
