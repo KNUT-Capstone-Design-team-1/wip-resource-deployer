@@ -60,7 +60,9 @@ export async function readExcelContents(fileName: string) {
 export async function readCsvContents(fileName: string) {
   const buffer = fs.readFileSync(fileName);
   const csvString = decodeCsvBuffer(buffer);
-  const fileContents = (await new Converter().fromString(csvString)) as any[];
+  const fileContents = (await new Converter().fromString(
+    csvString,
+  )) as unknown[];
 
   return fileContents;
 }

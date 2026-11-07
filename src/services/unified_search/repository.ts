@@ -1,3 +1,4 @@
+import { isRecord } from "../../utils/guards";
 import { runQueryForSqlFile, runQueryWithOutput } from "./database/wrangler";
 import { createSqlFile } from "./database/sql_file";
 import { getSafeValue } from "./database/sql_values";
@@ -37,16 +38,6 @@ export async function upsert(unifiedSearchDataList: IUnifiedSearchData[]) {
 }
 
 const DELETE_BATCH_SIZE = 100;
-
-/**
- * 조회 응답 객체 확인
- */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  const isObject = typeof value === "object";
-  const isNotNull = value !== null;
-
-  return isObject && isNotNull;
-}
 
 /**
  * 성공한 조회 결과의 행 추출

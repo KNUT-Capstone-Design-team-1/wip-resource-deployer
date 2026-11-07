@@ -22,7 +22,7 @@ export function createResourcesDirectory() {
  */
 export async function createResourceFile(
   resourceFileName: string,
-  resourceData: Record<string, any>[],
+  resourceData: readonly unknown[],
 ) {
   const filePath = path.join(RESOURCE_DIRECTORY, resourceFileName);
   const startedAt = Date.now();

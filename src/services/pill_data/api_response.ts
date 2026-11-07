@@ -1,3 +1,4 @@
+import { isRecord } from "../../utils/guards";
 import { tryItem } from "../../utils/item_processing";
 
 export interface ApiItem {
@@ -8,13 +9,6 @@ export interface ApiPage<T> {
   items: T[];
   totalCount: number;
   receivedCount: number;
-}
-
-/**
- * 객체 여부 확인
- */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }
 
 /**

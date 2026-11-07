@@ -1,5 +1,6 @@
 import axios from "axios";
 import logger from "./logger";
+import { sleep } from "./delay";
 
 export interface RetryOptions {
   context?: string;
@@ -7,12 +8,6 @@ export interface RetryOptions {
   delayMs?: number;
   wait?: (milliseconds: number) => Promise<void>;
 }
-
-/**
- * 재시도 간격 대기
- */
-const wait = (milliseconds: number) =>
-  new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 
 /**
  * 일시적 통신 오류 확인
@@ -86,7 +81,7 @@ export async function retryRequest<T>(
   const {
     maxAttempts = 3,
     delayMs = 1000,
-    wait: pause = wait,
+    wait: pause = sleep,
     context = "HTTP",
   } = options;
   validateRetryOptions(maxAttempts, delayMs);

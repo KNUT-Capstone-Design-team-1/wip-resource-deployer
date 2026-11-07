@@ -3,6 +3,7 @@ import path from "node:path";
 
 import logger from "./logger";
 import {
+  RESOURCE_KEYS,
   TLoadedResource,
   TResource,
   TResourceDirectoryName,
@@ -17,15 +18,6 @@ import {
 import { ORIGIN_DATA_DIRECTORY } from "./paths";
 import { normalizeChemicalValue } from "./resource_text";
 import { normalizeProhibitedListText } from "../services/prohibited_list/normalize";
-
-/**
- * snake_case 키 변환
- */
-function snakeToCamel(value: string) {
-  return value.replace(/_([a-z])/g, (_, character: string) =>
-    character.toUpperCase(),
-  );
-}
 
 const RESOURCE_NORMALIZERS: Partial<
   Record<TResourceDirectoryName, (value: unknown) => string>
@@ -150,7 +142,7 @@ export class ResourceLoader {
     for (const name of this.targetResources) {
       const rows = await readResourceDirectory(name);
 
-      Object.assign(resource, { [snakeToCamel(name)]: rows });
+      Object.assign(resource, { [RESOURCE_KEYS[name]]: rows });
     }
 
     return resource;

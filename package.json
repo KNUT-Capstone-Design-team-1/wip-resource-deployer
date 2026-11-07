@@ -6,7 +6,8 @@
   "scripts": {
     "start": "ts-node ./src/app.ts",
     "format": "prettier --write .",
-    "lint": "prettier --check ."
+    "lint": "prettier --check .",
+    "typecheck": "tsc --noEmit"
   },
   "repository": {
     "type": "git",

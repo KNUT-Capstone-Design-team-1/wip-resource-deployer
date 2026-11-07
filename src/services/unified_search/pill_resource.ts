@@ -1,15 +1,9 @@
+import { isRecord } from "../../utils/guards";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { RESOURCE_DIRECTORY } from "../../utils/paths";
 import { PILL_DATA_COLUMNS } from "./columns";
 import type { SearchPill } from "./types/unified_search";
-
-/**
- * 객체 여부 확인
- */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
-}
 
 /**
  * 품목 ID 형식 확인

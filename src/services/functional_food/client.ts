@@ -1,4 +1,6 @@
 import axios from "axios";
+import { sleep } from "../../utils/delay";
+import { isRecord } from "../../utils/guards";
 import { getApiKey } from "../../utils/api_key";
 import logger from "../../utils/logger";
 import type {
@@ -9,9 +11,11 @@ import type {
 
 /** 정상 응답만 해석하고 인증 오류나 구조 오류를 빈 데이터와 구분한다. */
 export function parseFoodSafetyPage(data: unknown, service: FoodSafetyService) {
-  const envelope = data as Record<string, any> | null;
-  const body = envelope?.[service];
-  const result = body?.RESULT ?? envelope?.RESULT;
+  const envelope = isRecord(data) ? data : undefined;
+  const candidate = envelope?.[service];
+  const body = isRecord(candidate) ? candidate : undefined;
+  const status = body?.RESULT ?? envelope?.RESULT;
+  const result = isRecord(status) ? status : undefined;
   if (result?.CODE === "INFO-200") {
     return { rows: [] as FoodSafetyRow[], total: 0 };
   }
@@ -51,9 +55,7 @@ export async function fetchAllFoodSafetyRows(
   ) {
     throw new Error("Invalid functional food pagination options");
   }
-  const wait =
-    options.wait ??
-    ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+  const wait = options.wait ?? sleep;
   const key = options.fetchPage
     ? ""
     : (options.apiKey ?? getApiKey("FOOD_SAFETY_KOREA_API_KEY"));

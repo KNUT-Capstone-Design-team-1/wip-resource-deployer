@@ -4,15 +4,12 @@ import type {
   EffectSummaryOptions,
 } from "../types/effect_summary";
 import axios from "axios";
+import { sleep } from "../../../utils/delay";
 import logger from "../../../utils/logger";
 import { describeError } from "../../../utils/error_details";
 import { tryAsyncItem } from "../../../utils/item_processing";
 import { RESOURCE_DIRECTORY } from "../../../utils/paths";
-import {
-  createEffectKeyword,
-  createEffectSummary,
-  FALLBACK_EFFECT_SUMMARY,
-} from "./summary";
+import { createEffectDetails, FALLBACK_EFFECT_SUMMARY } from "./summary";
 import {
   effectFilePath,
   readEffectDocument,
@@ -22,13 +19,6 @@ import {
 const REQUEST_DELAY_MS = 1000;
 const RETRY_DELAY_MS = 2000;
 const MAX_ATTEMPTS = 5;
-
-/**
- * 요청 간격 대기
- */
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 /**
  * 효능 XML 조회
@@ -71,16 +61,19 @@ export function getRetryAfterMs(value: unknown, now = Date.now()) {
 /**
  * 효능 문서 검증·요약
  */
-function summarizeDocument(document: string) {
+function summarizeDocument(document: string | null | undefined) {
   if (
     typeof document !== "string" ||
     !document.trim() ||
     /<!doctype\s+html|<html[\s>]/i.test(document)
   ) {
-    return FALLBACK_EFFECT_SUMMARY;
+    return {
+      summary: FALLBACK_EFFECT_SUMMARY,
+      keyword: FALLBACK_EFFECT_SUMMARY,
+    };
   }
 
-  return createEffectSummary(document);
+  return createEffectDetails(document);
 }
 
 /**
@@ -113,13 +106,12 @@ export async function fetchEffectSummaryResult(
       "effect cache read ITEM_SEQ=" + itemSeq,
     );
 
-    const summary =
-      cached == null ? FALLBACK_EFFECT_SUMMARY : summarizeDocument(cached);
+    const { summary, keyword } = summarizeDocument(cached);
 
     if (summary !== FALLBACK_EFFECT_SUMMARY) {
       return {
         summary,
-        keyword: createEffectKeyword(cached),
+        keyword,
         httpStatus: null,
         attempts: 0,
         message: "cached",
@@ -184,7 +176,7 @@ export async function fetchEffectSummaryResult(
       continue;
     }
 
-    const summary = summarizeDocument(document);
+    const { summary, keyword } = summarizeDocument(document);
 
     if (summary === FALLBACK_EFFECT_SUMMARY) {
       const empty = typeof document !== "string" || !document.trim();
@@ -228,7 +220,7 @@ export async function fetchEffectSummaryResult(
 
     return {
       summary,
-      keyword: createEffectKeyword(document),
+      keyword,
       httpStatus,
       attempts: attempt,
       message: "success",
