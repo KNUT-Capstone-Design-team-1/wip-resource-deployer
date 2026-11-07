@@ -672,33 +672,43 @@ function isGuidanceExpression(expression: string) {
 }
 
 /**
- * 효능 키워드 요약 생성
+ * 키워드 추출 전 효능 문구 수집
  */
-export function createEffectSummary(
-  eeDocData: string | null | undefined,
-  maxLength = DEFAULT_MAX_LENGTH,
-) {
-  const cleaned = cleanHtml(eeDocData);
+function collectEffectExpressions(eeDocData: string | null | undefined) {
+  const effectText = removeNonEffectLines(cleanHtml(eeDocData));
 
-  const isEmptyText = !cleaned;
-
-  if (isEmptyText) {
-    return FALLBACK_EFFECT_SUMMARY;
-  }
-
-  const effectText = removeNonEffectLines(cleaned);
-  const candidates = extractEffectCandidates(effectText)
+  return extractEffectCandidates(effectText)
     .filter((expression) => !isGuidanceExpression(expression))
     .map(normalizeEffectExpression)
     .map(rewriteEffectExpression)
     .map(removeTrailingBoilerplate)
     .map(trimDanglingEnding)
     .filter(isUsefulEffectExpression);
-  const uniqueCandidates = removeDuplicateExpressions(
-    candidates.flatMap(extractEffectKeywords),
+}
+
+/**
+ * 수식어와 적응 조건을 보존한 줄글 효능 요약 생성
+ */
+export function createEffectSummary(eeDocData: string | null | undefined) {
+  const expressions = removeDuplicateExpressions(
+    collectEffectExpressions(eeDocData),
   );
 
-  return compressEffect(uniqueCandidates, maxLength) || FALLBACK_EFFECT_SUMMARY;
+  return expressions.join(". ") || FALLBACK_EFFECT_SUMMARY;
+}
+
+/**
+ * 효능 키워드 생성
+ */
+export function createEffectKeyword(
+  eeDocData: string | null | undefined,
+  maxLength = DEFAULT_MAX_LENGTH,
+) {
+  const keywords = removeDuplicateExpressions(
+    collectEffectExpressions(eeDocData).flatMap(extractEffectKeywords),
+  );
+
+  return compressEffect(keywords, maxLength) || FALLBACK_EFFECT_SUMMARY;
 }
 
 /**

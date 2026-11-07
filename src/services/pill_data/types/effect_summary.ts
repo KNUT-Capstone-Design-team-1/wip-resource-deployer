@@ -1,5 +1,6 @@
 export interface EffectSummaryResult {
   summary: string;
+  keyword: string;
   reason?: EffectFailureReason;
   httpStatus: number | null;
   attempts: number;

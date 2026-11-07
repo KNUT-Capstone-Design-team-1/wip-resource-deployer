@@ -42,5 +42,7 @@ export interface IPillData {
   CHANGE_DATE: string; // 변경일자
   COVERAGE_ENG_NAME: string; // 보험코드
   /** 명사형 효능 키워드를 공백 없는 쉼표로 연결한 문자열 */
+  EFFECT_KEYWORD?: string | null;
+  /** 키워드 추출 전 수식어와 적응 조건을 보존한 줄글 */
   EFFECT_SUMMARY?: string | null;
 }

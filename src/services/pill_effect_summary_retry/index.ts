@@ -154,6 +154,7 @@ export async function retryFailedPillEffectSummaries(
 
         if (!result.reason && result.summary !== FALLBACK_EFFECT_SUMMARY) {
           for (const pill of byId.get(itemSeq)!) {
+            pill.EFFECT_KEYWORD = result.keyword;
             pill.EFFECT_SUMMARY = result.summary;
           }
 

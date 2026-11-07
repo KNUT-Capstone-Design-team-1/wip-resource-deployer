@@ -8,7 +8,11 @@ import logger from "../../../utils/logger";
 import { describeError } from "../../../utils/error_details";
 import { tryAsyncItem } from "../../../utils/item_processing";
 import { RESOURCE_DIRECTORY } from "../../../utils/paths";
-import { createEffectSummary, FALLBACK_EFFECT_SUMMARY } from "./summary";
+import {
+  createEffectKeyword,
+  createEffectSummary,
+  FALLBACK_EFFECT_SUMMARY,
+} from "./summary";
 import {
   effectFilePath,
   readEffectDocument,
@@ -113,7 +117,13 @@ export async function fetchEffectSummaryResult(
       cached == null ? FALLBACK_EFFECT_SUMMARY : summarizeDocument(cached);
 
     if (summary !== FALLBACK_EFFECT_SUMMARY) {
-      return { summary, httpStatus: null, attempts: 0, message: "cached" };
+      return {
+        summary,
+        keyword: createEffectKeyword(cached),
+        httpStatus: null,
+        attempts: 0,
+        message: "cached",
+      };
     }
   }
 
@@ -157,6 +167,7 @@ export async function fetchEffectSummaryResult(
       if (!retryable || attempt === maxAttempts) {
         return {
           summary: FALLBACK_EFFECT_SUMMARY,
+          keyword: FALLBACK_EFFECT_SUMMARY,
           reason: httpStatus === null ? "network_error" : "http_error",
           httpStatus,
           attempts: attempt,
@@ -198,6 +209,7 @@ export async function fetchEffectSummaryResult(
 
       return {
         summary,
+        keyword: FALLBACK_EFFECT_SUMMARY,
         reason: empty ? "empty_document" : "empty_summary",
         httpStatus,
         attempts: attempt,
@@ -214,7 +226,13 @@ export async function fetchEffectSummaryResult(
       "effect cache write ITEM_SEQ=" + itemSeq,
     );
 
-    return { summary, httpStatus, attempts: attempt, message: "success" };
+    return {
+      summary,
+      keyword: createEffectKeyword(document),
+      httpStatus,
+      attempts: attempt,
+      message: "success",
+    };
   }
 
   throw new Error("Unreachable effect summary retry state");
@@ -235,6 +253,7 @@ async function fetchItemSummary(
   return (
     result ?? {
       summary: FALLBACK_EFFECT_SUMMARY,
+      keyword: FALLBACK_EFFECT_SUMMARY,
       reason: "network_error",
       httpStatus: null,
       attempts: 0,
@@ -288,7 +307,7 @@ export async function fetchEffectSummaryMap(
 
   const directory = options.directory ?? RESOURCE_DIRECTORY;
   const itemSeqs = [...new Set(itemSeqList.filter(Boolean))];
-  const summaryMap = new Map<string, string>();
+  const summaryMap = new Map<string, EffectSummaryResult>();
   const wait = options.wait ?? sleep;
   const fetchDocument = options.fetchDocument ?? fetchEeDocData;
   let lastRequestedAt: number | null = null;
@@ -317,6 +336,7 @@ export async function fetchEffectSummaryMap(
     const result: EffectSummaryResult = rateLimited
       ? {
           summary: FALLBACK_EFFECT_SUMMARY,
+          keyword: FALLBACK_EFFECT_SUMMARY,
           reason: "rate_limit_deferred",
           httpStatus: null,
           attempts: 0,
@@ -337,7 +357,7 @@ export async function fetchEffectSummaryMap(
       );
     }
 
-    summaryMap.set(itemSeq, result.summary);
+    summaryMap.set(itemSeq, result);
 
     await tryAsyncItem(async () => {
       await options.onResult?.(itemSeq, result);

@@ -1,7 +1,10 @@
 import { IDrugRecognition } from "./types/drug_recognition";
 import { IDrugProductPermissionDetail } from "./types/drug_product_permission_detail";
 import { IPillData } from "./types/pill_data";
-import { createEffectSummary } from "./effect_summary/summary";
+import {
+  createEffectKeyword,
+  createEffectSummary,
+} from "./effect_summary/summary";
 import { mergeDuplicateObjectArray } from "../../utils/collections";
 import { tryItem } from "../../utils/item_processing";
 
@@ -105,6 +108,7 @@ function combinePill(
     ITEM_NAME: drug.ITEM_NAME.trim().replace(/\s{2, }/g, " "),
     PRINT_FRONT: replacePrint(drug.PRINT_FRONT),
     PRINT_BACK: replacePrint(drug.PRINT_BACK),
+    EFFECT_KEYWORD: createEffectKeyword(drug.CLASS_NAME),
     EFFECT_SUMMARY: createEffectSummary(drug.CLASS_NAME),
   };
 }

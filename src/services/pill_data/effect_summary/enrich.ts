@@ -1,4 +1,5 @@
 import logger from "../../../utils/logger";
+import type { EffectSummaryResult } from "../types/effect_summary";
 import { IPillData } from "../types/pill_data";
 import { fetchEffectSummaryMap } from "./client";
 import { FALLBACK_EFFECT_SUMMARY } from "./summary";
@@ -15,16 +16,15 @@ function isSuccessfulSummary(summary: string | undefined): summary is string {
  */
 function applySummary(
   pill: IPillData,
-  summaries: Map<string, string>,
+  summaries: Map<string, EffectSummaryResult>,
 ): string[] {
-  const summary = summaries.get(pill.ITEM_SEQ);
-
-  const hasSummary = isSuccessfulSummary(summary);
-  if (!hasSummary) {
+  const result = summaries.get(pill.ITEM_SEQ);
+  if (!result || !isSuccessfulSummary(result.summary)) {
     return [];
   }
 
-  pill.EFFECT_SUMMARY = summary;
+  pill.EFFECT_KEYWORD = result.keyword;
+  pill.EFFECT_SUMMARY = result.summary;
 
   return [pill.ITEM_SEQ];
 }
