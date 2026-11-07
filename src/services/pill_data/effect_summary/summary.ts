@@ -95,6 +95,33 @@ function decodeHtmlEntities(text: string) {
   return decoded;
 }
 
+/** 원문 보존 경로와 분리해 요약에서만 진단 전용 절과 환산표를 제외한다. */
+function removeNonEffectMarkup(raw: string | null | undefined) {
+  if (typeof raw !== "string") return raw;
+  return (
+    raw
+      // 진단·교육 전용 절과 키/체중 환산표는 적응증 본문이 아니다.
+      .replace(
+        /<ARTICLE\b[^>]*\btitle=["'](?:진단시\s*특별히|세심한\s*치료\s*프로그램)[^"']*["'][^>]*?(?:\/\s*>|>[\s\S]*?<\/ARTICLE>)/gi,
+        "\n",
+      )
+      .replace(
+        /<PARAGRAPH\b[^>]*>([\s\S]*?)<\/PARAGRAPH>/gi,
+        (paragraph, body: string) => {
+          const diagnostic =
+            /진단하는 것은|있음을 뜻한다|최소\s*\d+가지가\s*최소|기준이 만족되어야/.test(
+              body,
+            );
+          const bmiTable =
+            /tagName=["']table["']/i.test(paragraph) &&
+            /체중/.test(body) &&
+            /키\s*\(?cm/.test(body);
+          return diagnostic || bmiTable ? "\n" : paragraph;
+        },
+      )
+  );
+}
+
 /**
  * 태그·문서 장식 제거
  */
@@ -113,6 +140,7 @@ function cleanHtml(raw: string | null | undefined) {
       return title ? `\n${title[1] ?? title[2]}\n` : "\n";
     })
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, "$1")
+    .replace(/<sup>\s*2\s*<\/sup>/gi, "²")
     .replace(
       /<(?:br|\/p|\/paragraph|\/div|\/li|\/section|\/article)[^>]*>/gi,
       "\n",
@@ -170,6 +198,7 @@ function isNonEffectLine(line: string) {
     /^성상/,
     /^포장단위/,
     /^보험/,
+    /^표\s*\d+[.：:]?\s*체질량지수/,
   ];
 
   const isSectionHeading = sectionHeadingPatterns.some((pattern) =>
@@ -464,6 +493,11 @@ function rewriteEffectExpression(expression: string) {
     .replace(/\s+사용할\s+수\s+있다$/, "")
     .trim();
 
+  result = result.replace(
+    /(단독|병용) 치료이(?=\s*(?:권장|추천))/g,
+    "$1 치료가",
+  );
+
   return normalizeWhitespace(result);
 }
 
@@ -532,7 +566,7 @@ function trimDanglingEnding(expression: string) {
  * 유효 효능 표현 확인
  */
 function isUsefulEffectExpression(expression: string) {
-  const isEmptyExpression = !expression;
+  const isEmptyExpression = !expression || /^[-+\d.\s%]+$/.test(expression);
 
   if (isEmptyExpression) {
     return false;
@@ -656,6 +690,14 @@ function compressEffect(keywords: string[], maxLength: number) {
  */
 function isGuidanceExpression(expression: string) {
   if (
+    /진단은|가이드라인에\s*따라|아래는.*체질량지수표|체질량지수는.*계산|(?:복용|투여|병용)하지\s*않|사용해야\s*한다|투여를\s*철회한다/.test(
+      expression,
+    )
+  ) {
+    return true;
+  }
+
+  if (
     /이\s*약(?:을)?\s*투여에?\s*앞서|이\s*약에\s*함유된.*효능|확인하여야|배제해야|측정해야|측정하여야|검사시에는|검사\s*시에는/.test(
       expression,
     )
@@ -677,7 +719,7 @@ function isGuidanceExpression(expression: string) {
  */
 function collectEffectExpressions(eeDocData: string | null | undefined) {
   const effectText = removeNonEffectLines(
-    simplifyEffectTerminology(cleanHtml(eeDocData)),
+    simplifyEffectTerminology(cleanHtml(removeNonEffectMarkup(eeDocData))),
   );
 
   return extractEffectCandidates(effectText)

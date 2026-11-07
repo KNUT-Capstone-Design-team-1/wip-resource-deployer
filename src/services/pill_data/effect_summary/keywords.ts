@@ -13,6 +13,13 @@ export function extractEffectKeywords(expression: string): string[] {
     return [];
   }
 
+  // 예시 위험인자 목록은 이 약이 치료하는 질환 목록과 구분한다.
+  expression = expression.replace(/\([^()]*(?:위험인자|위험요소)[^()]*\)/g, "");
+  expression = expression.replace(
+    /((?:위험\s*인자|다중위험요소))\s*\([^()]*\)/g,
+    "$1",
+  );
+
   const text = prepareKeywordExpression(expression)
     // 단어 중간의 동의어 괄호는 뒤의 명사 어근을 양쪽에 붙인다.
     .replace(/([가-힣]+)\(([가-힣]+)\)([가-힣]+)/g, "$1$3,$2$3")
@@ -89,12 +96,19 @@ function normalizeKeyword(value: string): string {
     .trim();
 
   keyword = keyword
+    .replace(/^(?:가진|가지고|보인)(?:\s+|$)/, "")
     .replace(
-      /^.*(?:조절되지\s*않는|반응하지\s*않는|반응이\s*적절하지\s*않은|상승되어\s*있는|필요한|요구되는|적합한)\s*/,
+      /^.*(?:조절되지\s*않는|반응하지\s*않는|반응이\s*적절하지\s*않은|상승되어\s*있는|필요한|요구되는|적합한|적절한|다중위험요소가\s*있는)\s*/,
       "",
     )
-    .replace(/^(?:지속적으로|적절하게|상승된|낮은|동반한|같이)\s+/, "")
-    .replace(/^(?:성인|소아|청소년)\s+(?=주의력결핍)/, "")
+    .replace(
+      /^(?:지속적으로|적절하게|상승된|낮은|낮추어|낮추고|동반한|같이)\s+/,
+      "",
+    )
+    .replace(
+      /^(?:성인|소아|청소년)\s+(?=(?:제\s*)?[12]형\s*당뇨병|주의력결핍)/,
+      "",
+    )
     .replace(/^제\s*([12])\s*형\s*당뇨병/, "$1형 당뇨병")
     .replace(/^([12])\s*형\s*당뇨병/, "$1형 당뇨병")
     .replace(/^비타민\s*([A-K])\s*(\d*)$/i, "비타민 $1$2")
@@ -136,6 +150,16 @@ function normalizeKeyword(value: string): string {
 /** 쉼표로 나누기 전에 공유 명사와 비타민 이름을 복원한다. */
 function prepareKeywordExpression(expression: string): string {
   return simplifyEffectTerminology(expression)
+    .replace(
+      /(?:초기\s*)?체질량지수(?:가)?\s*\d+(?:\.\d+)?\s*kg\s*\/\s*m\s*(?:2|²)\s*(?:이상인|이상)?/gi,
+      ",",
+    )
+    .replace(/말초와\s*중추\s*(신경병증성\s*통증)/g, "말초 $1,중추 $1")
+    .replace(
+      /미란성과?\s*(?:또는|및)\s*궤양성\s*(위식도\s*역류질환)/g,
+      "미란성 $1,궤양성 $1",
+    )
+    .replace(/증상(?:이나|\s*및)\s*징후/g, "증상")
     .replace(
       /주의력\s*결핍\s*\/?\s*과잉행동\s*장애/g,
       "주의력결핍 과잉행동장애",
@@ -204,6 +228,27 @@ function normalizeKeywordSynonym(keyword: string): string {
 
 /** 대상·치료 방식·문장 조각과 병용 성분을 독립 효능으로 노출하지 않는다. */
 function isNonEffectKeyword(keyword: string): boolean {
+  if (
+    /^(?:[가나다라마바사아자차카타파하]|지연|초기|기본|목표 수준|징후|증상이나|내약성|중증|미란성|말초|이차적 전신증상|이전 당뇨병 약물)$/.test(
+      keyword,
+    )
+  )
+    return true;
+  if (
+    /^(?:ACE\s*억제제|저밀도 콜레스테롤[- ](?:apheresis|분리반출법))$/i.test(
+      keyword,
+    )
+  )
+    return true;
+  // 예후 지표는 summary에 보존하고 독립 효능 키워드에서는 제외한다.
+  if (/사망|입원|생존(?:률|율|기간)/.test(keyword)) return true;
+  // 문장 연결어를 질환명 안의 글자와 구별한다(예: 농가진).
+  if (
+    /^(?:가진|가지고|보인|기존|관련|로서|환경|환경적인 요인|보조|일부)$/.test(
+      keyword,
+    )
+  )
+    return true;
   if (/^(?:비타민 [A-K]\d*|[BC]형\s*간염|HIV(?:-1)?\s*감염)/i.test(keyword))
     return false;
   if (
@@ -248,7 +293,7 @@ function isNonEffectKeyword(keyword: string): boolean {
   )
     return true;
   return (
-    /(?:은|는|거나|하여|하도록|시키기|시키고|시킨|한|된|적인|적|하며|하고|되며)$/.test(
+    /(?:은|는|거나|하여|하도록|시키기|시키고|시킨|한|된|적인|적|하며|하고|되며|면서|이고|으며|으나|지만|아니라|않다|없다|하였다|시켰으나)$/.test(
       keyword,
     ) ||
     /^(?:앓는|받은|보지|이러한|효과는|기존|충분한|경우|다른|치료에|대하여|또는|및)(?:\s|에는)/.test(
