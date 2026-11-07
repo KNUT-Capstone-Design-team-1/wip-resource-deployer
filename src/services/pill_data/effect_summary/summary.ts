@@ -1,5 +1,6 @@
 import type { SplitState } from "../types/effect_summary";
 import { extractEffectKeywords } from "./keywords";
+import { simplifyEffectTerminology } from "./terminology";
 export const FALLBACK_EFFECT_SUMMARY = "효능·효과 정보가 없습니다.";
 const DEFAULT_MAX_LENGTH = 80;
 
@@ -154,7 +155,7 @@ function isNonEffectLine(line: string) {
     /^사용방법/,
     /^사용법/,
     /^주의사항/,
-    /^주의/,
+    /^주의(?:\s|[:：]|$)/,
     /^금기/,
     /^경고/,
     /^신중투여/,
@@ -675,7 +676,9 @@ function isGuidanceExpression(expression: string) {
  * 키워드 추출 전 효능 문구 수집
  */
 function collectEffectExpressions(eeDocData: string | null | undefined) {
-  const effectText = removeNonEffectLines(cleanHtml(eeDocData));
+  const effectText = removeNonEffectLines(
+    simplifyEffectTerminology(cleanHtml(eeDocData)),
+  );
 
   return extractEffectCandidates(effectText)
     .filter((expression) => !isGuidanceExpression(expression))
