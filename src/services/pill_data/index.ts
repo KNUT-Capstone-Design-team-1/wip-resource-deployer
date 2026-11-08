@@ -45,8 +45,9 @@ export async function createPillDataResourceFile(
   );
 
   logger.info(
-    "[PILL-DATA] Merge completed sourceRecords=%s outputRecords=%s",
+    "[PILL-DATA] Merge completed recognition=%s permissions=%s outputRecords=%s",
     sources.drugRecognition.length,
+    sources.drugProductPermissionDetails.length,
     pills.length,
   );
 

@@ -45,6 +45,8 @@ function toDrugRecognition(item: IDrugRecognition) {
   };
 }
 
+type NormalizedDrug = ReturnType<typeof toDrugRecognition>;
+
 /**
  * 각인 문자열 정리
  */
@@ -80,13 +82,27 @@ function indexPermissions(
  * 단일 알약 정보 병합
  */
 function combinePill(
-  drug: ReturnType<typeof toDrugRecognition>,
+  drug: NormalizedDrug,
   permission: IDrugProductPermissionDetail | undefined,
 ): IPillData {
   const effects = createEffectDetails(drug.CLASS_NAME);
+  const itemName = (drug.ITEM_NAME.trim() || text(permission?.ITEM_NAME))
+    .trim()
+    .replace(/\s{2, }/g, " ");
+  const enterpriseName =
+    drug.ENTP_NAME.trim() || text(permission?.ENTP_NAME).trim();
 
   return {
     ...drug,
+    ITEM_NAME: itemName,
+    ITEM_ENG_NAME: drug.ITEM_ENG_NAME || text(permission?.ITEM_ENG_NAME),
+    ENTP_NAME: enterpriseName,
+    ITEM_PERMIT_DATE:
+      drug.ITEM_PERMIT_DATE || text(permission?.ITEM_PERMIT_DATE),
+    ETC_OTC_CODE: drug.ETC_OTC_CODE || text(permission?.ETC_OTC_CODE),
+    CHART: drug.CHART || text(permission?.CHART),
+    CHANGE_DATE: drug.CHANGE_DATE || text(permission?.CHANGE_DATE),
+    COVERAGE_ENG_NAME: drug.COVERAGE_ENG_NAME || text(permission?.EDI_CODE),
     ENTP_ENG_NAME: text(permission?.ENTP_ENG_NAME),
     MATERIAL_NAME: text(permission?.MATERIAL_NAME),
     MATERIAL_ENG_NAME: text(permission?.MAIN_INGR_ENG),
@@ -104,7 +120,6 @@ function combinePill(
     ATC_CODE: text(permission?.ATC_CODE),
     RARE_DRUG_YN: text(permission?.RARE_DRUG_YN),
     OEM_ENTP_NAME: text(permission?.CNSGN_MANUF),
-    ITEM_NAME: drug.ITEM_NAME.trim().replace(/\s{2, }/g, " "),
     PRINT_FRONT: replacePrint(drug.PRINT_FRONT),
     PRINT_BACK: replacePrint(drug.PRINT_BACK),
     EFFECT_KEYWORD: effects.keyword,
@@ -125,24 +140,59 @@ function normalizeDrug(item: IDrugRecognition, index: number) {
 }
 
 /**
- * 낱알식별 기준 알약 병합
+ * 식별정보 중복 병합 후 허가정보에만 있는 품목 추가
+ */
+function collectDrugs(
+  drugRecognition: IDrugRecognition[],
+  permissions: Map<string, IDrugProductPermissionDetail>,
+): NormalizedDrug[] {
+  const drugs = mergeDuplicateObjectArray(
+    "ITEM_SEQ",
+    drugRecognition.flatMap(normalizeDrug),
+  );
+  const recognizedIds = new Set(drugs.map((drug) => drug.ITEM_SEQ));
+
+  for (const itemSeq of permissions.keys()) {
+    if (recognizedIds.has(itemSeq)) {
+      continue;
+    }
+
+    drugs.push(toDrugRecognition({ ITEM_SEQ: itemSeq }));
+  }
+
+  return drugs;
+}
+
+/**
+ * 품목명과 업체명 필수 값 확인
+ */
+function hasRequiredNames(pill: IPillData): boolean {
+  return pill.ITEM_NAME.trim() !== "" && pill.ENTP_NAME.trim() !== "";
+}
+
+/**
+ * 낱알식별·허가 정보의 전체 품목 병합
  */
 export function createPillData(
   drugRecognition: IDrugRecognition[],
   drugProductPermissionDetails: IDrugProductPermissionDetail[],
 ): IPillData[] {
   const permissions = indexPermissions(drugProductPermissionDetails);
-  const drugs = mergeDuplicateObjectArray(
-    "ITEM_SEQ",
-    drugRecognition.flatMap(normalizeDrug),
-  );
+  const drugs = collectDrugs(drugRecognition, permissions);
+  const pills: IPillData[] = [];
 
-  return drugs.flatMap((drug) => {
+  for (const drug of drugs) {
     const pill = tryItem(
       () => combinePill(drug, permissions.get(drug.ITEM_SEQ)),
       "pill ITEM_SEQ=" + drug.ITEM_SEQ,
     );
 
-    return pill === undefined ? [] : [pill];
-  });
+    if (pill === undefined || !hasRequiredNames(pill)) {
+      continue;
+    }
+
+    pills.push(pill);
+  }
+
+  return pills;
 }
