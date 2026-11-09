@@ -79,9 +79,10 @@ export async function retryFailedPillEffectSummaries(
 ) {
   logger.info("[EE-SUMMARY-RETRY] Start retry failed effect summaries");
 
-  // 리소스 경로와 체크포인트 간격을 준비한다.
+  // 리소스 경로를 준비한다.
   const directory = options.directory ?? RESOURCE_DIRECTORY;
 
+  // 기존 호출 옵션의 유효성 검사는 유지하되 성공 건은 즉시 저장한다.
   const checkpointSize = options.checkpointSize ?? 50;
 
   // 처리 건수와 저장 간격이 유효한 값인지 확인한다.
@@ -135,7 +136,7 @@ export async function retryFailedPillEffectSummaries(
   }
 
   try {
-    // 실패 항목을 재조회하고 성공 결과를 반영하면서 주기적으로 저장한다.
+    // 실패 항목을 재조회하고 성공할 때마다 저장 후 실패 파일을 제거한다.
     await fetchEffectSummaryMap(targets, {
       ...options,
       onResult: async (itemSeq, result) => {
@@ -159,14 +160,13 @@ export async function retryFailedPillEffectSummaries(
           }
 
           pendingSuccesses.add(itemSeq);
+
+          // 다음 항목 조회나 외부 콜백 전에 결과 저장과 실패 파일 정리를 완료
+          await checkpoint();
           recovered += 1;
         }
 
         await options.onResult?.(itemSeq, result);
-
-        if (processed % checkpointSize === 0) {
-          await checkpoint();
-        }
       },
     });
   } finally {

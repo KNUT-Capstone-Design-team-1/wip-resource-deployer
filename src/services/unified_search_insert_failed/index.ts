@@ -15,15 +15,19 @@ async function upsertFailedRetry(filePath: string) {
     const parsed = JSON.parse(fileContent);
 
     await upsert([parsed]);
+
+    // DB 저장에 성공한 파일은 다음 레코드 처리 전에 즉시 제거
+    fs.unlinkSync(filePath);
+
     logger.info(
-      "[UNIFIED-SEARCH-UPSERT-FAILED] Success upsert data. data %s",
-      fileContent,
+      "[UNIFIED-SEARCH-UPSERT-FAILED] Upserted and removed file=%s",
+      filePath,
     );
 
     return true;
   } catch (error: any) {
     logger.error(
-      `[UNIFIED-SEARCH-UPSERT-FAILED] Failed to read file %s. error: %s`,
+      `[UNIFIED-SEARCH-UPSERT-FAILED] Failed to retry or remove file %s. error: %s`,
       filePath,
       error.stack || error,
     );
@@ -55,8 +59,8 @@ export async function upsertFailedRetryAll() {
     .readdirSync(directory, { withFileTypes: true })
     .filter((entry) => entry.isFile() && entry.name.endsWith(".json"));
 
-  // 실패 레코드를 순차 저장하고 성공한 파일 경로를 수집
-  const succeededFiles: string[] = [];
+  // 성공한 파일은 즉시 삭제하고 처리 완료 건수만 집계
+  let succeededCount = 0;
 
   for (const file of files) {
     const filePath = path.join(directory, file.name);
@@ -64,11 +68,11 @@ export async function upsertFailedRetryAll() {
     const succeeded = await upsertFailedRetry(filePath);
 
     if (succeeded) {
-      succeededFiles.push(filePath);
+      succeededCount += 1;
     }
   }
 
-  const hasNoRecoveredFiles = succeededFiles.length === 0;
+  const hasNoRecoveredFiles = succeededCount === 0;
 
   if (hasNoRecoveredFiles) {
     return;
@@ -76,16 +80,4 @@ export async function upsertFailedRetryAll() {
 
   // 복구한 데이터가 있으면 마지막에 FTS 인덱스를 한 번 재구축
   await rebuildFts5();
-
-  // DB 저장과 인덱스 재구축을 모두 마친 항목의 실패 파일만 제거
-  removeRecoveredFiles(succeededFiles);
-}
-
-/**
- * 복구 완료 파일 제거
- */
-function removeRecoveredFiles(filePaths: string[]) {
-  for (const filePath of filePaths) {
-    fs.unlinkSync(filePath);
-  }
 }
