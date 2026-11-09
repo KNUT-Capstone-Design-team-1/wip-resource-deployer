@@ -2,7 +2,7 @@
   "common": {
     "targetResource": [
       "_pill_data",
-      "_pill_effect_summary_retry",
+      "_pill_effect_summary_failed",
       "_nearby_pharmacies",
       "_cannabis",
       "_narcotics",

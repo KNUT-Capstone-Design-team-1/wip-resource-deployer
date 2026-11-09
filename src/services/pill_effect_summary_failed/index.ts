@@ -2,7 +2,7 @@ import { writeAtomicFile } from "../../utils/atomic_file";
 import type {
   PillResourceFile,
   EffectRetryOptions,
-} from "./types/pill_effect_summary_retry";
+} from "./types/pill_effect_summary_failed";
 import fs from "fs";
 import path from "path";
 import logger from "../../utils/logger";
@@ -77,7 +77,7 @@ function indexPills(pills: IPillData[]) {
 export async function retryFailedPillEffectSummaries(
   options: EffectRetryOptions = {},
 ) {
-  logger.info("[EE-SUMMARY-RETRY] Start retry failed effect summaries");
+  logger.info("[EE-SUMMARY-FAILED] Start retry failed effect summaries");
 
   // 리소스 경로를 준비한다.
   const directory = options.directory ?? RESOURCE_DIRECTORY;
@@ -133,7 +133,7 @@ export async function retryFailedPillEffectSummaries(
 
         if (result.reason) {
           logger.warn(
-            "[EE-SUMMARY-RETRY] Failed ITEM_SEQ=%s reason=%s status=%s attempts=%s: %s",
+            "[EE-SUMMARY-FAILED] Failed ITEM_SEQ=%s reason=%s status=%s attempts=%s: %s",
             itemSeq,
             result.reason,
             result.httpStatus,
@@ -170,7 +170,7 @@ export async function retryFailedPillEffectSummaries(
   ).length;
 
   logger.info(
-    "[EE-SUMMARY-RETRY] Processed=%s recovered=%s remaining=%s",
+    "[EE-SUMMARY-FAILED] Processed=%s recovered=%s remaining=%s",
     processed,
     recovered,
     remaining,

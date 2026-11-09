@@ -12,10 +12,10 @@ export function createResourceTasks(config: AppConfig): ResourceTask[] {
       },
     },
     {
-      name: "pill_effect_summary_retry",
+      name: "pill_effect_summary_failed",
       execute: async () => {
         const { retryFailedPillEffectSummaries } =
-          await import("./services/pill_effect_summary_retry");
+          await import("./services/pill_effect_summary_failed");
         return retryFailedPillEffectSummaries();
       },
     },
