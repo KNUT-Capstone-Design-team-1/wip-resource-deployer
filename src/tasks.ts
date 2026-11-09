@@ -42,11 +42,16 @@ export function createResourceTasks(config: AppConfig) {
       name: "functional_food",
       execute: () => createFunctionalFoodResources(config.functional_food),
     },
-    { name: "unified_search_create_tables", execute: createTables },
     { name: "unified_search_restore_fts", execute: restoreUnifiedSearchFts },
     {
       name: "unified_search",
-      execute: () => updateUnifiedSearchDb(config.unifiedSearch?.dbInitialize),
+      execute: async () => {
+        if (config.unifiedSearch?.dbInitialize) {
+          await createTables();
+        }
+
+        await updateUnifiedSearchDb();
+      },
     },
     { name: "unified_search_insert_failed", execute: upsertFailedRetryAll },
   ];
