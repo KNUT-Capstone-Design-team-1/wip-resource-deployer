@@ -82,18 +82,7 @@ export async function retryFailedPillEffectSummaries(
   // 리소스 경로를 준비한다.
   const directory = options.directory ?? RESOURCE_DIRECTORY;
 
-  // 기존 호출 옵션의 유효성 검사는 유지하되 성공 건은 즉시 저장한다.
-  const checkpointSize = options.checkpointSize ?? 50;
-
-  // 처리 건수와 저장 간격이 유효한 값인지 확인한다.
-  if (
-    !Number.isInteger(checkpointSize) ||
-    checkpointSize <= 0 ||
-    (options.limit !== undefined &&
-      (!Number.isInteger(options.limit) || options.limit <= 0))
-  ) {
-    throw new Error("limit and checkpointSize must be positive integers");
-  }
+  validateRetryOptions(options);
 
   // 기존 알약 리소스를 읽고 품목별로 조회할 수 있도록 묶는다.
   const resource = await readPillResource(directory);
@@ -188,4 +177,14 @@ export async function retryFailedPillEffectSummaries(
   );
 
   return { processed, recovered, remaining };
+}
+
+function validateRetryOptions(options: EffectRetryOptions) {
+  if (options.limit !== undefined) validatePositiveInteger(options.limit);
+}
+
+function validatePositiveInteger(value: number) {
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error("limit must be a positive integer");
+  }
 }

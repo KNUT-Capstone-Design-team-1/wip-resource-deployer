@@ -167,51 +167,70 @@ export function normalizeKeywordSynonym(keyword: string): string {
 }
 
 /** 대상·치료 방식·문장 조각과 병용 성분을 독립 효능으로 노출하지 않는다. */
+// 순서가 중요하다. 예외로 허용하는 질환명은 뒤의 일반 제외 규칙보다 먼저 판정한다.
+const KEYWORD_RULES: readonly [
+  matches: (keyword: string) => boolean,
+  excluded: boolean,
+][] = [
+  [(keyword) => EXCLUDED_MODIFIERS.has(keyword), true],
+  [
+    (keyword) =>
+      /^(?:ACE\s*억제제|저밀도 콜레스테롤[- ](?:apheresis|분리반출법))$/i.test(
+        keyword,
+      ),
+    true,
+  ],
+  [(keyword) => /사망|입원|생존(?:률|율|기간)/.test(keyword), true],
+  [(keyword) => CONNECTING_WORDS.has(keyword), true],
+  [
+    (keyword) =>
+      /^(?:비타민 [A-K]\d*|[BC]형\s*간염|HIV(?:-1)?\s*감염)/i.test(keyword),
+    false,
+  ],
+  [(keyword) => NON_EFFECT_TERMS.has(keyword), true],
+  [
+    (keyword) =>
+      /^(?:stage|NYHA|type|class)\b/i.test(keyword) ||
+      /^(?:[A-Z][A-Z0-9-]*\s*)?(?:양성|음성)$/.test(keyword),
+    true,
+  ],
+  [
+    (keyword) =>
+      /^(?:[A-K]\s*\d*|[Ⅰ-ⅩIVX]+[ab]?형?|total-C|LDL-C|HDL-C|Apo B|TG|ALT|AST|mg|kg|mL|Fredrickson)$/i.test(
+        keyword,
+      ),
+    true,
+  ],
+  [
+    (keyword) =>
+      /^\d+\s*차$/.test(keyword) || /^(?:성인|소아|청소년)\s*$/.test(keyword),
+    true,
+  ],
+  [
+    (keyword) =>
+      /^(?:(?:만\s*)?\d+\s*(?:세|kg|㎏)|체중이)/.test(keyword) &&
+      !/(?:병|염|암|통|증|장애|질환|궤양|발작|고혈압)$/.test(keyword),
+    true,
+  ],
+  [(keyword) => /^[가-힣]+(?:요법제|용제|억제제)$/.test(keyword), false],
+  [
+    (keyword) =>
+      /(?:요법|병용|단독|복합제|항생제|투여|수용체|임상적|불내성|반응|양성이거나|알려지지 않은|수치를|수치가|중에|동안|필요|요구|실시|중요|못했|같다|없으나|된 비타민|팔미틴산|콜레칼시페롤|사용상|치료\s*프로그램|사용했|임상시험|입증|진단|검사법)/.test(
+        keyword,
+      ) &&
+      !/(?:병|염|암|통|증|장애|질환|궤양|발작|고혈압|탈모|두드러기|빈혈)$/.test(
+        keyword,
+      ),
+    true,
+  ],
+  [(keyword) => MEDICATION_NAMES.has(keyword), true],
+];
+
+/** 대상·치료 방식·문장 조각과 병용 성분을 독립 효능에서 제외한다. */
 export function isNonEffectKeyword(keyword: string): boolean {
-  if (EXCLUDED_MODIFIERS.has(keyword)) return true;
-  if (
-    /^(?:ACE\s*억제제|저밀도 콜레스테롤[- ](?:apheresis|분리반출법))$/i.test(
-      keyword,
-    )
-  )
-    return true;
-  // 예후 지표는 summary에 보존하고 독립 효능 키워드에서는 제외한다.
-  if (/사망|입원|생존(?:률|율|기간)/.test(keyword)) return true;
-  // 문장 연결어를 질환명 안의 글자와 구별한다(예: 농가진).
-  if (CONNECTING_WORDS.has(keyword)) return true;
-  if (/^(?:비타민 [A-K]\d*|[BC]형\s*간염|HIV(?:-1)?\s*감염)/i.test(keyword))
-    return false;
-  if (NON_EFFECT_TERMS.has(keyword)) return true;
-  if (
-    /^(?:stage|NYHA|type|class)\b/i.test(keyword) ||
-    /^(?:[A-Z][A-Z0-9-]*\s*)?(?:양성|음성)$/.test(keyword)
-  )
-    return true;
-  if (
-    /^(?:[A-K]\s*\d*|[Ⅰ-ⅩIVX]+[ab]?형?|total-C|LDL-C|HDL-C|Apo B|TG|ALT|AST|mg|kg|mL|Fredrickson)$/i.test(
-      keyword,
-    )
-  )
-    return true;
-  if (/^\d+\s*차$/.test(keyword) || /^(?:성인|소아|청소년)\s*$/.test(keyword))
-    return true;
-  if (
-    /^(?:(?:만\s*)?\d+\s*(?:세|kg|㎏)|체중이)/.test(keyword) &&
-    !/(?:병|염|암|통|증|장애|질환|궤양|발작|고혈압)$/.test(keyword)
-  )
-    return true;
-  // 분류명만 있는 원본도 유효하다. '당뇨병용제'의 '병용'은 병용요법이 아니다.
-  if (/^[가-힣]+(?:요법제|용제|억제제)$/.test(keyword)) return false;
-  if (
-    /(?:요법|병용|단독|복합제|항생제|투여|수용체|임상적|불내성|반응|양성이거나|알려지지 않은|수치를|수치가|중에|동안|필요|요구|실시|중요|못했|같다|없으나|된 비타민|팔미틴산|콜레칼시페롤|사용상|치료\s*프로그램|사용했|임상시험|입증|진단|검사법)/.test(
-      keyword,
-    ) &&
-    !/(?:병|염|암|통|증|장애|질환|궤양|발작|고혈압|탈모|두드러기|빈혈)$/.test(
-      keyword,
-    )
-  )
-    return true;
-  if (MEDICATION_NAMES.has(keyword)) return true;
+  for (const [matches, excluded] of KEYWORD_RULES) {
+    if (matches(keyword)) return excluded;
+  }
   return (
     /(?:은|는|거나|하여|하도록|시키기|시키고|시킨|한|된|적인|적|하며|하고|되며|면서|이고|으며|으나|지만|아니라|않다|없다|하였다|시켰으나)$/.test(
       keyword,

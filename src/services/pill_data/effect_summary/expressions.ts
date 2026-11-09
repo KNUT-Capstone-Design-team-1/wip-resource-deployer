@@ -65,13 +65,11 @@ function extractEffectCandidates(text: string) {
       continue;
     }
 
-    for (const candidate of extractLineCandidates(line)) {
-      candidates.push(
-        effectContext && !candidate.includes(effectContext)
-          ? `${candidate}의 ${effectContext}`
-          : candidate,
-      );
-    }
+    candidates.push(
+      ...extractLineCandidates(line).map((candidate) =>
+        withEffectContext(candidate, effectContext),
+      ),
+    );
   }
 
   return candidates;
@@ -90,4 +88,10 @@ export function collectEffectExpressions(eeDocData: string | null | undefined) {
     .map(removeTrailingBoilerplate)
     .map(trimDanglingEnding)
     .filter(isUsefulEffectExpression);
+}
+
+function withEffectContext(candidate: string, context: string) {
+  return context && !candidate.includes(context)
+    ? `${candidate}의 ${context}`
+    : candidate;
 }

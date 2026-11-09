@@ -18,6 +18,10 @@ export const CLASSIFICATION_FIELDS = [
   "CRET_DTM",
   "LAST_UPDT_DTM",
 ] as const;
+const CLASSIFICATION_IDENTITY_FIELDS = CLASSIFICATION_FIELDS.filter(
+  (key) => key !== "CRET_DTM" && key !== "LAST_UPDT_DTM",
+);
+
 export const RAW_MATERIAL_FIELDS = [
   "LCNS_NO",
   "BSSH_NM",
@@ -85,9 +89,7 @@ export function createFunctionalFoodClassifications(
       skipped.push({ row: index + 1, fields: Object.keys(row) });
       return [];
     }
-    const identity = CLASSIFICATION_FIELDS.filter(
-      (key) => key !== "CRET_DTM" && key !== "LAST_UPDT_DTM",
-    ).map((key) => record[key]);
+    const identity = CLASSIFICATION_IDENTITY_FIELDS.map((key) => record[key]);
     return [
       {
         id: createHash("sha256").update(JSON.stringify(identity)).digest("hex"),
@@ -144,9 +146,8 @@ export function splitRawMaterials(value: string): string[] {
   let start = 0;
   for (let index = 0; index < value.length; index += 1) {
     const char = value[index];
-    if ("([{（".includes(char)) depth += 1;
-    if (")]}）".includes(char)) depth = Math.max(0, depth - 1);
-    if ((char === "," || char === "\n") && depth === 0) {
+    depth = materialDepth(char, depth);
+    if (isMaterialSeparator(char, depth)) {
       parts.push(value.slice(start, index).trim());
       start = index + 1;
     }
@@ -158,4 +159,14 @@ export function splitRawMaterials(value: string): string[] {
 /** 띄어쓰기·대소문자만 통일한다. 부분 일치나 임의의 동의어로 연결하지 않는다. */
 function normalizeMaterialName(value: string): string {
   return value.normalize("NFKC").replace(/\s+/g, "").toLowerCase();
+}
+
+function materialDepth(char: string, depth: number) {
+  if ("([{（".includes(char)) return depth + 1;
+  if (")]}）".includes(char)) return Math.max(0, depth - 1);
+  return depth;
+}
+
+function isMaterialSeparator(char: string, depth: number) {
+  return (char === "," || char === "\n") && depth === 0;
 }

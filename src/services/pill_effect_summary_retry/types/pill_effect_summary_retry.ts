@@ -8,5 +8,4 @@ export interface PillResourceFile {
 
 export interface EffectRetryOptions extends EffectSummaryOptions {
   limit?: number;
-  checkpointSize?: number;
 }

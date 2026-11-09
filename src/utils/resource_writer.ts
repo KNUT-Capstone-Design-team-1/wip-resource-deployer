@@ -10,7 +10,7 @@ import logger from "./logger";
  * 출력 디렉터리 생성
  */
 export function createResourcesDirectory() {
-  logger.info(
+  logger.debug(
     "[RESOURCE-FILE] Preparing directory path=%s",
     RESOURCE_DIRECTORY,
   );

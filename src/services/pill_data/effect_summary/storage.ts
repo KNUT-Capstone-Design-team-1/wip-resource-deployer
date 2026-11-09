@@ -34,15 +34,7 @@ export async function writeEffectSummaryFailure(
   directory = RESOURCE_DIRECTORY,
 ) {
   const filePath = effectFilePath(failure.ITEM_SEQ, "failed", directory);
-  let previous: EffectSummaryFailure | undefined;
-
-  try {
-    previous = JSON.parse(await fs.promises.readFile(filePath, "utf8"));
-  } catch (e) {
-    if (e.code !== "ENOENT") {
-      throw e;
-    }
-  }
+  const previous = await readPreviousFailure(filePath);
 
   // 실제 요청을 하지 않은 항목은 기존 실패 원인과 파일을 그대로 보존한다.
   if (failure.reason === "rate_limit_deferred" && previous) {
@@ -142,4 +134,15 @@ export async function removeEffectDocuments(directory = RESOURCE_DIRECTORY) {
   }
 
   await fs.promises.rm(documentsDirectory, { recursive: true, force: true });
+}
+
+async function readPreviousFailure(
+  filePath: string,
+): Promise<EffectSummaryFailure | undefined> {
+  try {
+    return JSON.parse(await fs.promises.readFile(filePath, "utf8"));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    return undefined;
+  }
 }

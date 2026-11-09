@@ -84,8 +84,8 @@ function indexPermissions(
 function combinePill(
   drug: NormalizedDrug,
   permission: IDrugProductPermissionDetail | undefined,
+  effects: ReturnType<typeof createEffectDetails>,
 ): IPillData {
-  const effects = createEffectDetails(drug.CLASS_NAME);
   const itemName = (drug.ITEM_NAME.trim() || text(permission?.ITEM_NAME))
     .trim()
     .replace(/\s{2, }/g, " ");
@@ -95,14 +95,16 @@ function combinePill(
   return {
     ...drug,
     ITEM_NAME: itemName,
-    ITEM_ENG_NAME: drug.ITEM_ENG_NAME || text(permission?.ITEM_ENG_NAME),
+    ITEM_ENG_NAME: preferText(drug.ITEM_ENG_NAME, permission?.ITEM_ENG_NAME),
     ENTP_NAME: enterpriseName,
-    ITEM_PERMIT_DATE:
-      drug.ITEM_PERMIT_DATE || text(permission?.ITEM_PERMIT_DATE),
-    ETC_OTC_CODE: drug.ETC_OTC_CODE || text(permission?.ETC_OTC_CODE),
-    CHART: drug.CHART || text(permission?.CHART),
-    CHANGE_DATE: drug.CHANGE_DATE || text(permission?.CHANGE_DATE),
-    COVERAGE_ENG_NAME: drug.COVERAGE_ENG_NAME || text(permission?.EDI_CODE),
+    ITEM_PERMIT_DATE: preferText(
+      drug.ITEM_PERMIT_DATE,
+      permission?.ITEM_PERMIT_DATE,
+    ),
+    ETC_OTC_CODE: preferText(drug.ETC_OTC_CODE, permission?.ETC_OTC_CODE),
+    CHART: preferText(drug.CHART, permission?.CHART),
+    CHANGE_DATE: preferText(drug.CHANGE_DATE, permission?.CHANGE_DATE),
+    COVERAGE_ENG_NAME: preferText(drug.COVERAGE_ENG_NAME, permission?.EDI_CODE),
     ENTP_ENG_NAME: text(permission?.ENTP_ENG_NAME),
     MATERIAL_NAME: text(permission?.MATERIAL_NAME),
     MATERIAL_ENG_NAME: text(permission?.MAIN_INGR_ENG),
@@ -180,10 +182,19 @@ export function createPillData(
   const permissions = indexPermissions(drugProductPermissionDetails);
   const drugs = collectDrugs(drugRecognition, permissions);
   const pills: IPillData[] = [];
+  const classEffects = new Map<
+    string,
+    ReturnType<typeof createEffectDetails>
+  >();
 
   for (const drug of drugs) {
     const pill = tryItem(
-      () => combinePill(drug, permissions.get(drug.ITEM_SEQ)),
+      () =>
+        combinePill(
+          drug,
+          permissions.get(drug.ITEM_SEQ),
+          getClassEffects(drug.CLASS_NAME, classEffects),
+        ),
       "pill ITEM_SEQ=" + drug.ITEM_SEQ,
     );
 
@@ -195,4 +206,23 @@ export function createPillData(
   }
 
   return pills;
+}
+
+function preferText(
+  primary: string,
+  fallback: string | number | null | undefined,
+) {
+  return primary || text(fallback);
+}
+
+/** 동일 분류명은 실행 중 한 번만 요약한다. */
+function getClassEffects(
+  name: string,
+  cache: Map<string, ReturnType<typeof createEffectDetails>>,
+) {
+  const cached = cache.get(name);
+  if (cached) return cached;
+  const effects = createEffectDetails(name);
+  cache.set(name, effects);
+  return effects;
 }

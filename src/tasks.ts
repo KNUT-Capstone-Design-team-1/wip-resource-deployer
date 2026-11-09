@@ -1,58 +1,99 @@
-import type { AppConfig } from "./types/resource_tasks";
-import { createCannabisResource } from "./services/cannabis";
-import { createNarcoticsResource } from "./services/narcotics";
-import { createPsychotropicsResource } from "./services/psychotropics";
-import { createProhibitedListResource } from "./services/prohibited_list";
-import { createFunctionalFoodResources } from "./services/functional_food";
-import { createPillDataResourceFile } from "./services/pill_data";
-import { retryFailedPillEffectSummaries } from "./services/pill_effect_summary_retry";
-import { createNearbyPharmaciesResource } from "./services/nearby_pharmacies";
-import { updateUnifiedSearchDb } from "./services/unified_search";
-import { createTables } from "./services/unified_search_create_tables";
-import { restoreUnifiedSearchFts } from "./services/unified_search_restore_fts";
-import { upsertFailedRetryAll } from "./services/unified_search_insert_failed";
+import type { AppConfig, ResourceTask } from "./types/resource_tasks";
 
-/**
- * 리소스 작업·순서 등록
- */
-export function createResourceTasks(config: AppConfig) {
-  // 리소스 생성과 검색 DB 관리 작업을 의존 순서에 맞춰 등록
+/** 선택된 작업의 모듈만 로드하며 의존 순서대로 실행한다. */
+export function createResourceTasks(config: AppConfig): ResourceTask[] {
   return [
     {
       name: "pill_data",
-      execute: () => createPillDataResourceFile(config.pillData),
+      execute: async () => {
+        const { createPillDataResourceFile } =
+          await import("./services/pill_data");
+        return createPillDataResourceFile(config.pillData);
+      },
     },
     {
       name: "pill_effect_summary_retry",
-      execute: () =>
-        config.pillData?.createEffectSummary === false
-          ? Promise.resolve()
-          : retryFailedPillEffectSummaries(),
+      execute: async () => {
+        const { retryFailedPillEffectSummaries } =
+          await import("./services/pill_effect_summary_retry");
+        return retryFailedPillEffectSummaries();
+      },
     },
     {
       name: "nearby_pharmacies",
-      execute: () =>
-        createNearbyPharmaciesResource(config.nearbyPharmacies?.apiUrl),
+      execute: async () => {
+        const { createNearbyPharmaciesResource } =
+          await import("./services/nearby_pharmacies");
+        return createNearbyPharmaciesResource(config.nearbyPharmacies?.apiUrl);
+      },
     },
-    { name: "cannabis", execute: createCannabisResource },
-    { name: "narcotics", execute: createNarcoticsResource },
-    { name: "psychotropics", execute: createPsychotropicsResource },
-    { name: "prohibited_list", execute: createProhibitedListResource },
+    {
+      name: "cannabis",
+      execute: async () => {
+        const { createCannabisResource } = await import("./services/cannabis");
+        return createCannabisResource();
+      },
+    },
+    {
+      name: "narcotics",
+      execute: async () => {
+        const { createNarcoticsResource } =
+          await import("./services/narcotics");
+        return createNarcoticsResource();
+      },
+    },
+    {
+      name: "psychotropics",
+      execute: async () => {
+        const { createPsychotropicsResource } =
+          await import("./services/psychotropics");
+        return createPsychotropicsResource();
+      },
+    },
+    {
+      name: "prohibited_list",
+      execute: async () => {
+        const { createProhibitedListResource } =
+          await import("./services/prohibited_list");
+        return createProhibitedListResource();
+      },
+    },
     {
       name: "functional_food",
-      execute: () => createFunctionalFoodResources(config.functional_food),
+      execute: async () => {
+        const { createFunctionalFoodResources } =
+          await import("./services/functional_food");
+        return createFunctionalFoodResources(config.functional_food);
+      },
     },
-    { name: "unified_search_restore_fts", execute: restoreUnifiedSearchFts },
+    {
+      name: "unified_search_restore_fts",
+      execute: async () => {
+        const { restoreUnifiedSearchFts } =
+          await import("./services/unified_search_restore_fts");
+        return restoreUnifiedSearchFts();
+      },
+    },
     {
       name: "unified_search",
       execute: async () => {
         if (config.unifiedSearch?.dbInitialize) {
+          const { createTables } =
+            await import("./services/unified_search_create_tables");
           await createTables();
         }
-
-        await updateUnifiedSearchDb();
+        const { updateUnifiedSearchDb } =
+          await import("./services/unified_search");
+        return updateUnifiedSearchDb();
       },
     },
-    { name: "unified_search_insert_failed", execute: upsertFailedRetryAll },
+    {
+      name: "unified_search_insert_failed",
+      execute: async () => {
+        const { upsertFailedRetryAll } =
+          await import("./services/unified_search_insert_failed");
+        return upsertFailedRetryAll();
+      },
+    },
   ];
 }

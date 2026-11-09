@@ -214,71 +214,35 @@ export function trimDanglingEnding(expression: string) {
 /**
  * 유효 효능 표현 확인
  */
+const USELESS_EXPRESSION_CHECKS: readonly ((expression: string) => boolean)[] =
+  [
+    (expression) => !expression || /^[-+\d.\s%]+$/.test(expression),
+    (expression) =>
+      /다음\s*(?:질환|질병)(?:에|의)?$/.test(expression) ||
+      /삭제|유효성을\s*입증하지\s*못함/.test(expression),
+    (expression) =>
+      /(?:하며|하고|하여|이며|이고|있으며|하므로|하면서|경우로)$/.test(
+        expression,
+      ),
+    (expression) =>
+      /^(?:\([^)]*\)\s*)+$/.test(expression) ||
+      /^\*?\s*\d+(?:\.\d+)?\s*(?:mg|㎎|밀리그램)$/i.test(expression),
+    (expression) => REJECTED_EXPRESSIONS.has(expression.replace(/\s+/g, "")),
+    (expression) => /(?:이\s*약을|이\s*약은)$/.test(expression),
+    (expression) =>
+      /^(?:이 약의)?유효성은|^임상적 증거는|^국내임상시험결과/.test(expression),
+    (expression) =>
+      /^ACE억제제에\s+(?:대한\s+추가요법|내약성이)/.test(expression) ||
+      /^다음\s*질환에서\s*혈전\s*생성\s*억제$/.test(expression),
+    (expression) =>
+      /^(?:이 약은|이 약의|투여한다|사용한다|사용할 수 있다)\s*$/.test(
+        expression,
+      ),
+  ];
+
+/** 유효한 효능 표현인지 규칙 목록으로 판단한다. */
 export function isUsefulEffectExpression(expression: string) {
-  const isEmptyExpression = !expression || /^[-+\d.\s%]+$/.test(expression);
-
-  if (isEmptyExpression) {
-    return false;
-  }
-
-  if (
-    /다음\s*(?:질환|질병)(?:에|의)?$/.test(expression) ||
-    /삭제|유효성을\s*입증하지\s*못함/.test(expression)
-  ) {
-    return false;
-  }
-
-  if (
-    /(?:하며|하고|하여|이며|이고|있으며|하므로|하면서|경우로)$/.test(expression)
-  ) {
-    return false;
-  }
-
-  if (
-    /^(?:\([^)]*\)\s*)+$/.test(expression) ||
-    /^\*?\s*\d+(?:\.\d+)?\s*(?:mg|㎎|밀리그램)$/i.test(expression)
-  ) {
-    return false;
-  }
-
-  const compact = expression.replace(/\s+/g, "");
-
-  const isRejectedHeading = REJECTED_EXPRESSIONS.has(compact);
-
-  if (isRejectedHeading) {
-    return false;
-  }
-
-  if (/(?:이\s*약을|이\s*약은)$/.test(expression)) {
-    return false;
-  }
-
-  // 임상시험 결과/유효성 근거 자체는 환자가 알고 싶은 효능이 아니다.
-  const isEvidenceDescription =
-    /^(?:이 약의)?유효성은|^임상적 증거는|^국내임상시험결과/.test(expression);
-
-  if (isEvidenceDescription) {
-    return false;
-  }
-
-  // 안내 문구만 남은 경우 제거한다.
-  if (
-    /^ACE억제제에\s+(?:대한\s+추가요법|내약성이)/.test(expression) ||
-    /^다음\s*질환에서\s*혈전\s*생성\s*억제$/.test(expression)
-  ) {
-    return false;
-  }
-
-  const isInstructionOnly =
-    /^(?:이 약은|이 약의|투여한다|사용한다|사용할 수 있다)\s*$/.test(
-      expression,
-    );
-
-  if (isInstructionOnly) {
-    return false;
-  }
-
-  return true;
+  return !USELESS_EXPRESSION_CHECKS.some((rejects) => rejects(expression));
 }
 
 /**
