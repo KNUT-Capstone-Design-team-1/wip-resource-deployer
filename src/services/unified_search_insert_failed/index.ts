@@ -2,7 +2,6 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { upsert } from "../unified_search/repository";
-import { rebuildFts5 } from "../unified_search/rebuild";
 import { RESOURCE_DIRECTORY } from "../../utils/paths";
 import logger from "../../utils/logger";
 
@@ -72,12 +71,11 @@ export async function upsertFailedRetryAll() {
     }
   }
 
-  const hasNoRecoveredFiles = succeededCount === 0;
-
-  if (hasNoRecoveredFiles) {
-    return;
-  }
-
-  // 복구한 데이터가 있으면 마지막에 FTS 인덱스를 한 번 재구축
-  await rebuildFts5();
+  // FTS는 UPSERT 시 DB 트리거가 자동 동기화
+  logger.info(
+    "[UNIFIED-SEARCH-UPSERT-FAILED] Completed total=%s succeeded=%s failed=%s",
+    files.length,
+    succeededCount,
+    files.length - succeededCount,
+  );
 }
