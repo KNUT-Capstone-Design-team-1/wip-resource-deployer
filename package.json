@@ -7,7 +7,8 @@
     "start": "ts-node ./src/app.ts",
     "format": "prettier --write .",
     "lint": "prettier --check .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "unified-search:rebuild": "ts-node ./src/services/unified_search/rebuild_cli.ts"
   },
   "repository": {
     "type": "git",

@@ -9,6 +9,7 @@ import { retryFailedPillEffectSummaries } from "./services/pill_effect_summary_r
 import { createNearbyPharmaciesResource } from "./services/nearby_pharmacies";
 import { updateUnifiedSearchDb } from "./services/unified_search";
 import { createTables } from "./services/unified_search_create_tables";
+import { restoreUnifiedSearchFts } from "./services/unified_search_restore_fts";
 import { upsertFailedRetryAll } from "./services/unified_search_insert_failed";
 
 /**
@@ -42,6 +43,7 @@ export function createResourceTasks(config: AppConfig) {
       execute: () => createFunctionalFoodResources(config.functional_food),
     },
     { name: "unified_search_create_tables", execute: createTables },
+    { name: "unified_search_restore_fts", execute: restoreUnifiedSearchFts },
     {
       name: "unified_search",
       execute: () => updateUnifiedSearchDb(config.unifiedSearch?.dbInitialize),
