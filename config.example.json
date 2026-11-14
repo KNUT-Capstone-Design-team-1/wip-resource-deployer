@@ -11,8 +11,7 @@
       "_functional_food",
       "_unified_search_restore_fts",
       "_unified_search",
-      "_unified_search_insert_failed",
-      "_unified_search_rebuild_fts"
+      "_unified_search_insert_failed"
     ]
   },
   "unifiedSearch": {

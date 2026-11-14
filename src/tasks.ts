@@ -88,14 +88,6 @@ export function createResourceTasks(config: AppConfig): ResourceTask[] {
       },
     },
     {
-      name: "unified_search_rebuild_fts",
-      execute: async () => {
-        const { rebuildFts5 } =
-          await import("./services/unified_search/rebuild");
-        return rebuildFts5();
-      },
-    },
-    {
       name: "unified_search_insert_failed",
       execute: async () => {
         const { upsertFailedRetryAll } =
