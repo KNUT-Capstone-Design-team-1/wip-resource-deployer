@@ -66,19 +66,19 @@ yarn start
 
 #### GCS 리소스 업로드 시 인증 오류가 발생하는 경우
 
-1. [Google Cloud CLI](https://cloud.google.com/sdk/docs/install)를 설치한 후 프로젝트 터미널에서 아래 명령을 실행하고 브라우저에서 로그인 및 접근을 허용한다.
+```powershell
+# Google Cloud CLI 설치
+Invoke-WebRequest https://dl.google.com/dl/cloudsdk/channels/rapid/GoogleCloudSDKInstaller.exe -OutFile "$env:TEMP\GoogleCloudSDKInstaller.exe"
+& "$env:TEMP\GoogleCloudSDKInstaller.exe"
 
-```bash
+# 설치 후 터미널(VS Code 사용 시 VS Code)을 재시작하고 프로젝트 폴더에서 실행
+gcloud --version
 gcloud auth application-default login
+yarn start
+
+# 이미 생성된 리소스만 다시 업로드
+yarn upload:resources
 ```
-
-이 프로젝트의 `@google-cloud/storage`는 Application Default Credentials(ADC)를 사용하므로, CLI용 로그인인 `gcloud auth login`만으로는 인증 설정이 완료되지 않는다.
-
-2. 로그인 완료 후 `yarn upload:resources`를 다시 실행한다. 인증 만료 오류가 발생하면 위 로그인 명령을 다시 실행한다.
-
-3. `403` 권한 오류가 계속되면 로그인한 계정에 대상 버킷(기본값: `wip-bucket`, 변경 시 `RESOURCE_DATA_BUCKET`)의 객체 읽기·생성·덮어쓰기 권한이 있는지 확인한다.
-
-참고: [Cloud Storage 인증 안내](https://cloud.google.com/storage/docs/authentication)
 
 #### D1 데이터베이스 업데이트 안되는 경우
 
