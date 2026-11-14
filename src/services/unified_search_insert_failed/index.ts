@@ -5,15 +5,31 @@ import {
   removeFailedData,
 } from "../unified_search/failed_records";
 import logger from "../../utils/logger";
+import { createSearchRecord } from "../unified_search/batches";
+import { hasMissingDocuments } from "../unified_search/v2";
+import { readPillDataResource } from "../unified_search/pill_resource";
+import type { SearchPill } from "../unified_search/types/unified_search";
 
 /**
  * 검색 저장 실패 재시도
  */
-async function upsertFailedRetry(filePath: string) {
+async function upsertFailedRetry(
+  filePath: string,
+  pills: Map<string, SearchPill>,
+) {
   try {
-    const record = await readFailedData(filePath);
+    const failed = await readFailedData(filePath);
+    const pill = pills.get(failed.ITEM_SEQ);
+    if (!pill) throw new Error("Missing pill resource: " + failed.ITEM_SEQ);
+    // Never replay an older snapshot over a newer successful resource update.
+    const record = await createSearchRecord(pill);
 
     await upsert([record]);
+    if (hasMissingDocuments(record)) {
+      throw new Error(
+        "Document fetch incomplete; retained retry file: " + record.ITEM_SEQ,
+      );
+    }
 
     // DB 저장에 성공한 파일은 다음 레코드 처리 전에 즉시 제거
     await removeFailedData(filePath);
@@ -40,12 +56,15 @@ async function upsertFailedRetry(filePath: string) {
  */
 export async function upsertFailedRetryAll() {
   const files = await listFailedDataFiles();
+  const pills = new Map(
+    (await readPillDataResource()).map((pill) => [pill.ITEM_SEQ, pill]),
+  );
 
   // 성공한 파일은 즉시 삭제하고 처리 완료 건수만 집계
   let succeededCount = 0;
 
   for (const filePath of files) {
-    const succeeded = await upsertFailedRetry(filePath);
+    const succeeded = await upsertFailedRetry(filePath, pills);
 
     if (succeeded) {
       succeededCount += 1;
@@ -59,4 +78,6 @@ export async function upsertFailedRetryAll() {
     succeededCount,
     files.length - succeededCount,
   );
+  if (succeededCount !== files.length)
+    throw new Error("Search retry incomplete; failed files retained");
 }

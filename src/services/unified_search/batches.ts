@@ -6,13 +6,18 @@ import { getDocData } from "./documents";
 import { generateUniqueContents } from "./contents";
 import { upsert } from "./repository";
 import { writeFailedData } from "./failed_records";
+import { buildMetadata, hasMissingDocuments } from "./v2";
 
 const BATCH_SIZE = 5;
+// Each pill fetches at most three documents concurrently: at most nine requests.
+const DOCUMENT_CONCURRENCY = 3;
 
 /**
  * 검색 레코드 생성
  */
-async function createSearchRecord(pill: SearchPill) {
+export async function createSearchRecord(
+  pill: SearchPill,
+): Promise<IUnifiedSearchData> {
   const documents = await getDocData(pill.ITEM_SEQ);
   const values = [
     ...PILL_DATA_COLUMNS.map((column) => pill[column]),
@@ -24,6 +29,10 @@ async function createSearchRecord(pill: SearchPill) {
   return {
     ITEM_SEQ: pill.ITEM_SEQ,
     CONTENTS: generateUniqueContents(values),
+    ...buildMetadata(pill),
+    INDICATION_TEXT: documents.EE_DOC_DATA,
+    USAGE_TEXT: documents.UD_DOC_DATA,
+    WARNING_TEXT: documents.NB_DOC_DATA,
   };
 }
 
@@ -33,6 +42,10 @@ async function createSearchRecord(pill: SearchPill) {
 async function saveBatch(records: IUnifiedSearchData[]) {
   try {
     await upsert(records);
+    for (const record of records.filter(hasMissingDocuments)) {
+      await writeFailedData(record);
+    }
+    return records.filter(hasMissingDocuments).length;
   } catch (error) {
     logger.error(
       "[UNIFIED-SEARCH] Failed to upsert batch. %s",
@@ -42,6 +55,7 @@ async function saveBatch(records: IUnifiedSearchData[]) {
     for (const record of records) {
       await writeFailedData(record);
     }
+    return records.length;
   }
 }
 
@@ -51,18 +65,29 @@ async function saveBatch(records: IUnifiedSearchData[]) {
 async function processBatch(pills: SearchPill[]) {
   const records: IUnifiedSearchData[] = [];
 
-  for (const pill of pills) {
-    records.push(await createSearchRecord(pill));
+  for (let start = 0; start < pills.length; start += DOCUMENT_CONCURRENCY) {
+    records.push(
+      ...(await Promise.all(
+        pills
+          .slice(start, start + DOCUMENT_CONCURRENCY)
+          .map(createSearchRecord),
+      )),
+    );
   }
 
-  await saveBatch(records);
+  return saveBatch(records);
 }
 
 /**
  * 전체 검색 데이터 저장
  */
 export async function upsertAll(pills: SearchPill[]) {
+  let failed = 0;
   for (let start = 0; start < pills.length; start += BATCH_SIZE) {
-    await processBatch(pills.slice(start, start + BATCH_SIZE));
+    failed += await processBatch(pills.slice(start, start + BATCH_SIZE));
   }
+  if (failed)
+    throw new Error(
+      `Search update incomplete: ${failed} records; run unified-search:v2 retry`,
+    );
 }

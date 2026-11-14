@@ -1,4 +1,8 @@
 import logger from "../../utils/logger";
+import { SCHEMA_V2 } from "../unified_search/v2";
+import { TARGET_DB } from "../unified_search/repository";
+import { createSqlFile } from "../unified_search/database/sql_file";
+import { runQueryForSqlFile } from "../unified_search/database/wrangler";
 import {
   createUnifiedSearchTable,
   createUnifiedSearchFtsTable,
@@ -21,6 +25,8 @@ export async function createTables() {
   createUnifiedSearchFtsInsertTrigger();
   createUnifiedSearchFtsUpdateTrigger();
   createUnifiedSearchFtsDeleteTrigger();
+  createSqlFile("unified_search_v2_schema.sql", SCHEMA_V2);
+  runQueryForSqlFile("unified_search_v2_schema.sql", TARGET_DB);
 
   // 테이블 및 트리거 준비가 완료됐음을 기록
   logger.info(

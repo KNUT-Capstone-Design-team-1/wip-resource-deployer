@@ -15,7 +15,7 @@ async function fetchDocument(itemSeq: string, kind: DocumentKind) {
     });
     return normalizeText(response.data);
   }, `search document ITEM_SEQ=${itemSeq} kind=${kind}`);
-  return result ?? "";
+  return result ?? null;
 }
 
 async function readEffectText(itemSeq: string) {

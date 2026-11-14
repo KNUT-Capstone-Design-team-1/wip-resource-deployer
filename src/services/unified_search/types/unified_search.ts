@@ -13,4 +13,11 @@ export type SearchPill = Pick<
 export interface IUnifiedSearchData {
   ITEM_SEQ: string;
   CONTENTS: string;
+  NAME_TEXT?: string;
+  INGREDIENT_TEXT?: string;
+  INDICATION_TEXT?: string | null;
+  APPEARANCE_TEXT?: string;
+  COMPANY_TEXT?: string;
+  USAGE_TEXT?: string | null;
+  WARNING_TEXT?: string | null;
 }
