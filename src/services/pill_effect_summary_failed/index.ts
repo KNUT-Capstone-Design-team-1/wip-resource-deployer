@@ -1,3 +1,6 @@
+import { backupResourceFile } from "../../utils/resource_backup";
+import { uploadPillDataResources } from "../../utils/resource_upload";
+import { createPillDataPages } from "../../utils/resource_pages";
 import { writeAtomicFile } from "../../utils/atomic_file";
 import type {
   PillResourceFile,
@@ -111,12 +114,15 @@ export async function retryFailedPillEffectSummaries(
     }
 
     // 복구한 요약을 리소스 파일에 먼저 저장한다.
+    await backupResourceFile("pill_data.json", directory);
     await writeAtomicFile(
       path.join(directory, "pill_data.json"),
       JSON.stringify(resource, null, 2),
     );
 
     // 저장이 완료된 항목의 실패 파일만 제거한다.
+    await createPillDataPages(resource.resources, directory);
+
     for (const itemSeq of pendingSuccesses) {
       await removeEffectSummaryFailure(itemSeq, directory);
     }
@@ -164,6 +170,8 @@ export async function retryFailedPillEffectSummaries(
   }
 
   // 남아 있는 실패 항목 수를 집계해 재처리 결과를 반환한다.
+  if (recovered > 0) await uploadPillDataResources(directory);
+
   const remainingItemSeqs = await readFailedItemSeqs(failedDirectory);
   const remaining = [...remainingItemSeqs].filter((itemSeq) =>
     failedItemSeqs.has(itemSeq),

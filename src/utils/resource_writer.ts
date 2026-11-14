@@ -1,3 +1,5 @@
+import { backupResourceFile } from "./resource_backup";
+import { uploadResourceFile } from "./resource_upload";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -44,7 +46,12 @@ export async function createResourceFile(
       Date.now() - startedAt,
     );
 
+    await backupResourceFile(resourceFileName);
     await writeAtomicFile(filePath, contents);
+
+    if (resourceFileName !== "pill_data.json") {
+      await uploadResourceFile(resourceFileName);
+    }
 
     logger.info(
       "[RESOURCE-FILE] Save completed path=%s records=%s bytes=%s durationMs=%s",

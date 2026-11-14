@@ -7,7 +7,9 @@
     "start": "ts-node ./src/app.ts",
     "format": "prettier --write .",
     "lint": "prettier --check .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "upload:resources": "ts-node ./src/utils/resource_upload.ts",
+    "test:resource-upload": "node --test src/utils/resource_upload.test.cjs"
   },
   "repository": {
     "type": "git",
@@ -28,7 +30,8 @@
     "puppeteer": "^24.34.0",
     "typescript": "^5.6.3",
     "winston": "^3.17.0",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "@google-cloud/storage": "^7.19.0"
   },
   "devDependencies": {
     "@types/node": "^22.9.1",

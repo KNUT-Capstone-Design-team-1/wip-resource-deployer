@@ -1,3 +1,5 @@
+import { uploadPillDataResources } from "../../utils/resource_upload";
+import { createPillDataPages } from "../../utils/resource_pages";
 import { PillDataOptions } from "../../types/resource_tasks";
 import { createResourceFile } from "../../utils/resource_writer";
 import { mapConcurrent } from "../../utils/concurrent";
@@ -57,6 +59,10 @@ export async function createPillDataResourceFile(
   );
 
   await createResourceFile("pill_data.json", pills);
+  await runLoggedStage("PILL-DATA:RESOURCE-PAGES", () =>
+    createPillDataPages(pills),
+  );
+  await runLoggedStage("PILL-DATA:GCS-UPLOAD", () => uploadPillDataResources());
 
   await runLoggedStage("PILL-DATA:SUMMARY-CLEANUP", () =>
     mapConcurrent(successfulIds, 8, (itemSeq) =>
