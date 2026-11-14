@@ -41,16 +41,3 @@ export function normalizeText(input: string) {
 
   return text;
 }
-
-/**
- * 검색 단어 중복 제거
- */
-export function generateUniqueContents(
-  rawDataArr: (string | undefined | null)[],
-) {
-  const rawString = rawDataArr.filter((v) => v).join(" ");
-  const words = rawString.split(/\s+/).filter((word) => word.length > 0);
-  const uniqueWords = Array.from(new Set(words));
-
-  return uniqueWords.join(" ");
-}

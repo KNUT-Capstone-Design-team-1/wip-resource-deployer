@@ -1,7 +1,7 @@
 import { runQueryForSqlFile } from "./database/wrangler";
 import { createSqlFile } from "./database/sql_file";
 import { IUnifiedSearchData } from "./types/unified_search";
-import { buildUpsertSql } from "./v2";
+import { buildUpsertSql } from "./search_data";
 
 export const TARGET_DB = "wip_unified_search";
 

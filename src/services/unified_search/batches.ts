@@ -1,12 +1,10 @@
-import { PILL_DATA_COLUMNS } from "./columns";
 import logger from "../../utils/logger";
 import type { SearchPill } from "./types/unified_search";
 import type { IUnifiedSearchData } from "./types/unified_search";
 import { getDocData } from "./documents";
-import { generateUniqueContents } from "./contents";
 import { upsert } from "./repository";
 import { writeFailedData } from "./failed_records";
-import { buildMetadata, hasMissingDocuments } from "./v2";
+import { buildMetadata, hasMissingDocuments } from "./search_data";
 
 const BATCH_SIZE = 5;
 // Each pill fetches at most three documents concurrently: at most nine requests.
@@ -19,16 +17,9 @@ export async function createSearchRecord(
   pill: SearchPill,
 ): Promise<IUnifiedSearchData> {
   const documents = await getDocData(pill.ITEM_SEQ);
-  const values = [
-    ...PILL_DATA_COLUMNS.map((column) => pill[column]),
-    documents.EE_DOC_DATA,
-    documents.UD_DOC_DATA,
-    documents.NB_DOC_DATA,
-  ];
 
   return {
     ITEM_SEQ: pill.ITEM_SEQ,
-    CONTENTS: generateUniqueContents(values),
     ...buildMetadata(pill),
     INDICATION_TEXT: documents.EE_DOC_DATA,
     USAGE_TEXT: documents.UD_DOC_DATA,
@@ -88,6 +79,6 @@ export async function upsertAll(pills: SearchPill[]) {
   }
   if (failed)
     throw new Error(
-      `Search update incomplete: ${failed} records; run unified-search:v2 retry`,
+      `Search update incomplete: ${failed} records; enable unified_search_insert_failed in config.json and run yarn start`,
     );
 }

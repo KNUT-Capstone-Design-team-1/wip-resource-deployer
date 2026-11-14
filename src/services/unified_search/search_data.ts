@@ -24,7 +24,16 @@ const IMPORT_SCHEMA = `CREATE TABLE IF NOT EXISTS ${IMPORT_TABLE} (
   CONTENT TEXT NOT NULL, PRIMARY KEY (IMPORT_KEY, FIELD_NAME, PART_INDEX)
 );`;
 
-export const SCHEMA_V2 = `
+export const FTS_TABLES = [
+  "unified_search_fts_v2",
+  "unified_search_docs_fts_v2",
+] as const;
+export const FTS_SCHEMA =
+  ftsSchema(FTS_TABLES[0], CORE_COLUMNS) +
+  "\n" +
+  ftsSchema(FTS_TABLES[1], DOCUMENT_COLUMNS);
+
+export const SEARCH_SCHEMA = `
 CREATE TABLE IF NOT EXISTS unified_search_v2 (
   rowid INTEGER PRIMARY KEY AUTOINCREMENT,
   ITEM_SEQ TEXT NOT NULL UNIQUE,
@@ -32,8 +41,7 @@ CREATE TABLE IF NOT EXISTS unified_search_v2 (
   INDICATION_TEXT TEXT, APPEARANCE_TEXT TEXT NOT NULL, COMPANY_TEXT TEXT NOT NULL,
   USAGE_TEXT TEXT, WARNING_TEXT TEXT
 );
-${ftsSchema("unified_search_fts_v2", CORE_COLUMNS)}
-${ftsSchema("unified_search_docs_fts_v2", DOCUMENT_COLUMNS)}
+${FTS_SCHEMA}
 `;
 
 function ftsSchema(table: string, columns: readonly string[]) {
@@ -74,7 +82,7 @@ export function buildMetadata(pill: SearchPill) {
   };
 }
 
-export function hasV2Fields(record: IUnifiedSearchData): boolean {
+export function hasSearchFields(record: IUnifiedSearchData): boolean {
   return ALL_COLUMNS.every(
     (column) =>
       typeof record[column] === "string" ||
@@ -85,7 +93,7 @@ export function hasV2Fields(record: IUnifiedSearchData): boolean {
 
 export function hasMissingDocuments(record: IUnifiedSearchData): boolean {
   return (
-    !hasV2Fields(record) ||
+    !hasSearchFields(record) ||
     [record.INDICATION_TEXT, record.USAGE_TEXT, record.WARNING_TEXT].some(
       (value) => value === null,
     )
@@ -124,19 +132,13 @@ function recordStatements(
     `INSERT INTO unified_search_v2 (${columns.join(", ")}) VALUES (${columns.map(values).join(", ")})
     ON CONFLICT(ITEM_SEQ) DO UPDATE SET ${updates.join(", ")};`,
   ];
-  // Keep the previous index usable for rollback, including fetch failures.
-  if (!hasMissingDocuments(record)) {
-    statements.push(`INSERT INTO unified_search (ITEM_SEQ, CONTENTS)
-      VALUES (${values("ITEM_SEQ")}, ${values("CONTENTS")})
-      ON CONFLICT(ITEM_SEQ) DO UPDATE SET CONTENTS = excluded.CONTENTS;`);
-  }
   return statements;
 }
 
 export function buildUpsertStatements(records: IUnifiedSearchData[]): string[] {
-  if (records.some((record) => !hasV2Fields(record))) {
+  if (records.some((record) => !hasSearchFields(record))) {
     throw new Error(
-      "Legacy search record: regenerate with createSearchRecord before retrying",
+      "Invalid search record: regenerate with createSearchRecord before retrying",
     );
   }
   const statements: string[] = [];
@@ -149,16 +151,9 @@ export function buildUpsertStatements(records: IUnifiedSearchData[]): string[] {
           bytes + Buffer.byteLength(record[column] ?? "", "utf8"),
         0,
       );
-    const legacyBytes = Buffer.byteLength(
-      record.ITEM_SEQ + record.CONTENTS,
-      "utf8",
-    );
-    if (
-      rowBytes > MAX_ROW_BYTES ||
-      (!hasMissingDocuments(record) && legacyBytes > MAX_ROW_BYTES)
-    ) {
+    if (rowBytes > MAX_ROW_BYTES) {
       throw new Error(
-        `ITEM_SEQ=${record.ITEM_SEQ}: rowBytes=${rowBytes}, legacyBytes=${legacyBytes}; ` +
+        `ITEM_SEQ=${record.ITEM_SEQ}: rowBytes=${rowBytes}; ` +
           `exceeds safe row limit ${MAX_ROW_BYTES} bytes (D1 maximum 2 MB). Original text was not truncated.`,
       );
     }
@@ -181,10 +176,7 @@ export function buildUpsertStatements(records: IUnifiedSearchData[]): string[] {
     }
     const importKey = getSafeValue(randomUUID());
     const expressions = new Map<keyof IUnifiedSearchData, string>();
-    for (const column of [
-      ...ALL_COLUMNS,
-      ...(!hasMissingDocuments(record) ? ["CONTENTS" as const] : []),
-    ]) {
+    for (const column of ALL_COLUMNS) {
       const value = record[column];
       if (value == null) continue;
       splitLiteral(value).forEach((chunk, index) => {

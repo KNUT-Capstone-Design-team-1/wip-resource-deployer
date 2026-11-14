@@ -1,35 +1,12 @@
 import logger from "../../utils/logger";
-import { SCHEMA_V2 } from "../unified_search/v2";
+import { SEARCH_SCHEMA } from "../unified_search/search_data";
 import { TARGET_DB } from "../unified_search/repository";
 import { createSqlFile } from "../unified_search/database/sql_file";
 import { runQueryForSqlFile } from "../unified_search/database/wrangler";
-import {
-  createUnifiedSearchTable,
-  createUnifiedSearchFtsTable,
-  createUnifiedSearchFtsInsertTrigger,
-  createUnifiedSearchFtsUpdateTrigger,
-  createUnifiedSearchFtsDeleteTrigger,
-} from "./schema";
 
-/**
- * 검색 테이블·트리거 생성
- */
+/** Prepare missing search tables and triggers before writing data. */
 export async function createTables() {
-  logger.info("[UNIFIED-SEARCH-TABLES] Start creating tables and triggers");
-
-  // 검색 원본 테이블과 FTS5 가상 테이블을 준비
-  createUnifiedSearchTable();
-  createUnifiedSearchFtsTable();
-
-  // 이후 데이터 추가·변경·삭제가 FTS 인덱스에 반영되도록 트리거를 등록
-  createUnifiedSearchFtsInsertTrigger();
-  createUnifiedSearchFtsUpdateTrigger();
-  createUnifiedSearchFtsDeleteTrigger();
-  createSqlFile("unified_search_v2_schema.sql", SCHEMA_V2);
-  runQueryForSqlFile("unified_search_v2_schema.sql", TARGET_DB);
-
-  // 테이블 및 트리거 준비가 완료됐음을 기록
-  logger.info(
-    "[UNIFIED-SEARCH-TABLES] Successfully created tables and triggers",
-  );
+  logger.info("[UNIFIED-SEARCH-TABLES] Preparing tables and triggers");
+  createSqlFile("unified_search_schema.sql", SEARCH_SCHEMA);
+  runQueryForSqlFile("unified_search_schema.sql", TARGET_DB);
 }

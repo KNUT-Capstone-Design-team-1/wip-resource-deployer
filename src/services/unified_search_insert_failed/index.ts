@@ -1,3 +1,5 @@
+import { createTables } from "../unified_search_create_tables";
+import { verifyUnifiedSearch } from "../unified_search/verify";
 import { upsert } from "../unified_search/repository";
 import {
   listFailedDataFiles,
@@ -6,7 +8,7 @@ import {
 } from "../unified_search/failed_records";
 import logger from "../../utils/logger";
 import { createSearchRecord } from "../unified_search/batches";
-import { hasMissingDocuments } from "../unified_search/v2";
+import { hasMissingDocuments } from "../unified_search/search_data";
 import { readPillDataResource } from "../unified_search/pill_resource";
 import type { SearchPill } from "../unified_search/types/unified_search";
 
@@ -61,6 +63,7 @@ export async function upsertFailedRetryAll() {
   );
 
   // 성공한 파일은 즉시 삭제하고 처리 완료 건수만 집계
+  await createTables();
   let succeededCount = 0;
 
   for (const filePath of files) {
@@ -80,4 +83,5 @@ export async function upsertFailedRetryAll() {
   );
   if (succeededCount !== files.length)
     throw new Error("Search retry incomplete; failed files retained");
+  await verifyUnifiedSearch();
 }

@@ -62,6 +62,24 @@ yarn install
 yarn start
 ```
 
+통합 검색은 기존 v2 스키마(`unified_search_v2`, `unified_search_fts_v2`,
+`unified_search_docs_fts_v2`)만 사용한다. v1 테이블 생성·저장·복구는 수행하지 않는다.
+
+`config.json`의 `common.targetResource`에서 필요한 작업의 `_`를 제거하고 `yarn start`를 실행한다.
+별도 CLI 실행은 필요 없다. 최초 구축이나 누락된 스키마 생성이 필요하면
+`unifiedSearch.dbInitialize`를 `true`로 설정한다(기본값 `false`).
+`unified_search` 실행 전에 없는 v2 테이블·트리거만 생성하며 기존 데이터는 삭제하지 않는다.
+
+- `unified_search`: `dbInitialize: true`이면 스키마·트리거 준비 → `pill_data.json` 전체 저장 → 누락·추가·문서 실패 및 두 FTS 인덱스 검증
+- `unified_search_insert_failed`: 스키마 준비 → 실패 항목 재생성·저장 → 전체 데이터와 두 FTS 인덱스 검증
+- `unified_search_restore_fts`: 기존 v2 원본을 기준으로 누락된 FTS 테이블·트리거 복구 및 두 인덱스 재구축·검증
+- `unified_search_rebuild_fts`: 기존 두 FTS 인덱스 재구축·검증
+
+기본 예제 설정은 위 작업도 비활성화한다. 검색 작업은 앞서 선택한 리소스 생성 작업 이후 실행되며,
+원격 D1 데이터베이스 `wip_unified_search`를 갱신한다.
+TypeScript에서는 `updateUnifiedSearchDb`, `upsertFailedRetryAll`, `restoreUnifiedSearchFts`,
+`rebuildFts5`, `verifyUnifiedSearch` 함수를 직접 가져와 실행할 수도 있다.
+
 # Trouble Shooting
 
 #### D1 데이터베이스 업데이트 안되는 경우
