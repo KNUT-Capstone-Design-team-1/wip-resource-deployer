@@ -8,7 +8,8 @@
     "format": "prettier --write .",
     "lint": "prettier --check .",
     "typecheck": "tsc --noEmit",
-    "unified-search:rebuild": "ts-node ./src/services/unified_search/rebuild_cli.ts"
+    "unified-search:rebuild": "ts-node ./src/services/unified_search/rebuild_cli.ts",
+    "unified-search:v2": "ts-node ./src/services/unified_search/v2_cli.ts"
   },
   "repository": {
     "type": "git",
