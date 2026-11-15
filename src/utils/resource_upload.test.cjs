@@ -155,32 +155,30 @@ test("page upload failure leaves latest unchanged and preserves local files", as
   await fs.access(path.join(directory, "backups"));
 });
 
-test("successful reruns reuse identical immutable objects", async (t) => {
+test("successful reruns overwrite every snapshot object", async (t) => {
   const { directory, uploader, storage } = await fixture(t);
   await uploader.uploadPillDataResources(directory, storage);
-  const initialCount = storage.saves.length;
+  const initialSaves = [...storage.saves];
   await uploader.uploadPillDataResources(directory, storage);
-  assert.deepEqual(storage.saves.slice(initialCount), [
-    "pill_data.json",
-    "resource-pages/latest.json",
-  ]);
+  assert.deepEqual(storage.saves.slice(initialSaves.length), initialSaves);
 });
 
-test("a concurrent publisher cannot be overwritten at latest", async (t) => {
+test("existing snapshot contents are replaced by local files", async (t) => {
   const { directory, uploader, storage } = await fixture(t);
-  const other = Buffer.from("another snapshot");
-  storage.beforeSave = (name) => {
-    if (name === "resource-pages/latest.json")
-      storage.objects.set(name, { body: other, generation: "999" });
-  };
-  await assert.rejects(
-    uploader.uploadPillDataResources(directory, storage),
-    /generation changed/,
-  );
-  assert.deepEqual(
-    storage.objects.get("resource-pages/latest.json").body,
-    other,
-  );
+  await uploader.uploadPillDataResources(directory, storage);
+  for (const object of storage.objects.values()) {
+    object.body = Buffer.from("old contents");
+  }
+  await uploader.uploadPillDataResources(directory, storage);
+  for (const [name, object] of storage.objects) {
+    const localPath = name.startsWith("resource-pages/manifests/")
+      ? "resource-pages/latest.json"
+      : name;
+    assert.deepEqual(
+      object.body,
+      await fs.readFile(path.join(directory, localPath)),
+    );
+  }
 });
 
 test("stale original data and corrupt local pages fail before writes to GCS", async (t) => {

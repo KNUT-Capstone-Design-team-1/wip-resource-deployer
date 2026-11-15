@@ -24,10 +24,6 @@ const hash = (body: Buffer) => createHash("sha256").update(body).digest("hex");
 const latestPath = "resource-pages/latest.json";
 const encodings = ["identity", "br", "gzip", "deflate"];
 
-function status(error: unknown) {
-  return Number((error as { code?: number | string } | null)?.code);
-}
-
 /** Upload one public JSON resource; local histories are never uploaded. */
 export async function uploadResourceFile(
   name: string,
@@ -139,39 +135,21 @@ export async function uploadPillDataResources(
 
   const bucket = storage.bucket(bucketName);
   const latest = bucket.file(latestPath);
-  let generation: string | number = 0;
-  try {
-    const [metadata] = await latest.getMetadata();
-    if (!metadata.generation)
-      throw new Error("Missing latest manifest generation");
-    generation = metadata.generation;
-  } catch (error) {
-    if (status(error) !== 404) throw error;
-  }
 
-  async function saveImmutable(
+  async function saveSnapshotFile(
     objectPath: string,
     body: Buffer,
     contentType: string,
   ) {
-    const file = bucket.file(objectPath);
-    try {
-      await file.save(body, {
-        resumable: false,
-        gzip: false,
-        validation: "crc32c",
-        preconditionOpts: { ifGenerationMatch: 0 },
-        metadata: {
-          contentType,
-          cacheControl: "public, max-age=31536000, immutable",
-        },
-      });
-    } catch (error) {
-      if (status(error) !== 412) throw error;
-      const [existing] = await file.download({ decompress: false });
-      if (!existing.equals(body))
-        throw new Error(`Immutable GCS object differs: ${objectPath}`);
-    }
+    await bucket.file(objectPath).save(body, {
+      resumable: false,
+      gzip: false,
+      validation: "crc32c",
+      metadata: {
+        contentType,
+        cacheControl: "public, max-age=31536000, immutable",
+      },
+    });
   }
 
   logger.info(
@@ -185,9 +163,9 @@ export async function uploadPillDataResources(
     if (body.length !== file.bytes || hash(body) !== file.sha256) {
       throw new Error(`Page changed during upload: ${file.path}`);
     }
-    await saveImmutable(file.path, body, "application/octet-stream");
+    await saveSnapshotFile(file.path, body, "application/octet-stream");
   }
-  await saveImmutable(
+  await saveSnapshotFile(
     `resource-pages/manifests/${hash(manifestBody)}.json`,
     manifestBody,
     "application/json",
@@ -198,12 +176,11 @@ export async function uploadPillDataResources(
     validation: "crc32c",
     metadata: { contentType: "application/json", cacheControl: "no-store" },
   });
-  // A concurrent publisher must not be overwritten after we captured its generation.
+  // Publish latest last, replacing any existing snapshot pointer.
   await latest.save(manifestBody, {
     resumable: false,
     gzip: false,
     validation: "crc32c",
-    preconditionOpts: { ifGenerationMatch: generation },
     metadata: { contentType: "application/json", cacheControl: "no-store" },
   });
   logger.info(
