@@ -1,4 +1,4 @@
-import { Storage } from "@google-cloud/storage";
+import { File, Storage } from "@google-cloud/storage";
 import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -24,6 +24,16 @@ const hash = (body: Buffer) => createHash("sha256").update(body).digest("hex");
 const latestPath = "resource-pages/latest.json";
 const encodings = ["identity", "br", "gzip", "deflate"];
 
+// Local paths and manifest descriptors stay relative; prefix only GCS objects.
+const resourcePath = (name: string) => `resources/${name}`;
+
+async function verifyUpload(file: File, expected: Buffer) {
+  const [actual] = await file.download({ decompress: false });
+  if (actual.length !== expected.length || hash(actual) !== hash(expected)) {
+    throw new Error(`Uploaded resource checksum mismatch: ${file.name}`);
+  }
+}
+
 /** Upload one public JSON resource; local histories are never uploaded. */
 export async function uploadResourceFile(
   name: string,
@@ -42,17 +52,18 @@ export async function uploadResourceFile(
   await backupResourceFile(name, directory);
   await storage
     .bucket(bucketName)
-    .file(name)
+    .file(resourcePath(name))
     .save(body, {
       resumable: false,
       gzip: false,
       validation: "crc32c",
       metadata: { contentType: "application/json", cacheControl: "no-store" },
     });
+  await verifyUpload(storage.bucket(bucketName).file(resourcePath(name)), body);
   logger.info(
     "[RESOURCE-UPLOAD] Published bucket=%s resource=%s",
     bucketName,
-    name,
+    resourcePath(name),
   );
 }
 
@@ -134,14 +145,15 @@ export async function uploadPillDataResources(
   await backupResourceFile(latestPath, directory);
 
   const bucket = storage.bucket(bucketName);
-  const latest = bucket.file(latestPath);
+  const latest = bucket.file(resourcePath(latestPath));
 
   async function saveSnapshotFile(
     objectPath: string,
     body: Buffer,
     contentType: string,
   ) {
-    await bucket.file(objectPath).save(body, {
+    const file = bucket.file(resourcePath(objectPath));
+    await file.save(body, {
       resumable: false,
       gzip: false,
       validation: "crc32c",
@@ -150,6 +162,7 @@ export async function uploadPillDataResources(
         cacheControl: "public, max-age=31536000, immutable",
       },
     });
+    await verifyUpload(file, body);
   }
 
   logger.info(
@@ -170,12 +183,14 @@ export async function uploadPillDataResources(
     manifestBody,
     "application/json",
   );
-  await bucket.file("pill_data.json").save(rawBody, {
+  const original = bucket.file(resourcePath("pill_data.json"));
+  await original.save(rawBody, {
     resumable: false,
     gzip: false,
     validation: "crc32c",
     metadata: { contentType: "application/json", cacheControl: "no-store" },
   });
+  await verifyUpload(original, rawBody);
   // Publish latest last, replacing any existing snapshot pointer.
   await latest.save(manifestBody, {
     resumable: false,
@@ -183,6 +198,7 @@ export async function uploadPillDataResources(
     validation: "crc32c",
     metadata: { contentType: "application/json", cacheControl: "no-store" },
   });
+  await verifyUpload(latest, manifestBody);
   logger.info(
     "[RESOURCE-UPLOAD] Published bucket=%s manifest=%s",
     bucketName,
