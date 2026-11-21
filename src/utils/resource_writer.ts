@@ -1,3 +1,4 @@
+import { PAGED_RESOURCE_TABLES } from "./resource_pages";
 import { backupResourceFile } from "./resource_backup";
 import { uploadResourceFile } from "./resource_upload";
 import fs from "node:fs";
@@ -49,7 +50,11 @@ export async function createResourceFile(
     await backupResourceFile(resourceFileName);
     await writeAtomicFile(filePath, contents);
 
-    if (resourceFileName !== "pill_data.json") {
+    if (
+      !PAGED_RESOURCE_TABLES.some(
+        (table) => resourceFileName === `${table}.json`,
+      )
+    ) {
       await uploadResourceFile(resourceFileName);
     }
 

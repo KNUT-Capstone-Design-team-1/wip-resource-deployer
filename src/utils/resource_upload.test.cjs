@@ -418,3 +418,90 @@ test("pill snapshot rotation preserves pages, manifest and original together", a
     );
   }
 });
+
+test("functional pages split at 5000, preserve pill pages, and publish all tables together", async (t) => {
+  const { directory, uploader, storage, cache } = await fixture(t);
+  const builder = loadModule("resource_pages", directory, cache);
+  const products = Array.from({ length: 5001 }, (_, i) => ({
+    PRDLST_REPORT_NO: String(i),
+    PRDLST_NM: "??",
+  }));
+  const tables = {
+    functional_food_classification: [],
+    health_functional_food_raw_material: products,
+  };
+  for (const [name, rows] of Object.entries(tables)) {
+    await fs.writeFile(
+      path.join(directory, name + ".json"),
+      JSON.stringify({ resources: rows }),
+    );
+  }
+  await builder.createResourcePages(tables, directory);
+  const readManifest = async () =>
+    JSON.parse(
+      await fs.readFile(
+        path.join(directory, "resource-pages/latest.json"),
+        "utf8",
+      ),
+    );
+  const manifest = await readManifest();
+  assert.equal(Object.keys(manifest.tables).length, 3);
+  assert.deepEqual(
+    manifest.tables.functional_food_classification.pages["5000"],
+    [],
+  );
+  const pages =
+    manifest.tables.health_functional_food_raw_material.pages["5000"];
+  assert.equal(pages.length, 2);
+  for (const [i, page] of pages.entries()) {
+    const identity = await fs.readFile(
+      path.join(directory, page.files.identity.path),
+    );
+    const data = JSON.parse(identity);
+    assert.equal(data.resource.length, i === 0 ? 5000 : 1);
+    assert.equal(data.current, i * 5000);
+    assert.equal(data.total, 5001);
+    assert.equal(data.totalPage, 2);
+    const zlib = require("node:zlib");
+    for (const [encoding, decode] of Object.entries({
+      br: zlib.brotliDecompressSync,
+      gzip: zlib.gunzipSync,
+      deflate: zlib.inflateSync,
+    })) {
+      assert.deepEqual(
+        decode(
+          await fs.readFile(path.join(directory, page.files[encoding].path)),
+        ),
+        identity,
+      );
+    }
+  }
+  const pillRows = JSON.parse(
+    await fs.readFile(path.join(directory, "pill_data.json"), "utf8"),
+  ).resources;
+  await builder.createPillDataPages(pillRows, directory);
+  assert.deepEqual((await readManifest()).tables, manifest.tables);
+  await uploader.uploadPagedResources(directory, storage);
+  assert.equal(storage.saves.at(-1), "resources/resource-pages/latest.json");
+  for (const name of Object.keys(manifest.tables))
+    assert(storage.objects.has("resources/" + name + ".json"));
+  const previous = new Map(
+    [...storage.objects].map(([name, obj]) => [name, Buffer.from(obj.body)]),
+  );
+  await uploader.uploadPagedResources(directory, storage);
+  for (const [name, body] of previous)
+    assert.deepEqual(
+      storage.objects.get(name.replace(/^resources\//, "current/")).body,
+      body,
+    );
+  await fs.writeFile(
+    path.join(directory, "health_functional_food_raw_material.json"),
+    JSON.stringify({ resources: [] }),
+  );
+  storage.saves.length = 0;
+  await assert.rejects(
+    uploader.uploadPagedResources(directory, storage),
+    /does not match/,
+  );
+  assert.equal(storage.saves.length, 0);
+});

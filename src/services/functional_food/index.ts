@@ -1,3 +1,5 @@
+import { createResourcePages } from "../../utils/resource_pages";
+import { uploadPagedResources } from "../../utils/resource_upload";
 import { createResourceFile } from "../../utils/resource_writer";
 import logger from "../../utils/logger";
 import { fetchAllFoodSafetyRows } from "./client";
@@ -27,6 +29,11 @@ export async function createFunctionalFoodResources(
     "health_functional_food_raw_material.json",
     products,
   );
+  await createResourcePages({
+    functional_food_classification: classifications,
+    health_functional_food_raw_material: products,
+  });
+  await uploadPagedResources();
   logger.info(
     "[FUNCTIONAL-FOOD] Completed classifications=%s products=%s",
     classifications.length,
