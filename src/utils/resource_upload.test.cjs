@@ -49,13 +49,30 @@ function fakeStorage() {
   const storage = {
     objects,
     saves,
+    events: [],
     failPath: undefined,
     beforeSave: undefined,
     bucket(name) {
       assert.equal(name, "wip-bucket");
       return {
+        async getFiles({ prefix }) {
+          return [
+            [...objects.keys()]
+              .filter((key) => key.startsWith(prefix))
+              .map((key) => this.file(key)),
+          ];
+        },
         file(name) {
           return {
+            name,
+            async copy(target) {
+              storage.events.push("copy:" + name);
+              if (storage.failCopy) throw Error("copy failed");
+              objects.set(target.name, {
+                ...objects.get(name),
+                body: Buffer.from(objects.get(name).body),
+              });
+            },
             async getMetadata() {
               if (!objects.has(name))
                 throw Object.assign(Error("missing"), { code: 404 });
@@ -63,6 +80,8 @@ function fakeStorage() {
             },
             async download(options) {
               assert.equal(options.decompress, false);
+              storage.events.push("download:" + name);
+              if (name === storage.failDownload) throw Error("download failed");
               return [objects.get(name).body];
             },
             async save(body, options) {
@@ -85,6 +104,7 @@ function fakeStorage() {
                 metadata: options.metadata,
                 generation: String(++sequence),
               };
+              storage.events.push("save:" + name);
               saves.push(name);
               objects.set(name, object);
             },
@@ -117,10 +137,11 @@ test("snapshot uploads pages, immutable manifest and original before latest; met
   const { directory, uploader, storage } = await fixture(t);
   await uploader.uploadPillDataResources(directory, storage, "wip-bucket");
   assert.equal(storage.saves.length, 7);
-  assert.equal(storage.saves.at(-2), "pill_data.json");
-  assert.equal(storage.saves.at(-1), "resource-pages/latest.json");
+  assert.equal(storage.saves.at(-2), "resources/pill_data.json");
+  assert.equal(storage.saves.at(-1), "resources/resource-pages/latest.json");
   assert.equal(
-    storage.objects.get("resource-pages/latest.json").metadata.cacheControl,
+    storage.objects.get("resources/resource-pages/latest.json").metadata
+      .cacheControl,
     "no-store",
   );
   for (const name of storage.saves.slice(0, 4)) {
@@ -144,13 +165,17 @@ test("page upload failure leaves latest unchanged and preserves local files", as
       "utf8",
     ),
   );
-  storage.failPath = first.tables.pill_data.pages["5000"][0].files.br.path;
+  storage.failPath =
+    "resources/" + first.tables.pill_data.pages["5000"][0].files.br.path;
   await assert.rejects(
     uploader.uploadPillDataResources(directory, storage),
     /upload failed/,
   );
-  assert.equal(storage.objects.has("resource-pages/latest.json"), false);
-  assert.equal(storage.objects.has("pill_data.json"), false);
+  assert.equal(
+    storage.objects.has("resources/resource-pages/latest.json"),
+    false,
+  );
+  assert.equal(storage.objects.has("resources/pill_data.json"), false);
   await fs.access(path.join(directory, "pill_data.json"));
   await fs.access(path.join(directory, "backups"));
 });
@@ -171,9 +196,11 @@ test("existing snapshot contents are replaced by local files", async (t) => {
   }
   await uploader.uploadPillDataResources(directory, storage);
   for (const [name, object] of storage.objects) {
-    const localPath = name.startsWith("resource-pages/manifests/")
+    if (!name.startsWith("resources/")) continue;
+    const relative = name.slice("resources/".length);
+    const localPath = relative.startsWith("resource-pages/manifests/")
       ? "resource-pages/latest.json"
-      : name;
+      : relative;
     assert.deepEqual(
       object.body,
       await fs.readFile(path.join(directory, localPath)),
@@ -211,7 +238,7 @@ test("ordinary resources back up locally and upload with no-store; failed upload
   const name = "nearby_pharmacies.json";
   const content = JSON.stringify({ resources: [{ id: 1 }] });
   await fs.writeFile(path.join(directory, name), content);
-  storage.failPath = name;
+  storage.failPath = "resources/" + name;
   await assert.rejects(
     uploader.uploadResourceFile(name, directory, storage),
     /upload failed/,
@@ -227,7 +254,10 @@ test("ordinary resources back up locally and upload with no-store; failed upload
   );
   storage.failPath = undefined;
   await uploader.uploadResourceFile(name, directory, storage);
-  assert.equal(storage.objects.get(name).metadata.cacheControl, "no-store");
+  assert.equal(
+    storage.objects.get("resources/" + name).metadata.cacheControl,
+    "no-store",
+  );
 });
 
 test("all-resources retry uploads public JSON and excludes backups, reports and SQL", async (t) => {
@@ -251,7 +281,9 @@ test("all-resources retry uploads public JSON and excludes backups, reports and 
   await fs.writeFile(path.join(directory, "unified_search.sql"), "SELECT 1;");
   await uploader.uploadAllResources(directory, storage);
   assert.equal(
-    [...storage.objects.keys()].filter((name) => !name.includes("/")).length,
+    [...storage.objects.keys()].filter((name) =>
+      /^resources\/[^/]+$/.test(name),
+    ).length,
     9,
   );
   assert(
@@ -276,4 +308,113 @@ test("backup helper preserves the old resource before replacement", async (t) =>
   const backup = await backupResourceFile("narcotics.json", directory);
   await fs.writeFile(target, "new");
   assert.equal(await fs.readFile(backup, "utf8"), "old");
+});
+
+test("rotation archives current, copies published resources, then publishes new data", async (t) => {
+  const { directory, uploader, storage } = await fixture(t);
+  const name = "narcotics.json";
+  const old = Buffer.from("previous backup");
+  const published = Buffer.from("published resource");
+  storage.objects.set("current/" + name, { body: old });
+  storage.objects.set("resources/" + name, { body: published });
+  storage.objects.set("current/cannabis.json", {
+    body: Buffer.from("unrelated"),
+  });
+  await fs.writeFile(
+    path.join(directory, name),
+    JSON.stringify({ resources: [1] }),
+  );
+  await uploader.uploadResourceFile(name, directory, storage);
+  const archives = await fs.readdir(
+    path.join(directory, "backups/gcs-current"),
+  );
+  assert.deepEqual(
+    await fs.readFile(
+      path.join(directory, "backups/gcs-current", archives[0], name),
+    ),
+    old,
+  );
+  assert.deepEqual(storage.objects.get("current/" + name).body, published);
+  assert.deepEqual(
+    storage.objects.get("resources/" + name).body,
+    await fs.readFile(path.join(directory, name)),
+  );
+  assert.equal(
+    storage.objects.get("current/cannabis.json").body.toString(),
+    "unrelated",
+  );
+  const events = storage.events;
+  assert(
+    events.indexOf("download:current/" + name) <
+      events.indexOf("copy:resources/" + name),
+  );
+  assert(
+    events.indexOf("copy:resources/" + name) <
+      events.indexOf("save:resources/" + name),
+  );
+});
+
+test("failed current download or remote copy prevents publication", async (t) => {
+  for (const failure of ["download", "copy"]) {
+    const { directory, uploader, storage } = await fixture(t);
+    const name = "narcotics.json";
+    storage.objects.set("current/" + name, { body: Buffer.from("backup") });
+    storage.objects.set("resources/" + name, {
+      body: Buffer.from("published"),
+    });
+    await fs.writeFile(
+      path.join(directory, name),
+      JSON.stringify({ resources: [] }),
+    );
+    if (failure === "download") storage.failDownload = "current/" + name;
+    else storage.failCopy = true;
+    await assert.rejects(
+      uploader.uploadResourceFile(name, directory, storage),
+      /failed/,
+    );
+    assert.equal(storage.saves.length, 0);
+    assert.equal(
+      storage.objects.get("resources/" + name).body.toString(),
+      "published",
+    );
+    assert.equal(
+      storage.objects.get("current/" + name).body.toString(),
+      "backup",
+    );
+  }
+});
+
+test("pill snapshot rotation preserves pages, manifest and original together", async (t) => {
+  const { directory, uploader, storage } = await fixture(t);
+  await uploader.uploadPillDataResources(directory, storage);
+  const previous = new Map(
+    [...storage.objects].map(([name, object]) => [
+      name,
+      Buffer.from(object.body),
+    ]),
+  );
+  await uploader.uploadPillDataResources(directory, storage);
+  for (const [name, body] of previous) {
+    assert.deepEqual(
+      storage.objects.get(name.replace(/^resources\//, "current/")).body,
+      body,
+    );
+  }
+  await uploader.uploadPillDataResources(directory, storage);
+  const archives = await fs.readdir(
+    path.join(directory, "backups/gcs-current"),
+  );
+  for (const [name, body] of previous) {
+    assert.deepEqual(
+      await fs.readFile(
+        path.join(
+          directory,
+          "backups/gcs-current",
+          archives[0],
+          name.slice("resources/".length),
+        ),
+      ),
+      body,
+    );
+  }
 });

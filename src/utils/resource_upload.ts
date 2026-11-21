@@ -1,5 +1,5 @@
-import { File, Storage } from "@google-cloud/storage";
-import { createHash } from "node:crypto";
+import { Bucket, File, Storage } from "@google-cloud/storage";
+import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { RESOURCE_DIRECTORY } from "./paths";
@@ -27,6 +27,55 @@ const encodings = ["identity", "br", "gzip", "deflate"];
 // Local paths and manifest descriptors stay relative; prefix only GCS objects.
 const resourcePath = (name: string) => `resources/${name}`;
 
+/** Archive the previous backup locally before replacing it with published data. */
+async function rotatePublishedResources(
+  bucket: Bucket,
+  directory: string,
+  name: string,
+) {
+  const includes = (relative: string) =>
+    relative === name ||
+    (name === "pill_data.json" && relative.startsWith("resource-pages/"));
+  const [currentFiles] = await bucket.getFiles({ prefix: "current/" });
+  const [publishedFiles] = await bucket.getFiles({ prefix: "resources/" });
+  const stamp =
+    new Date().toISOString().replace(/[:.]/g, "-") + "-" + randomUUID();
+  const archive = path.join(directory, "backups", "gcs-current", stamp);
+
+  // Finish every download before changing any remote backup.
+  for (const file of currentFiles) {
+    const relative = file.name.slice("current/".length);
+    if (!includes(relative)) continue;
+    if (
+      relative
+        .split("/")
+        .some((part) => !part || part === "." || part === "..") ||
+      relative.includes("\\") ||
+      relative.includes(":")
+    ) {
+      throw new Error("Invalid remote backup path: " + file.name);
+    }
+    const [body] = await file.download({ decompress: false });
+    const target = path.join(archive, relative);
+    await fs.mkdir(path.dirname(target), { recursive: true });
+    await fs.writeFile(target, body, { flag: "wx" });
+  }
+
+  for (const file of publishedFiles) {
+    const relative = file.name.slice("resources/".length);
+    if (!includes(relative)) continue;
+    const target = bucket.file("current/" + relative);
+    const [body] = await file.download({ decompress: false });
+    await file.copy(target);
+    await verifyUpload(target, body);
+  }
+  logger.info(
+    "[RESOURCE-UPLOAD] Rotation completed resource=%s archive=%s",
+    name,
+    archive,
+  );
+}
+
 async function verifyUpload(file: File, expected: Buffer) {
   const [actual] = await file.download({ decompress: false });
   if (actual.length !== expected.length || hash(actual) !== hash(expected)) {
@@ -50,6 +99,7 @@ export async function uploadResourceFile(
     throw new Error(`Not a public resource: ${name}`);
   }
   await backupResourceFile(name, directory);
+  await rotatePublishedResources(storage.bucket(bucketName), directory, name);
   await storage
     .bucket(bucketName)
     .file(resourcePath(name))
@@ -145,6 +195,7 @@ export async function uploadPillDataResources(
   await backupResourceFile(latestPath, directory);
 
   const bucket = storage.bucket(bucketName);
+  await rotatePublishedResources(bucket, directory, "pill_data.json");
   const latest = bucket.file(resourcePath(latestPath));
 
   async function saveSnapshotFile(
