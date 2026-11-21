@@ -505,3 +505,68 @@ test("functional pages split at 5000, preserve pill pages, and publish all table
   );
   assert.equal(storage.saves.length, 0);
 });
+
+test("functional-only publication does not back up or upload pill files", async (t) => {
+  const { directory, uploader, storage, cache } = await fixture(t);
+  await uploader.uploadPillDataResources(directory, storage);
+  const pillOriginal = storage.objects.get("resources/pill_data.json");
+  const backupsBefore = (
+    await fs.readdir(path.join(directory, "backups"), { recursive: true })
+  ).filter((name) => name.endsWith("pill_data.json"));
+  const tables = {
+    functional_food_classification: [{ id: 1 }],
+    health_functional_food_raw_material: [{ PRDLST_REPORT_NO: "1" }],
+  };
+  for (const [name, rows] of Object.entries(tables))
+    await fs.writeFile(
+      path.join(directory, name + ".json"),
+      JSON.stringify({ resources: rows }),
+    );
+  await loadModule("resource_pages", directory, cache).createResourcePages(
+    tables,
+    directory,
+  );
+  // Retained pill data is verified against GCS, independent of local originals.
+  await fs.unlink(path.join(directory, "pill_data.json"));
+  storage.events.length = 0;
+  storage.saves.length = 0;
+  await uploader.uploadFunctionalFoodResources(directory, storage);
+  assert.equal(storage.objects.get("resources/pill_data.json"), pillOriginal);
+  assert(
+    !storage.saves.some(
+      (name) =>
+        name.endsWith("pill_data.json") ||
+        name.includes("resource-pages/pill_data/"),
+    ),
+  );
+  assert(
+    !storage.events.some(
+      (event) =>
+        event.startsWith("copy:") &&
+        (event.endsWith("pill_data.json") ||
+          event.includes("resource-pages/pill_data/")),
+    ),
+  );
+  const backupsAfter = (
+    await fs.readdir(path.join(directory, "backups"), { recursive: true })
+  ).filter((name) => name.endsWith("pill_data.json"));
+  assert.deepEqual(backupsAfter, backupsBefore);
+  assert(
+    storage.saves.includes(
+      "resources/health_functional_food_raw_material.json",
+    ),
+  );
+  const manifest = JSON.parse(
+    storage.objects.get("resources/resource-pages/latest.json").body,
+  );
+  assert(manifest.tables.pill_data);
+  assert(manifest.tables.health_functional_food_raw_material);
+  const pillPage = manifest.tables.pill_data.pages["5000"][0].files.br.path;
+  storage.objects.get("resources/" + pillPage).body = Buffer.from("corrupt");
+  storage.saves.length = 0;
+  await assert.rejects(
+    uploader.uploadFunctionalFoodResources(directory, storage),
+    /Retained resource page/,
+  );
+  assert.equal(storage.saves.length, 0);
+});

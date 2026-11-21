@@ -1,3 +1,4 @@
+import { prepareResourceSnapshot } from "./resource_snapshot";
 import { createResourcePages, PAGED_RESOURCE_TABLES } from "./resource_pages";
 import { Bucket, File, Storage } from "@google-cloud/storage";
 import { createHash, randomUUID } from "node:crypto";
@@ -7,23 +8,8 @@ import { RESOURCE_DIRECTORY } from "./paths";
 import logger from "./logger";
 import { backupResourceFile } from "./resource_backup";
 
-interface Descriptor {
-  path: string;
-  bytes: number;
-  sha256: string;
-}
-interface Page {
-  bodyLength: number;
-  etag: string;
-  files: Record<string, Descriptor>;
-}
-interface Manifest {
-  format: number;
-  tables: Record<string, { total: number; pages: Record<string, Page[]> }>;
-}
 const hash = (body: Buffer) => createHash("sha256").update(body).digest("hex");
 const latestPath = "resource-pages/latest.json";
-const encodings = ["identity", "br", "gzip", "deflate"];
 
 // Local paths and manifest descriptors stay relative; prefix only GCS objects.
 const resourcePath = (name: string) => `resources/${name}`;
@@ -40,7 +26,13 @@ async function rotatePublishedResources(
     (PAGED_RESOURCE_TABLES.some((table) =>
       relatedNames.includes(`${table}.json`),
     ) &&
-      relative.startsWith("resource-pages/"));
+      (relative === latestPath ||
+        relative.startsWith("resource-pages/manifests/") ||
+        PAGED_RESOURCE_TABLES.some(
+          (table) =>
+            relatedNames.includes(table + ".json") &&
+            relative.startsWith("resource-pages/" + table + "/"),
+        )));
   const [currentFiles] = await bucket.getFiles({ prefix: "current/" });
   const [publishedFiles] = await bucket.getFiles({ prefix: "resources/" });
   const stamp =
@@ -98,7 +90,9 @@ export async function uploadResourceFile(
   if (!/^[a-z][a-z0-9_]*\.json$/.test(name))
     throw new Error("Invalid resource filename");
   if (PAGED_RESOURCE_TABLES.some((table) => name === `${table}.json`))
-    return uploadPagedResources(directory, storage, bucketName);
+    return uploadPagedResources(directory, storage, bucketName, [
+      name.slice(0, -5),
+    ]);
   const body = await fs.readFile(path.join(directory, name));
   if (!Array.isArray(JSON.parse(body.toString("utf8")).resources)) {
     throw new Error(`Not a public resource: ${name}`);
@@ -122,104 +116,51 @@ export async function uploadResourceFile(
   );
 }
 
+/** Publish only the functional food tables while retaining other snapshot references. */
+export async function uploadFunctionalFoodResources(
+  directory = RESOURCE_DIRECTORY,
+  storage = new Storage(),
+  bucketName = process.env.RESOURCE_DATA_BUCKET || "wip-bucket",
+) {
+  return uploadPagedResources(directory, storage, bucketName, [
+    "functional_food_classification",
+    "health_functional_food_raw_material",
+  ]);
+}
+
 /** Publish all referenced objects before switching the API's current snapshot. */
-export const uploadPillDataResources = uploadPagedResources;
+export async function uploadPillDataResources(
+  directory = RESOURCE_DIRECTORY,
+  storage = new Storage(),
+  bucketName = process.env.RESOURCE_DATA_BUCKET || "wip-bucket",
+) {
+  return uploadPagedResources(directory, storage, bucketName, ["pill_data"]);
+}
 
 export async function uploadPagedResources(
   directory = RESOURCE_DIRECTORY,
   storage = new Storage(),
   bucketName = process.env.RESOURCE_DATA_BUCKET || "wip-bucket",
+  selectedTables?: readonly string[],
 ) {
-  const manifestBody = await fs.readFile(path.join(directory, latestPath));
-  const manifest = JSON.parse(manifestBody.toString("utf8")) as Manifest;
-  if (
-    manifest.format !== 1 ||
-    !manifest.tables ||
-    typeof manifest.tables !== "object" ||
-    Array.isArray(manifest.tables) ||
-    !Object.keys(manifest.tables).length
-  )
-    throw new Error("Invalid resource snapshot; regenerate before uploading");
-  const descriptors = new Map<string, Descriptor>();
-  const originals = new Map<string, Buffer>();
-  for (const [tableName, table] of Object.entries(manifest.tables)) {
-    if (!(PAGED_RESOURCE_TABLES as readonly string[]).includes(tableName))
-      throw new Error("Invalid resource snapshot table");
-    if (
-      manifest.format !== 1 ||
-      !table ||
-      !Number.isSafeInteger(table.total) ||
-      table.total < 0 ||
-      !table.pages ||
-      Object.keys(table.pages).length !== 1 ||
-      !Array.isArray(table.pages["5000"]) ||
-      table.pages["5000"].length !== Math.ceil(table.total / 5000)
-    ) {
-      throw new Error("Invalid resource snapshot; regenerate before uploading");
-    }
-
-    const rawBody = await fs.readFile(
-      path.join(directory, `${tableName}.json`),
-    );
-    originals.set(`${tableName}.json`, rawBody);
-    const raw = JSON.parse(rawBody.toString("utf8"));
-    if (!Array.isArray(raw.resources) || raw.resources.length !== table.total) {
-      throw new Error(`${tableName}.json does not match the prepared snapshot`);
-    }
-    for (const [index, page] of table.pages["5000"].entries()) {
-      if (!page.files || Object.keys(page.files).length !== encodings.length) {
-        throw new Error("Invalid page encodings");
-      }
-      for (const encoding of encodings) {
-        const file = page.files[encoding];
-        if (
-          !file ||
-          !file.path.startsWith(`resource-pages/${tableName}/`) ||
-          !/^resource-pages\/[a-z_]+\/[a-f0-9]{64}\.(identity|br|gzip|deflate)$/.test(
-            file.path,
-          ) ||
-          !file.path.endsWith(`.${encoding}`) ||
-          !Number.isSafeInteger(file.bytes) ||
-          file.bytes < 0 ||
-          !/^[a-f0-9]{64}$/.test(file.sha256)
-        )
-          throw new Error("Invalid page descriptor");
-        descriptors.set(file.path, file);
-      }
-      const expected = Buffer.from(
-        JSON.stringify({
-          resource: raw.resources.slice(index * 5000, (index + 1) * 5000),
-          total: table.total,
-          totalPage: table.pages["5000"].length,
-          current: index * 5000,
-        }),
+  const { manifestBody, descriptors, retainedDescriptors, originals } =
+    await prepareResourceSnapshot(directory, selectedTables);
+  // A combined manifest must only reference retained pages already published to GCS.
+  const bucket = storage.bucket(bucketName);
+  for (const file of retainedDescriptors.values()) {
+    const [body] = await bucket
+      .file(resourcePath(file.path))
+      .download({ decompress: false });
+    if (body.length !== file.bytes || hash(body) !== file.sha256)
+      throw new Error(
+        "Retained resource page missing or changed in GCS: " + file.path,
       );
-      if (
-        page.bodyLength !== expected.length ||
-        page.files.identity.sha256 !== hash(expected) ||
-        page.etag !==
-          `W/"${createHash("sha256").update(expected).digest("base64")}"`
-      ) {
-        throw new Error(
-          `${tableName}.json does not match the prepared snapshot`,
-        );
-      }
-    }
-  }
-
-  // Check local bytes before making any changes to GCS.
-  for (const file of descriptors.values()) {
-    const body = await fs.readFile(path.join(directory, file.path));
-    if (body.length !== file.bytes || hash(body) !== file.sha256) {
-      throw new Error(`Page checksum mismatch: ${file.path}`);
-    }
   }
 
   for (const name of originals.keys())
     await backupResourceFile(name, directory);
   await backupResourceFile(latestPath, directory);
 
-  const bucket = storage.bucket(bucketName);
   const names = [...originals.keys()];
   await rotatePublishedResources(bucket, directory, names[0], names);
   const latest = bucket.file(resourcePath(latestPath));
